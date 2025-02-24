@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres
+    restart: always
+    container_name: entrenia-postgres
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+
+  backend:
+    image: entrenia-backend
+    pull_policy: never
+    container_name: entrenia-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    volumes:
+      - ./backend/app:/app/app
+    depends_on:
+      - postgres
+    environment:
+      - APP_NAME=${APP_NAME?Variable not set}
+      - APP_DESCRIPTION=${APP_DESCRIPTION?Variable not set}
+      - APP_CONTACT_NAME=${APP_CONTACT_NAME?Variable not set}
+      - APP_CONTACT_EMAIL=${APP_CONTACT_EMAIL?Variable not set}
+      - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
+
+volumes:
+  postgres-db:
