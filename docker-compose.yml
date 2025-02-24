@@ -10,9 +10,14 @@ services:
     volumes:
       - postgres-db:/var/lib/postgresql/data
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   adminer:
     image: adminer
@@ -34,13 +39,19 @@ services:
     volumes:
       - ./backend/app:/app/app
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+        restart: true
     environment:
       - APP_NAME=${APP_NAME?Variable not set}
       - APP_DESCRIPTION=${APP_DESCRIPTION?Variable not set}
       - APP_CONTACT_NAME=${APP_CONTACT_NAME?Variable not set}
       - APP_CONTACT_EMAIL=${APP_CONTACT_EMAIL?Variable not set}
       - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
+      - POSTGRES_SERVER=${POSTGRES_SERVER?Variable not set}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
 volumes:
   postgres-db:
