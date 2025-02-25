@@ -1,6 +1,8 @@
-from sqlmodel import Session, create_engine, SQLModel, select
-from app.models.users import User
 import os
+
+from sqlmodel import Session, create_engine, SQLModel, select
+
+from app.models.users import User
 from app.crud import users
 
 DB_URL = os.environ["POSTGRES_URL"]
@@ -33,7 +35,7 @@ def create_first_admin(session: Session):
             username=os.environ["FIRST_ADMIN_USERNAME"],
             email=os.environ["FIRST_ADMIN_EMAIL"],
             password=os.environ["FIRST_ADMIN_PASSWORD"],
-            is_superuser=True,
+            is_admin=True,
             is_verified=True,
         )
         user = users.create_user(session=session, user_in=admin)

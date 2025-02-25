@@ -1,12 +1,9 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.main import api_router
-import os
-from time import sleep
 
-from sqlmodel import Session, create_engine, select, SQLModel
-from app.models.users import User
-import os
+from app.api.main import api_router
 from app.start import start
 
 app = FastAPI(

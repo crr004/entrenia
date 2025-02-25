@@ -6,7 +6,7 @@ import os
 ALGORITHM = "HS256"
 
 
-def create_access_token(subject: str | Any, expires_delta: timedelta):
+def create_access_token(*, subject: str | Any, expires_delta: timedelta) -> str:
     """Crea un token de acceso.
 
     Args:
