@@ -10,7 +10,7 @@ class UserBase(SQLModel):
     email: EmailStr = Field(
         unique=True, index=True, max_length=255, description="Email del usuario"
     )
-    username: str = Field(max_length=30, description="Nombre de usuario")
+    username: str = Field(min_length=3, max_length=20, description="Nombre de usuario")
     full_name: str | None = Field(
         max_length=255, description="Nombre completo del usuario"
     )
@@ -21,16 +21,25 @@ class UserBase(SQLModel):
 
 # TABLA: users
 class User(UserBase, table=True):
-    """Modelo de usuario que se mapea a la tabla de la base de datos"""
+    """Modelo de usuario que se mapea a la tabla de la base de datos."""
 
     __tablename__ = "users"
 
     id: uuid.UUID = Field(
-        primary_key=True, default=uuid.uuid4, description="ID del usuario"
+        primary_key=True, default_factory=uuid.uuid4, description="ID del usuario"
     )
     password: str = Field(
         max_length=255, description="Contraseña del usuario (haseada)"
     )
     created_at: datetime = Field(
-        default=datetime.now(), description="Fecha de creación del usuario"
+        default=datetime.now(),
+        description="Fecha de creación del usuario",
+    )
+
+
+class UserCreate(UserBase):
+    """Modelo de usuario para la creación de un nuevo usuario."""
+
+    password: str = Field(
+        min_length=9, max_length=50, description="Contraseña del usuario (sin hashear)"
     )

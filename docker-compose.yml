@@ -52,6 +52,10 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+      - POSTGRES_URL=${POSTGRES_URL?Variable not set}
+      - FIRST_ADMIN_USERNAME=${FIRST_ADMIN_USERNAME?Variable not set}
+      - FIRST_ADMIN_PASSWORD=${FIRST_ADMIN_PASSWORD?Variable not set}
+      - FIRST_ADMIN_EMAIL=${FIRST_ADMIN_EMAIL?Variable not set}
 
 volumes:
   postgres-db:
