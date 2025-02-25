@@ -48,6 +48,7 @@ services:
       - APP_CONTACT_NAME=${APP_CONTACT_NAME?Variable not set}
       - APP_CONTACT_EMAIL=${APP_CONTACT_EMAIL?Variable not set}
       - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
+      - API_PREFIX=${API_PREFIX?Variable not set}
       - POSTGRES_SERVER=${POSTGRES_SERVER?Variable not set}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
@@ -56,6 +57,8 @@ services:
       - FIRST_ADMIN_USERNAME=${FIRST_ADMIN_USERNAME?Variable not set}
       - FIRST_ADMIN_PASSWORD=${FIRST_ADMIN_PASSWORD?Variable not set}
       - FIRST_ADMIN_EMAIL=${FIRST_ADMIN_EMAIL?Variable not set}
+      - ACCESS_TOKEN_EXPIRE=${ACCESS_TOKEN_EXPIRE?Variable not set}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
 
 volumes:
   postgres-db:

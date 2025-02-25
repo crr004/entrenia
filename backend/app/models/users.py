@@ -1,7 +1,7 @@
 import uuid
 from sqlmodel import Field, SQLModel
 from pydantic import EmailStr
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class UserBase(SQLModel):
@@ -32,7 +32,7 @@ class User(UserBase, table=True):
         max_length=255, description="Contraseña del usuario (haseada)"
     )
     created_at: datetime = Field(
-        default=datetime.now(),
+        default=datetime.now(timezone.utc),
         description="Fecha de creación del usuario",
     )
 
@@ -43,3 +43,17 @@ class UserCreate(UserBase):
     password: str = Field(
         min_length=9, max_length=50, description="Contraseña del usuario (sin hashear)"
     )
+
+
+class UserReturn(UserBase):
+    """Modelo de usuario para retornar."""
+
+    id: uuid.UUID = Field(description="ID del usuario")
+    created_at: datetime = Field(description="Fecha de creación del usuario")
+
+
+class UsersReturn(SQLModel):
+    """Modelo de usuarios para retornar (lista de todos los usuarios con su longitud)."""
+
+    users: list[UserReturn]
+    count: int

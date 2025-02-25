@@ -1,8 +1,9 @@
 from app.core import db
-from app.core.db import engine
 
 
 def start():
+    """Iniciar la base de datos y crear el primer administrador."""
+
     db.init_db()
-    with db.Session(engine) as session:
+    with db.Session(db.engine) as session:
         db.create_first_admin(session)
