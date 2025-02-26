@@ -59,6 +59,14 @@ services:
       - FIRST_ADMIN_EMAIL=${FIRST_ADMIN_EMAIL?Variable not set}
       - ACCESS_TOKEN_EXPIRE=${ACCESS_TOKEN_EXPIRE?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
-
+      - SMTP_HOST=${SMTP_HOST?Variable not set}
+      - SMTP_USER=${SMTP_USER?Variable not set}
+      - SMTP_PASSWORD=${SMTP_PASSWORD?Variable not set}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL?Variable not set}
+      - SMTP_TLS=${SMTP_TLS?Variable not set}
+      - SMTP_SSL=${SMTP_SSL?Variable not set}
+      - SMTP_PORT=${SMTP_PORT?Variable not set}
+      - FRONTEND_URL=${FRONTEND_URL?Variable not set}
+      
 volumes:
   postgres-db:
