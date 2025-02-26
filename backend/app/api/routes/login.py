@@ -14,9 +14,8 @@ from app.utils.tokens import create_access_token
 router = APIRouter(prefix="/login", tags=["login"])
 
 
-@router.post("/access-token", status_code=status.HTTP_200_OK, response_model=Token)
-# async?
-def login_acces_token(
+@router.post("/", status_code=status.HTTP_200_OK, response_model=Token)
+def login_user(
     session: SessionDep, data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> Token:
     """Obtiene un token de acceso para un usuario.
