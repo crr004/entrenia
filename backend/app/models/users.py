@@ -56,7 +56,11 @@ class UserRegister(SQLModel):
     """Modelo de usuario para el registro de un nuevo usuario."""
 
     email: EmailStr = Field(max_length=255, description="Email del usuario")
-    username: str = Field(min_length=3, max_length=20, description="Nombre de usuario")
+    username: str = Field(
+        min_length=3,
+        max_length=20,
+        description="Nombre de usuario",
+    )
     full_name: str | None = Field(
         max_length=255, description="Nombre completo del usuario", default=None
     )
@@ -100,7 +104,10 @@ class UserUpdateOwn(SQLModel):
         max_length=255, description="Nombre completo del usuario", default=None
     )
     username: str | None = Field(
-        min_length=3, max_length=20, description="Nombre de usuario", default=None
+        min_length=3,
+        max_length=20,
+        description="Nombre de usuario",
+        default=None,
     )
 
 

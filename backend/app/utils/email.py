@@ -112,7 +112,7 @@ def generate_password_reset_email(
     """
 
     project_name = os.environ["APP_NAME"]
-    subject = f"{project_name} - Restablecimiento de contraserña para {username}"
+    subject = f"{project_name} - Restablecimiento de contraseña para {username}"
     frontend_url = os.environ["PASSWORD_RESET_FRONTEND_URL"]
     link = f"{frontend_url}?token={token}"
     expire_mins = int(os.environ["PASSWORD_RESET_TOKEN_EXPIRE"])

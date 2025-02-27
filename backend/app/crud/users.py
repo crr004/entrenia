@@ -176,7 +176,7 @@ def get_current_admin(*, current_user: CurrentUser) -> User:
 
 
 def update_user(
-    *, session: Session, user: User, user_data: dict, extra_data: dict | None
+    *, session: Session, user: User, user_data: dict, extra_data: dict | None = None
 ) -> User:
     """Actualiza los datos de un usuario.
 

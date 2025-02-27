@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
@@ -106,6 +107,130 @@ def admin_create_user(
             html_content=email_data.html_content,
         )
     return user
+
+
+@router.patch("/own", response_model=UserReturn)
+def update_user_own(
+    *, session: SessionDep, user_in: UserUpdateOwn, current_user: CurrentUser
+) -> UserReturn:
+    """Actualiza los datos del usuario actual.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        user_in (UserUpdateOwn): Datos del usuario a actualizar.
+        current_user (CurrentUser): Usuario actual.
+
+    Raises:
+        HTTPException[409]: Si el nombre de usuario ya existe en la base de datos.
+        HTTPException[400]: Si los campos no cumplen las restricciones.
+
+    Returns:
+        UserReturn: Usuario actualizado.
+    """
+
+    if user_in.full_name:
+        if not re.match(
+            r"^[A-Za-zÁ-ÿà-ÿ]+(?:[ '-][A-Za-zÁ-ÿà-ÿ]+)*$", user_in.full_name
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The full name field has invalid characters",
+            )
+
+    if user_in.username:
+        existing_user = get_user_by_username(session=session, username=user_in.username)
+        if existing_user and existing_user.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User with this username already exists",
+            )
+        if not re.match(r"^(?=.*[a-z]{3})[a-z0-9_]+$", user_in.username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The username can only contain lowercase letters, numbers and underscores, and must contain at least 3 letters",
+            )
+    user_data = user_in.model_dump(
+        exclude_unset=True
+    )  # Genera un diccionario con solo los datos que han sido modificados.
+
+    current_user = update_user(session=session, user=current_user, user_data=user_data)
+
+    return current_user
+
+
+@router.get("/own", response_model=UserReturn)
+def read_user_own(current_user: CurrentUser) -> UserReturn:
+    """Devuelve los datos del usuario actual.
+
+    Args:
+        current_user (CurrentUser): Usuario actual.
+
+    Returns:
+        UserReturn: Datos del usuario actual.
+    """
+    return current_user
+
+
+@router.patch("/own/password", response_model=Message)
+def update_password_own(
+    *, session: SessionDep, form_body: UserUpdatePassword, current_user: CurrentUser
+) -> Message:
+    """Actualiza la contraseña del usuario actual.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        body (UserUpdatePassword): Datos de la nueva contraseña.
+        current_user (CurrentUser): Usuario actual.
+
+    Raises:
+        HTTPException[400]: Si la contraseña actual es incorrecta o si la nueva contraseña es igual a la actual.
+
+    Returns:
+        Message: Mensaje de confirmación.
+    """
+
+    if not verify_password(
+        plain_password=form_body.current_password, hashed_password=current_user.password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
+        )
+    if form_body.current_password == form_body.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password cannot be the same as the current one",
+        )
+
+    hashed_password = hash_password(password=form_body.new_password)
+    current_user = update_password(
+        session=session, user=current_user, new_password=hashed_password
+    )
+    return Message(message="Password updated successfully")
+
+
+@router.delete("/own", response_model=Message)
+def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
+    """Elimina el usuario actual.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        current_user (CurrentUser): Usuario actual.
+
+    Raises:
+        HTTPException[403]: Si el usuario actual es un admin.
+
+    Returns:
+        Message: Mensaje de confirmación.
+    """
+
+    print("Hola")
+    if current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admins are not allowed to delete themselves",
+        )
+    delete_user(session=session, user=current_user)
+    return Message(message="User deleted successfully")
 
 
 @router.patch(
@@ -222,111 +347,3 @@ def read_user(
         )
 
     return user
-
-
-@router.get("/own", response_model=UserReturn)
-def read_user_own(current_user: CurrentUser) -> UserReturn:
-    """Devuelve los datos del usuario actual.
-
-    Args:
-        current_user (CurrentUser): Usuario actual.
-
-    Returns:
-        UserReturn: Datos del usuario actual.
-    """
-    return current_user
-
-
-@router.patch("/own", response_model=UserReturn)
-def update_user_own(
-    *, session: SessionDep, user_in: UserUpdateOwn, current_user: CurrentUser
-) -> UserReturn:
-    """Actualiza los datos del usuario actual.
-
-    Args:
-        session (SessionDep): Sesión de la base de datos.
-        user_in (UserUpdateOwn): Datos del usuario a actualizar.
-        current_user (CurrentUser): Usuario actual.
-
-    Raises:
-        HTTPException[409]: Si el nombre de usuario ya existe en la base de datos.
-
-    Returns:
-        UserReturn: Usuario actualizado.
-    """
-
-    if user_in.username:
-        existing_user = get_user_by_username(session=session, username=user_in.username)
-        if existing_user and existing_user.id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User with this username already exists",
-            )
-    user_data = user_in.model_dump(
-        exclude_unset=True
-    )  # Genera un diccionario con solo los datos que han sido modificados.
-
-    current_user = update_user(session=session, user=current_user, user_data=user_data)
-
-    return current_user
-
-
-@router.patch("/own/password", response_model=Message)
-def update_password_own(
-    *, session: SessionDep, form_body: UserUpdatePassword, current_user: CurrentUser
-) -> Message:
-    """Actualiza la contraseña del usuario actual.
-
-    Args:
-        session (SessionDep): Sesión de la base de datos.
-        body (UserUpdatePassword): Datos de la nueva contraseña.
-        current_user (CurrentUser): Usuario actual.
-
-    Raises:
-        HTTPException[400]: Si la contraseña actual es incorrecta o si la nueva contraseña es igual a la actual.
-
-    Returns:
-        Message: Mensaje de confirmación.
-    """
-
-    if not verify_password(
-        plain_password=form_body.current_password, hashed_password=current_user.password
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
-        )
-    if form_body.current_password == form_body.new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password cannot be the same as the current one",
-        )
-
-    hashed_password = hash_password(password=form_body.new_password)
-    current_user = update_password(
-        session=session, user=current_user, new_password=hashed_password
-    )
-    return Message(message="Password updated successfully")
-
-
-@router.delete("/own", response_model=Message)
-def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
-    """Elimina el usuario actual.
-
-    Args:
-        session (SessionDep): Sesión de la base de datos.
-        current_user (CurrentUser): Usuario actual.
-
-    Raises:
-        HTTPException[403]: Si el usuario actual es un admin.
-
-    Returns:
-        Message: Mensaje de confirmación.
-    """
-
-    if current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admins are not allowed to delete themselves",
-        )
-    delete_user(session=session, user=current_user)
-    return Message(message="User deleted successfully")

@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 
 from app.models.users import UserReturn, UserRegister, UserCreate
@@ -24,7 +26,8 @@ def register_user(
         background_tasks (BackgroundTasks): Tareas en segundo plano.
 
     Raises:
-        HTTPException: Si el usuario ya existe en el sistema.
+        HTTPException[409]: Si el usuario ya existe en el sistema.
+        HTTPException[400]: Si los campos no cumplen las restricciones.
 
     Returns:
         UserReturn: Usuario registrado.
@@ -33,15 +36,30 @@ def register_user(
     user = get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="The user with this email already exists in the system",
         )
     user = get_user_by_username(session=session, username=user_in.username)
     if user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="The user with this username already exists in the system",
         )
+
+    if not re.match(r"^(?=.*[a-z]{3})[a-z0-9_]+$", user_in.username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The username can only contain lowercase letters, numbers and underscores, and must contain at least 3 letters",
+        )
+
+    if user_in.full_name:
+        if not re.match(
+            r"^[A-Za-zÁ-ÿà-ÿ]+(?:[ '-][A-Za-zÁ-ÿà-ÿ]+)*$", user_in.full_name
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The full name field has invalid characters",
+            )
 
     user_create = UserCreate.model_validate(user_in)
     user = create_user(session=session, user_in=user_create)

@@ -36,7 +36,7 @@ def login_user(
     """
 
     user = authenticate_user(
-        session=session, email=data.username, password=data.password
+        session=session, email_or_username=data.username, password=data.password
     )
     if not user:
         raise HTTPException(
