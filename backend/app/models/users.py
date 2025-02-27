@@ -115,3 +115,14 @@ class UserUpdatePassword(SQLModel):
         max_length=50,
         description="Nueva contraseña del usuario (sin hashear)",
     )
+
+
+class NewPassword(SQLModel):
+    """Modelo de contraseña para restablecerla."""
+
+    token: str
+    new_password: str = Field(
+        min_length=9,
+        max_length=50,
+        description="Nueva contraseña del usuario (sin hashear)",
+    )

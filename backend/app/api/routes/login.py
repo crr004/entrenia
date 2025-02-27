@@ -2,14 +2,21 @@ import os
 from typing import Annotated
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import HTTPException
 
-from app.crud.users import SessionDep
+from app.crud.users import SessionDep, get_user_by_email, update_password
 from app.utils.users import authenticate_user
 from app.models.tokens import Token
-from app.utils.tokens import create_access_token
+from app.models.messages import Message
+from app.models.users import NewPassword
+from app.utils.tokens import (
+    create_access_token,
+    create_password_reset_token,
+    verify_password_reset_token,
+)
+from app.utils.email import generate_password_reset_email, send_email
+from app.utils.hashing import hash_password
 
 router = APIRouter(prefix="/login", tags=["login"])
 
@@ -50,3 +57,80 @@ def login_user(
             subject=user.id, expires_delta=acces_token_expire
         )
     )
+
+
+@router.post("/password-recovery/{email}")
+def recover_password(
+    session: SessionDep, email: str, background_tasks: BackgroundTasks
+) -> Message:
+    """Manda un correo al usuario para que restablezca su contraseña a través de un token.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        email (str): Email del usuario.
+        background_tasks (BackgroundTasks): Tareas en segundo plano.
+
+    Returns:
+        Message: Mensaje de confirmación.
+    """
+
+    user = get_user_by_email(session=session, email=email)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The user with this email does not exist in the system",
+        )
+
+    password_reset_token = create_password_reset_token(email=email)
+    if user.full_name:
+        username = user.full_name
+    else:
+        username = user.username
+    email_data = generate_password_reset_email(
+        email_to=user.email, username=username, token=password_reset_token
+    )
+
+    background_tasks.add_task(
+        send_email,
+        email_to=user.email,
+        subject=email_data.subject,
+        html_content=email_data.html_content,
+    )
+    return Message(message="Password recovery email sent")
+
+
+@router.post("/password-reset/")
+def reset_password(session: SessionDep, body: NewPassword) -> Message:
+    """Verifica el token y restablece la contraseña.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        body (NewPassword): Token y nueva contraseña.
+
+    Raises:
+        HTTPException[400]: Si el token no es válido o el usuario no está activo.
+        HTTPException[404]: Si no existe un usuario con ese email.
+
+    Return:
+        Message: Mensaje de confirmación.
+    """
+
+    email = verify_password_reset_token(token=body.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
+        )
+    user = get_user_by_email(session=session, email=email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The user with this email does not exist in the system.",
+        )
+    elif not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+        )
+    hashed_password = hash_password(password=body.new_password)
+    user = update_password(session=session, user=user, new_password=hashed_password)
+    return Message(message="Password updated successfully")

@@ -52,7 +52,7 @@ def register_user(
             username = user_in.username
 
         email_data = generate_new_account_email(
-            email_to=user_in.email, username=username, password=user_in.password
+            email_to=user_in.email, username=username
         )
 
         background_tasks.add_task(

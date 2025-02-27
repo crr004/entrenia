@@ -72,15 +72,12 @@ def send_email(
     logger.info(f"Message sent to {email_to}. Server response: {response}")
 
 
-def generate_new_account_email(
-    email_to: str, username: str, password: str
-) -> EmailData:
+def generate_new_account_email(email_to: str, username: str) -> EmailData:
     """Genera un email para notificar a un usuario que se ha creado una nueva cuenta.
 
     Args:
         email_to (str): Dirección de email del destinatario.
         username (str): Nombre de usuario.
-        password (str): Contraseña de la nueva cuenta.
 
     Returns:
         EmailData: Datos del email generado.
@@ -93,9 +90,41 @@ def generate_new_account_email(
         context={
             "project_name": project_name,
             "username": username,
-            "password": password,
             "email": email_to,
             "link": os.environ["FRONTEND_URL"],
+        },
+    )
+    return EmailData(html_content=html_content, subject=subject)
+
+
+def generate_password_reset_email(
+    email_to: str, username: str, token: str
+) -> EmailData:
+    """Genera un email para un usuario que quiere restablecer su contraseña.
+
+    Args:
+        email_to (str): Dirección de email del destinatario.
+        username (str): Nombre de usuario.
+        token (str): Token de restablecimiento de contraseña.
+
+    Returns:
+        EmailData: Datos del email generado.
+    """
+
+    project_name = os.environ["APP_NAME"]
+    subject = f"{project_name} - Restablecimiento de contraserña para {username}"
+    frontend_url = os.environ["PASSWORD_RESET_FRONTEND_URL"]
+    link = f"{frontend_url}?token={token}"
+    expire_mins = int(os.environ["PASSWORD_RESET_TOKEN_EXPIRE"])
+    expire_hours = str(int(expire_mins / 60))
+    html_content = render_email_template(
+        template_name="email_password_reset.html",
+        context={
+            "project_name": project_name,
+            "username": username,
+            "email": email_to,
+            "valid_hours": expire_hours,
+            "link": link,
         },
     )
     return EmailData(html_content=html_content, subject=subject)

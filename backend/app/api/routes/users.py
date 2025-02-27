@@ -68,7 +68,7 @@ def admin_create_user(
         user_in (UserCreate): Datos del usuario a crear.
 
     Raises:
-        HTTPException: Si el usuario ya existe en la base de datos.
+        HTTPException[409]: Si el usuario (email/username) ya existe en la base de datos.
 
     Returns:
         UserReturn: Usuario creado.
@@ -77,14 +77,14 @@ def admin_create_user(
     user = get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="The user with this email already exists in the system",
         )
 
     user = get_user_by_username(session=session, username=user_in.username)
     if user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICTT,
             detail="The user with this username already exists in the system",
         )
 
@@ -96,7 +96,7 @@ def admin_create_user(
             username = user_in.username
 
         email_data = generate_new_account_email(
-            email_to=user_in.email, username=username, password=user_in.password
+            email_to=user_in.email, username=username
         )
 
         background_tasks.add_task(
@@ -127,7 +127,8 @@ def admin_update_user(
         current_user (CurrentUser): Usuario actual.
 
     Raises:
-        HTTPException: Si el usuario no tiene suficientes privilegios.
+        HTTPException[404]: Si no existe un usuario con ese ID.
+        HTTPException[409]: Si el usuario (email/username) ya existe en la base de datos.
 
     Returns:
         UserReturn: Datos del usuario.
@@ -170,7 +171,8 @@ def admin_delete_user(
         current_user (CurrentUser): Usuario actual.
 
     Raises:
-        HTTPException: Si el usuario no tiene suficientes privilegios.
+        HTTPException[404]: Si no existe un usuario con ese ID.
+        HTTPException[403]: Si el usuario no tiene suficientes privilegios.
 
     Returns:
         Message: Mensaje de confirmación.
@@ -188,7 +190,7 @@ def admin_delete_user(
             detail="Admins are not allowed to delete themselves",
         )
 
-    delete_user(session=session, user=current_user)
+    delete_user(session=session, user=user)
     return Message(message="User deleted successfully")
 
 
@@ -204,7 +206,7 @@ def read_user(
         current_user (CurrentUser): Usuario actual.
 
     Raises:
-        HTTPException: Si el usuario no tiene suficientes privilegios.
+        HTTPException[403]: Si el usuario no tiene suficientes privilegios.
 
     Returns:
         UserReturn: Datos del usuario.
@@ -247,7 +249,7 @@ def update_user_own(
         current_user (CurrentUser): Usuario actual.
 
     Raises:
-        HTTPException: Si el nombre de usuario ya existe en la base de datos.
+        HTTPException[409]: Si el nombre de usuario ya existe en la base de datos.
 
     Returns:
         UserReturn: Usuario actualizado.
@@ -281,7 +283,7 @@ def update_password_own(
         current_user (CurrentUser): Usuario actual.
 
     Raises:
-        HTTPException: Si la contraseña actual es incorrecta o si la nueva contraseña es igual a la actual.
+        HTTPException[400]: Si la contraseña actual es incorrecta o si la nueva contraseña es igual a la actual.
 
     Returns:
         Message: Mensaje de confirmación.
@@ -315,7 +317,7 @@ def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
         current_user (CurrentUser): Usuario actual.
 
     Raises:
-        HTTPException: Si el usuario actual es un admin.
+        HTTPException[403]: Si el usuario actual es un admin.
 
     Returns:
         Message: Mensaje de confirmación.
