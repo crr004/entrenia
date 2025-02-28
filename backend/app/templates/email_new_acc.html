@@ -17,10 +17,12 @@
   <div style="background-color:#ffffff; max-width:620px; margin:auto; padding:45px 25px; text-align:center; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1);">
     <h2 style="font-family:Roboto, Helvetica, Arial, sans-serif; color:#222;">¡Bienvenid@ a {{ project_name }}!</h2>
     <p style="font-family:Arial, Helvetica, sans-serif; color:#444; font-size:16px;">Hola {{ username }},</p>
-    <p style="font-family:Arial, Helvetica, sans-serif; color:#444; font-size:16px;">Estamos encantados de que te unas a nosotros. Ya puedes iniciar sesión con tu usuario y contraseña.</p>
+    <p style="font-family:Arial, Helvetica, sans-serif; color:#444; font-size:16px;">Estamos encantados de que te unas a nosotros. Antes de poder iniciar sesión, debes verificar tu identidad. Puedes hacerlo haciendo clic en el botón de abajo:</p>
     <div style="margin:25px 0;">
-      <a href="{{ link }}" style="background:#22868d; color:#ffffff; font-family:Roboto, Helvetica, Arial, sans-serif; font-size:18px; padding:12px 26px; border-radius:8px; text-decoration:none; display:inline-block;">Accede a {{ project_name }}</a>
+      <a href="{{ link }}" style="background:#22868d; color:#ffffff; font-family:Roboto, Helvetica, Arial, sans-serif; font-size:18px; padding:12px 26px; border-radius:8px; text-decoration:none; display:inline-block;">Verifica tu identidad</a>
     </div>
+    <p style="font-family:Arial, Helvetica, sans-serif; color:#444; font-size:16px;">O copia y pega el siguiente enlace en tu navegador:</p>
+    <p style="font-family:Arial, Helvetica, sans-serif; color:#444; font-size:16px;"><a href="{{ link }}">{{ link }}</a></p>
   </div>
 </body>
 </html>

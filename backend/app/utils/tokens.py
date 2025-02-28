@@ -19,7 +19,7 @@ def create_access_token(*, subject: str | Any, expires_delta: timedelta) -> str:
     """
 
     expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {"exp": expire, "sub": str(subject), "type": "auth"}
     encoded_jwt = jwt.encode(to_encode, os.environ["SECRET_KEY"], algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -34,12 +34,31 @@ def create_password_reset_token(*, email: str) -> str:
         str: Token de restablecimiento de contraseña.
     """
 
-    delta = timedelta(int(os.environ["PASSWORD_RESET_TOKEN_EXPIRE"]))
+    delta = timedelta(minutes=int(os.environ["PASSWORD_RESET_TOKEN_EXPIRE"]))
     now = datetime.now(timezone.utc)
     expire = now + delta
     exp = expire.timestamp()
     encoded_jwt = jwt.encode(
-        {"exp": exp, "nbf": now, "sub": email},
+        {"exp": exp, "nbf": now, "sub": email, "type": "pass_reset"},
+        os.environ["SECRET_KEY"],
+        algorithm=ALGORITHM,
+    )
+    return encoded_jwt
+
+
+def create_verify_account_token(*, email: str) -> str:
+    """Crea un token de verificación de cuenta (identidad).
+
+    Args:
+        email (str): Email del usuario.
+
+    Returns:
+        str: Token de verificación de cuenta.
+    """
+
+    now = datetime.now(timezone.utc)
+    encoded_jwt = jwt.encode(
+        {"nbf": now, "sub": email, "type": "acc_verification"},
         os.environ["SECRET_KEY"],
         algorithm=ALGORITHM,
     )
@@ -47,10 +66,10 @@ def create_password_reset_token(*, email: str) -> str:
 
 
 def verify_password_reset_token(*, token: str) -> str | None:
-    """Crea un token de restablecimiento de contraseña.
+    """Verifica un token de restablecimiento de contraseña.
 
     Args:
-        token (str): Token de restablecimiento de contraseña.
+        token (str): Token.
 
     Returns:
         str | None: El identificador del usuario (extraído del token) si es válido,
@@ -61,6 +80,30 @@ def verify_password_reset_token(*, token: str) -> str | None:
         decoded_token = jwt.decode(
             token, os.environ["SECRET_KEY"], algorithms=[ALGORITHM]
         )
+        if decoded_token.get("type") != "pass_reset":
+            return None
+        return str(decoded_token["sub"])
+    except InvalidTokenError:
+        return None
+
+
+def verify_user_verification_token(*, token: str) -> str | None:
+    """Verifica un token de verificación de usuario (identidad).
+
+    Args:
+        token (str): Token.
+
+    Returns:
+        str | None: El identificador del usuario (extraído del token) si es válido,
+                    o None si el token es inválido.
+    """
+
+    try:
+        decoded_token = jwt.decode(
+            token, os.environ["SECRET_KEY"], algorithms=[ALGORITHM]
+        )
+        if decoded_token.get("type") != "acc_verification":
+            return None
         return str(decoded_token["sub"])
     except InvalidTokenError:
         return None

@@ -72,12 +72,13 @@ def send_email(
     logger.info(f"Message sent to {email_to}. Server response: {response}")
 
 
-def generate_new_account_email(email_to: str, username: str) -> EmailData:
+def generate_new_account_email(email_to: str, username: str, token: str) -> EmailData:
     """Genera un email para notificar a un usuario que se ha creado una nueva cuenta.
 
     Args:
         email_to (str): Dirección de email del destinatario.
         username (str): Nombre de usuario.
+        token (str): Token de verificación de cuenta.
 
     Returns:
         EmailData: Datos del email generado.
@@ -85,13 +86,15 @@ def generate_new_account_email(email_to: str, username: str) -> EmailData:
 
     project_name = os.environ["APP_NAME"]
     subject = f"{project_name} - Nueva cuenta de {username}"
+    frontend_url = os.environ["LANDING_FRONTEND_URL"]
+    link = f"{frontend_url}?token={token}"
     html_content = render_email_template(
         template_name="email_new_acc.html",
         context={
             "project_name": project_name,
             "username": username,
             "email": email_to,
-            "link": os.environ["FRONTEND_URL"],
+            "link": link,
         },
     )
     return EmailData(html_content=html_content, subject=subject)

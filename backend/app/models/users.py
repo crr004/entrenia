@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlmodel import Field, SQLModel
 from pydantic import EmailStr
+from app.models.tokens import Token
 
 
 class UserBase(SQLModel):
@@ -23,7 +24,7 @@ class UserBase(SQLModel):
     )
     is_active: bool = Field(default=True, description="Usuario activo")
     is_admin: bool = Field(default=False, description="Usuario administrador")
-    is_verified: bool = Field(default=True, description="Usuario verificado")
+    is_verified: bool = Field(default=False, description="Usuario verificado")
 
 
 # TABLA: users

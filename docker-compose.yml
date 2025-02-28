@@ -67,7 +67,7 @@ services:
       - SMTP_TLS=${SMTP_TLS?Variable not set}
       - SMTP_SSL=${SMTP_SSL?Variable not set}
       - SMTP_PORT=${SMTP_PORT?Variable not set}
-      - FRONTEND_URL=${FRONTEND_URL?Variable not set}
+      - LANDING_FRONTEND_URL=${LANDING_FRONTEND_URL?Variable not set}
       - PASSWORD_RESET_FRONTEND_URL=${PASSWORD_RESET_FRONTEND_URL?Variable not set}
       
 volumes:

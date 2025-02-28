@@ -121,7 +121,8 @@ def get_current_user(*, session: SessionDep, token: TokenDep) -> User:
         token (str): Token JWT.
 
     Raises:
-        HTTPException: Error HTTP.
+        HTTPException[403]: Si el token no es válido.
+        HTTPException[400]: Si el usuario no existe o su cuenta está desactivada o no verificada.
 
     Returns:
         User: Usuario actual.
@@ -130,6 +131,11 @@ def get_current_user(*, session: SessionDep, token: TokenDep) -> User:
     try:
         data = jwt.decode(token, os.environ["SECRET_KEY"], algorithms=tokens.ALGORITHM)
         token_data = TokenData(**data)
+        if data.get("type") != "auth":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Could not validate credentials",
+            )
     except (InvalidTokenError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -161,7 +167,7 @@ def get_current_admin(*, current_user: CurrentUser) -> User:
         current_user (User): Usuario actual.
 
     Raises:
-        HTTPException: Error HTTP.
+        HTTPException[403]: Si el usuario no tiene suficientes privilegios.
 
     Returns:
         User: Usuario actual.

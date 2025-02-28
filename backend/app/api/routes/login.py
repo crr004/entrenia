@@ -16,7 +16,7 @@ from app.utils.tokens import (
     verify_password_reset_token,
 )
 from app.utils.email import generate_password_reset_email, send_email
-from app.utils.hashing import hash_password
+from app.utils.hashing import hash_password, verify_password
 
 router = APIRouter(prefix="/login", tags=["login"])
 
@@ -109,7 +109,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
         body (NewPassword): Token y nueva contraseña.
 
     Raises:
-        HTTPException[400]: Si el token no es válido o el usuario no está activo.
+        HTTPException[400]: Si el token no es válido o el usuario no está activo o la contraseña está repetida.
         HTTPException[404]: Si no existe un usuario con ese email.
 
     Return:
@@ -125,12 +125,18 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="The user with this email does not exist in the system.",
+            detail="The user with this email does not exist in the system",
         )
     elif not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
+    if verify_password(plain_password=body.new_password, hashed_password=user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot reuse you previous password",
+        )
+
     hashed_password = hash_password(password=body.new_password)
     user = update_password(session=session, user=user, new_password=hashed_password)
     return Message(message="Password updated successfully")
