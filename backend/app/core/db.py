@@ -1,35 +1,37 @@
 import os
 
-from sqlmodel import Session, create_engine, SQLModel, select
+from sqlmodel import SQLModel, select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from app.models.users import User
 from app.crud import users
 
-DB_URL = os.environ["POSTGRES_URL"]
-engine = create_engine(DB_URL)
+DB_URL = os.environ["POSTGRES_URL"].replace("postgresql://", "postgresql+asyncpg://")
+engine = create_async_engine(DB_URL, echo=True, future=True)
+
+async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-def init_db():
+async def init_db():
     """Inicializa la base de datos."""
 
-    SQLModel.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
 
 
-def get_session():
-    """Genera una nueva sesión de la base de datos."""
+async def get_session():
+    """Genera una nueva sesión asíncrona de la base de datos."""
 
-    with Session(engine) as session:
+    async with AsyncSession(engine) as session:
         yield session
 
 
-def create_first_admin(session: Session):
-    """Crea el primer usuario administrador.
+async def create_first_admin(session: AsyncSession):
+    """Crea el primer usuario administrador de forma asíncrona."""
 
-    Args:
-        session (Session): Sesión de la base de datos.
-    """
-
-    user = session.exec(select(User).where(User.username == "admin")).first()
+    user = await session.execute(select(User).where(User.username == "admin"))
+    user = user.first()
     if not user:
         admin = User(
             username=os.environ["FIRST_ADMIN_USERNAME"],
@@ -38,4 +40,5 @@ def create_first_admin(session: Session):
             is_admin=True,
             is_verified=True,
         )
-        user = users.create_user(session=session, user_in=admin)
+
+        user = await users.create_user(session=session, user_in=admin)

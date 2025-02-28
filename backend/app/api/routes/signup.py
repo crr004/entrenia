@@ -18,7 +18,7 @@ router = APIRouter(prefix="/signup", tags=["signup"])
 
 
 @router.post("/", response_model=UserReturn)
-def register_user(
+async def register_user(
     session: SessionDep, user_in: UserRegister, background_tasks: BackgroundTasks
 ) -> UserReturn:
     """Registra un nuevo usuario en el sistema.
@@ -36,13 +36,13 @@ def register_user(
         UserReturn: Usuario registrado.
     """
 
-    user = get_user_by_email(session=session, email=user_in.email)
+    user = await get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this email already exists in the system",
         )
-    user = get_user_by_username(session=session, username=user_in.username)
+    user = await get_user_by_username(session=session, username=user_in.username)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -66,7 +66,7 @@ def register_user(
 
     user_create = UserCreate.model_validate(user_in)
 
-    user = create_user(session=session, user_in=user_create)
+    user = await create_user(session=session, user_in=user_create)
 
     verify_account_token = create_verify_account_token(email=user.email)
 
@@ -90,7 +90,7 @@ def register_user(
 
 
 @router.post("/account-verification/")
-def verify_account(session: SessionDep, token: str) -> Message:
+async def verify_account(session: SessionDep, token: str) -> Message:
     """Verifica el token y marca como verificada la cuenta del usuario.
 
     Args:
@@ -111,7 +111,7 @@ def verify_account(session: SessionDep, token: str) -> Message:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
         )
-    user = get_user_by_email(session=session, email=email)
+    user = await get_user_by_email(session=session, email=email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -124,5 +124,5 @@ def verify_account(session: SessionDep, token: str) -> Message:
         )
     user.is_verified = True
     user_data = user.model_dump(exclude_unset=True)
-    user = update_user(session=session, user=user, user_data=user_data)
+    user = await update_user(session=session, user=user, user_data=user_data)
     return Message(message="User verified successfully")

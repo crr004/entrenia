@@ -22,7 +22,7 @@ router = APIRouter(prefix="/login", tags=["login"])
 
 
 @router.post("/", status_code=status.HTTP_200_OK, response_model=Token)
-def login_user(
+async def login_user(
     session: SessionDep, data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> Token:
     """Obtiene un token de acceso para un usuario.
@@ -35,7 +35,7 @@ def login_user(
         Token: Token de acceso.
     """
 
-    user = authenticate_user(
+    user = await authenticate_user(
         session=session, email_or_username=data.username, password=data.password
     )
     if not user:
@@ -60,7 +60,7 @@ def login_user(
 
 
 @router.post("/password-recovery/{email}")
-def recover_password(
+async def recover_password(
     session: SessionDep, email: str, background_tasks: BackgroundTasks
 ) -> Message:
     """Manda un correo al usuario para que restablezca su contraseña a través de un token.
@@ -74,7 +74,7 @@ def recover_password(
         Message: Mensaje de confirmación.
     """
 
-    user = get_user_by_email(session=session, email=email)
+    user = await get_user_by_email(session=session, email=email)
 
     if not user:
         raise HTTPException(
@@ -101,7 +101,7 @@ def recover_password(
 
 
 @router.post("/password-reset/")
-def reset_password(session: SessionDep, body: NewPassword) -> Message:
+async def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """Verifica el token y restablece la contraseña.
 
     Args:
@@ -121,7 +121,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
         )
-    user = get_user_by_email(session=session, email=email)
+    user = await get_user_by_email(session=session, email=email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -138,5 +138,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
         )
 
     hashed_password = hash_password(password=body.new_password)
-    user = update_password(session=session, user=user, new_password=hashed_password)
+    user = await update_password(
+        session=session, user=user, new_password=hashed_password
+    )
     return Message(message="Password updated successfully")

@@ -1,9 +1,10 @@
 from app.core import db
 
 
-def start():
-    """Iniciar la base de datos y crear el primer administrador."""
+async def start():
+    """Inicia la base de datos y crea el primer administrador."""
 
-    db.init_db()
-    with db.Session(db.engine) as session:
-        db.create_first_admin(session)
+    await db.init_db()
+
+    async for session in db.get_session():
+        await db.create_first_admin(session)

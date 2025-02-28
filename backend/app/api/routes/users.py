@@ -28,6 +28,7 @@ from app.crud.users import (
     update_user_by_admin,
 )
 from app.utils.email import generate_new_account_email, send_email
+from app.utils.tokens import create_verify_account_token
 
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -39,7 +40,7 @@ router = APIRouter(prefix="/users", tags=["users"])
     dependencies=[Depends(get_current_admin)],
     response_model=UsersReturn,
 )
-def admin_read_users(
+async def admin_read_users(
     session: SessionDep, skip: int = 0, limit: int = 100
 ) -> UsersReturn:
     """Devuelve todos los usuarios del sistema.
@@ -53,13 +54,13 @@ def admin_read_users(
         UsersReturn: Lista de usuarios.
     """
 
-    users = get_all_users(session=session, skip=skip, limit=limit)
+    users = await get_all_users(session=session, skip=skip, limit=limit)
 
     return users
 
 
 @router.post("/", dependencies=[Depends(get_current_admin)], response_model=UserReturn)
-def admin_create_user(
+async def admin_create_user(
     *, session: SessionDep, user_in: UserCreate, background_tasks: BackgroundTasks
 ) -> UserReturn:
     """Crea un nuevo usuario en el sistema.
@@ -75,21 +76,24 @@ def admin_create_user(
         UserReturn: Usuario creado.
     """
 
-    user = get_user_by_email(session=session, email=user_in.email)
+    user = await get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this email already exists in the system",
         )
 
-    user = get_user_by_username(session=session, username=user_in.username)
+    user = await get_user_by_username(session=session, username=user_in.username)
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICTT,
             detail="The user with this username already exists in the system",
         )
 
-    user = create_user(session=session, user_in=user_in)
+    user = await create_user(session=session, user_in=user_in)
+
+    verify_account_token = create_verify_account_token(email=user.email)
+
     if user_in.email:
         if user_in.full_name:
             username = user_in.full_name
@@ -97,7 +101,7 @@ def admin_create_user(
             username = user_in.username
 
         email_data = generate_new_account_email(
-            email_to=user_in.email, username=username
+            email_to=user_in.email, username=username, token=verify_account_token
         )
 
         background_tasks.add_task(
@@ -110,7 +114,7 @@ def admin_create_user(
 
 
 @router.patch("/own", response_model=UserReturn)
-def update_user_own(
+async def update_user_own(
     *, session: SessionDep, user_in: UserUpdateOwn, current_user: CurrentUser
 ) -> UserReturn:
     """Actualiza los datos del usuario actual.
@@ -138,7 +142,9 @@ def update_user_own(
             )
 
     if user_in.username:
-        existing_user = get_user_by_username(session=session, username=user_in.username)
+        existing_user = await get_user_by_username(
+            session=session, username=user_in.username
+        )
         if existing_user and existing_user.id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -153,13 +159,15 @@ def update_user_own(
         exclude_unset=True
     )  # Genera un diccionario con solo los datos que han sido modificados.
 
-    current_user = update_user(session=session, user=current_user, user_data=user_data)
+    current_user = await update_user(
+        session=session, user=current_user, user_data=user_data
+    )
 
     return current_user
 
 
 @router.get("/own", response_model=UserReturn)
-def read_user_own(current_user: CurrentUser) -> UserReturn:
+async def read_user_own(current_user: CurrentUser) -> UserReturn:
     """Devuelve los datos del usuario actual.
 
     Args:
@@ -172,7 +180,7 @@ def read_user_own(current_user: CurrentUser) -> UserReturn:
 
 
 @router.patch("/own/password", response_model=Message)
-def update_password_own(
+async def update_password_own(
     *, session: SessionDep, form_body: UserUpdatePassword, current_user: CurrentUser
 ) -> Message:
     """Actualiza la contraseña del usuario actual.
@@ -202,14 +210,14 @@ def update_password_own(
         )
 
     hashed_password = hash_password(password=form_body.new_password)
-    current_user = update_password(
+    current_user = await update_password(
         session=session, user=current_user, new_password=hashed_password
     )
     return Message(message="Password updated successfully")
 
 
 @router.delete("/own", response_model=Message)
-def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
+async def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
     """Elimina el usuario actual.
 
     Args:
@@ -223,13 +231,12 @@ def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
         Message: Mensaje de confirmación.
     """
 
-    print("Hola")
     if current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admins are not allowed to delete themselves",
         )
-    delete_user(session=session, user=current_user)
+    await delete_user(session=session, user=current_user)
     return Message(message="User deleted successfully")
 
 
@@ -238,7 +245,7 @@ def delete_user_own(session: SessionDep, current_user: CurrentUser) -> Message:
     dependencies=[Depends(get_current_admin)],
     response_model=UserReturn,
 )
-def admin_update_user(
+async def admin_update_user(
     *,
     session: SessionDep,
     user_id: uuid.UUID,
@@ -259,33 +266,35 @@ def admin_update_user(
         UserReturn: Datos del usuario.
     """
 
-    user = get_user_by_id(session=session, id=user_id)
+    user = await get_user_by_id(session=session, id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this id does not exist in the system",
         )
     if user_in.email:
-        existing_user = get_user_by_email(session=session, email=user_in.email)
+        existing_user = await get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email already exists",
             )
     if user_in.username:
-        existing_user = get_user_by_username(session=session, username=user_in.username)
+        existing_user = await get_user_by_username(
+            session=session, username=user_in.username
+        )
         if existing_user and existing_user.id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this username already exists",
             )
 
-    user = update_user_by_admin(session=session, db_user=user, user_in=user_in)
+    user = await update_user_by_admin(session=session, db_user=user, user_in=user_in)
     return user
 
 
 @router.delete("/{user_id}", dependencies=[Depends(get_current_admin)])
-def admin_delete_user(
+async def admin_delete_user(
     session: SessionDep, user_id: uuid.UUID, current_user: CurrentUser
 ) -> Message:
     """Elimina un usuario dado su ID.
@@ -303,7 +312,7 @@ def admin_delete_user(
         Message: Mensaje de confirmación.
     """
 
-    user = get_user_by_id(session=session, id=user_id)
+    user = await get_user_by_id(session=session, id=user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -315,12 +324,12 @@ def admin_delete_user(
             detail="Admins are not allowed to delete themselves",
         )
 
-    delete_user(session=session, user=user)
+    await delete_user(session=session, user=user)
     return Message(message="User deleted successfully")
 
 
 @router.get("/{user_id}", response_model=UserReturn)
-def read_user(
+async def read_user(
     session: SessionDep, user_id: uuid.UUID, current_user: CurrentUser
 ) -> UserReturn:
     """Devuelve los datos de un usuario específico dado su ID.
@@ -337,7 +346,12 @@ def read_user(
         UserReturn: Datos del usuario.
     """
 
-    user = get_user_by_id(session=session, id=user_id)
+    user = await get_user_by_id(session=session, id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The user with this id does not exist in the system",
+        )
     if user == current_user:
         return user
     if not current_user.is_admin:

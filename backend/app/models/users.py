@@ -1,9 +1,8 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlmodel import Field, SQLModel
 from pydantic import EmailStr
-from app.models.tokens import Token
 
 
 class UserBase(SQLModel):
@@ -40,7 +39,7 @@ class User(UserBase, table=True):
         max_length=255, description="Contraseña del usuario (haseada)"
     )
     created_at: datetime = Field(
-        default=datetime.now(timezone.utc),
+        default=datetime.now().replace(tzinfo=None),
         description="Fecha de creación del usuario",
     )
 

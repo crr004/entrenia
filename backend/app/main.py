@@ -1,10 +1,19 @@
 import os
-
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.start import start
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Llama a la función de inicialización de la base de datos de manera asíncrona."""
+
+    await start()
+    yield
+
 
 app = FastAPI(
     tittle=os.environ["APP_NAME"],
@@ -13,6 +22,7 @@ app = FastAPI(
         "name": os.environ["APP_CONTACT_NAME"],
         "email": os.environ["APP_CONTACT_EMAIL"],
     },
+    lifespan=lifespan,
 )
 
 # Middleware para CORS
@@ -25,5 +35,3 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=os.environ["API_PREFIX"])
-
-start()
