@@ -345,6 +345,7 @@ async def read_user(
         current_user (CurrentUser): Usuario actual.
 
     Raises:
+        HTTPException[404]: Si no existe un usuario con ese ID.
         HTTPException[403]: Si el usuario no tiene suficientes privilegios.
 
     Returns:

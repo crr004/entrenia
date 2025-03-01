@@ -133,8 +133,9 @@ async def get_current_user(*, session: SessionDep, token: TokenDep) -> User:
         token (str): Token JWT.
 
     Raises:
-        HTTPException[403]: Si el token no es válido.
-        HTTPException[400]: Si el usuario no existe o su cuenta está desactivada o no verificada.
+        HTTPException[403]: Si el token no es válido o no se pueden validar las credenciales.
+                            o si la cuenta del usuario está desactivada/no verificada.
+        HTTPException[404]: Si no existe un usuario con ese ID.
 
     Returns:
         User: Usuario actual.
@@ -156,15 +157,15 @@ async def get_current_user(*, session: SessionDep, token: TokenDep) -> User:
     user = await get_user_by_id(session=session, id=token_data.sub)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
     if not user.is_verified:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unverified user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Unverified user"
         )
     return user
 

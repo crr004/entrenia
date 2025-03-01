@@ -31,6 +31,10 @@ async def login_user(
         session (SessionDep): Sesión de la base de datos.
         data (OAuth2PasswordRequestForm): Datos del usuario.
 
+    Raises:
+        HTTPException[401]: Si el nombre de usuario/email o la contraseña son incorrectos.
+        HTTPException[403]: Si el usuario no está verificado o su cuenta está desactivada.
+
     Returns:
         Token: Token de acceso.
     """
@@ -40,16 +44,16 @@ async def login_user(
     )
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email/username or password",
         )
     elif not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
     elif not user.is_verified:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unverified user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Unverified user"
         )
     acces_token_expire = timedelta(minutes=int(os.environ["ACCESS_TOKEN_EXPIRE"]))
     return Token(
@@ -69,6 +73,9 @@ async def recover_password(
         session (SessionDep): Sesión de la base de datos.
         email (str): Email del usuario.
         background_tasks (BackgroundTasks): Tareas en segundo plano.
+
+    Raises:
+        HTTPException[404]: Si el usuario con ese correo no se encuentra en el sistema.
 
     Returns:
         Message: Mensaje de confirmación.
@@ -109,8 +116,9 @@ async def reset_password(session: SessionDep, body: NewPassword) -> Message:
         body (NewPassword): Token y nueva contraseña.
 
     Raises:
-        HTTPException[400]: Si el token no es válido o el usuario no está activo o la contraseña está repetida.
+        HTTPException[400]: Si el token no es válido o la contraseña está repetida.
         HTTPException[404]: Si no existe un usuario con ese email.
+        HTTPException[403]: Si la cuenta del usuario está desactivada.
 
     Return:
         Message: Mensaje de confirmación.
@@ -129,7 +137,7 @@ async def reset_password(session: SessionDep, body: NewPassword) -> Message:
         )
     elif not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
     if verify_password(plain_password=body.new_password, hashed_password=user.password):
         raise HTTPException(
