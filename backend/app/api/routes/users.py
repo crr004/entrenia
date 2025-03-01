@@ -59,7 +59,12 @@ async def admin_read_users(
     return users
 
 
-@router.post("/", dependencies=[Depends(get_current_admin)], response_model=UserReturn)
+@router.post(
+    "/",
+    dependencies=[Depends(get_current_admin)],
+    response_model=UserReturn,
+    status_code=status.HTTP_201_CREATED,
+)
 async def admin_create_user(
     *, session: SessionDep, user_in: UserCreate, background_tasks: BackgroundTasks
 ) -> UserReturn:
@@ -86,7 +91,7 @@ async def admin_create_user(
     user = await get_user_by_username(session=session, username=user_in.username)
     if user:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICTT,
+            status_code=status.HTTP_409_CONFLICT,
             detail="The user with this username already exists in the system",
         )
 

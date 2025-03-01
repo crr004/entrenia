@@ -17,7 +17,7 @@ from app.models.messages import Message
 router = APIRouter(prefix="/signup", tags=["signup"])
 
 
-@router.post("/", response_model=UserReturn)
+@router.post("/", response_model=UserReturn, status_code=status.HTTP_201_CREATED)
 async def register_user(
     session: SessionDep, user_in: UserRegister, background_tasks: BackgroundTasks
 ) -> UserReturn:
