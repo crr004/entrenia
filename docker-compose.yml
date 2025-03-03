@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres
+    restart: always
+    container_name: entrenia-postgres
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+
+  backend:
+    image: entrenia-backend
+    pull_policy: never
+    container_name: entrenia-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    volumes:
+      - ./backend/app:/app/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    environment:
+      - APP_NAME=${APP_NAME?Variable not set}
+      - APP_DESCRIPTION=${APP_DESCRIPTION?Variable not set}
+      - APP_CONTACT_NAME=${APP_CONTACT_NAME?Variable not set}
+      - APP_CONTACT_EMAIL=${APP_CONTACT_EMAIL?Variable not set}
+      - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
+      - API_PREFIX=${API_PREFIX?Variable not set}
+      - POSTGRES_SERVER=${POSTGRES_SERVER?Variable not set}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+      - POSTGRES_URL=${POSTGRES_URL?Variable not set}
+      - FIRST_ADMIN_USERNAME=${FIRST_ADMIN_USERNAME?Variable not set}
+      - FIRST_ADMIN_PASSWORD=${FIRST_ADMIN_PASSWORD?Variable not set}
+      - FIRST_ADMIN_EMAIL=${FIRST_ADMIN_EMAIL?Variable not set}
+      - ACCESS_TOKEN_EXPIRE=${ACCESS_TOKEN_EXPIRE?Variable not set}
+      - PASSWORD_RESET_TOKEN_EXPIRE=${PASSWORD_RESET_TOKEN_EXPIRE?Variabe not set}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - SMTP_HOST=${SMTP_HOST?Variable not set}
+      - SMTP_USER=${SMTP_USER?Variable not set}
+      - SMTP_PASSWORD=${SMTP_PASSWORD?Variable not set}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL?Variable not set}
+      - SMTP_TLS=${SMTP_TLS?Variable not set}
+      - SMTP_SSL=${SMTP_SSL?Variable not set}
+      - SMTP_PORT=${SMTP_PORT?Variable not set}
+      - LANDING_FRONTEND_URL=${LANDING_FRONTEND_URL?Variable not set}
+      - PASSWORD_RESET_FRONTEND_URL=${PASSWORD_RESET_FRONTEND_URL?Variable not set}
+      
+volumes:
+  postgres-db:
