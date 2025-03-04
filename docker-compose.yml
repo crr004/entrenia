@@ -69,6 +69,20 @@ services:
       - SMTP_PORT=${SMTP_PORT?Variable not set}
       - LANDING_FRONTEND_URL=${LANDING_FRONTEND_URL?Variable not set}
       - PASSWORD_RESET_FRONTEND_URL=${PASSWORD_RESET_FRONTEND_URL?Variable not set}
+  frontend:
+    image: entrenia-frontend
+    pull_policy: never
+    container_name: entrenia-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app/app
+      - ./frontend/nginx-setup.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 80:80
+    depends_on:
+      - backend
       
 volumes:
   postgres-db:
