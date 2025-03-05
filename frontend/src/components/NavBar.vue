@@ -75,9 +75,7 @@ const switchToSignup = () => {
 
 const loginSuccess = async () => {
   try{
-    const apiUrl = 'http://localhost:8000/api/users/own';
-
-    const response = await axios.get(apiUrl);
+    const response = await axios.get('/users/own');
 
     const user = response.data;
     authStore.setUser(user);

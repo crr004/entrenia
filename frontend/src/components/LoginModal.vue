@@ -153,10 +153,8 @@ const handleLogin = async () => {
       const formData = new URLSearchParams();
       formData.append('username', username.value);
       formData.append('password', password.value);
-      
-      const apiUrl = 'http://localhost:8000/api/login';
 
-      const response = await axios.post(apiUrl, formData, {
+      const response = await axios.post('/login', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
