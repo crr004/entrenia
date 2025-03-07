@@ -3,7 +3,7 @@
     <div v-if="isOpen" class="modal-overlay">
       <div class="auth-modal">
         <h1>¡Crea tu cuenta!</h1>
-        <button class="close-button" @click="closeSignup">
+        <button class="close-modal-button" @click="closeSignup">
           <font-awesome-icon :icon="['fas', 'xmark']" />
         </button>
         <form class="signup-body" @submit.prevent="handleSignup">
@@ -34,7 +34,7 @@
               id="signup-password"
               @input="validatePassword"
             />
-            <button type="submit" class="submit-button" :disabled="isLoading">
+            <button type="submit" class="app-button" :disabled="isLoading">
               <span v-if="!isLoading">Registrarse</span>
               <span v-else>
                 <font-awesome-icon icon="spinner" spin />
@@ -51,6 +51,7 @@
 </template>
 
 <style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';

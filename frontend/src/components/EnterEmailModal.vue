@@ -3,7 +3,7 @@
     <div v-if="isOpen" class="modal-overlay">
       <div class="auth-modal" id="login-modal">
         <h1>¡Restablece tu contraseña!</h1>
-        <button class="close-button" @click="closeEnterEmailModal">
+        <button class="close-modal-button" @click="closeEnterEmailModal">
           <font-awesome-icon :icon="['fas', 'xmark']" />
         </button>
         <form class="login-body" @submit.prevent="handleResetPassword">
@@ -15,7 +15,7 @@
               ref="emailFieldRef"
             />
             
-            <button type="submit" class="submit-button" :disabled="isLoading || !email">
+            <button type="submit" class="app-button" :disabled="isLoading || !email">
               <span v-if="!isLoading">Enviar instrucciones</span>
               <span v-else>
                 <font-awesome-icon icon="spinner" spin />
@@ -29,6 +29,7 @@
 </template>
 
 <style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';

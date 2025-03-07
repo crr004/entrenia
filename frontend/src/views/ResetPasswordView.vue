@@ -12,14 +12,14 @@
         <font-awesome-icon :icon="['fas', 'exclamation-triangle']" class="error-icon" />
         <h2>Enlace inválido o expirado</h2>
         <p>El enlace que has utilizado no es válido o ha expirado. Por favor, solicita un nuevo enlace para restablecer tu contraseña.</p>
-        <button @click="goToHome" class="submit-button">Volver al inicio</button>
+        <button @click="goToHome" class="app-button">Volver al inicio</button>
       </div>
       
       <div v-else-if="tokenStatus === 'success'" class="success-state">
         <font-awesome-icon :icon="['fas', 'check-circle']" class="success-icon" />
         <h2>¡Contraseña actualizada!</h2>
         <p>Tu contraseña ha sido actualizada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
-        <button @click="goToHome" class="submit-button">Volver al inicio</button>
+        <button @click="goToHome" class="app-button">Volver al inicio</button>
       </div>
       
       <form v-else-if="tokenStatus === 'valid'" class="auth-modal-form reset-password-form" @submit.prevent="handleSubmit">
@@ -41,7 +41,7 @@
           @input="validateConfirmPassword"
         />
         
-        <button type="submit" class="submit-button" :disabled="isSubmitting">
+        <button type="submit" class="app-button" :disabled="isSubmitting">
           <span v-if="!isSubmitting">Restablecer contraseña</span>
           <font-awesome-icon v-else :icon="['fas', 'spinner']" spin />
         </button>
@@ -183,6 +183,7 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>
 
 <style scoped>
 .reset-password-card {

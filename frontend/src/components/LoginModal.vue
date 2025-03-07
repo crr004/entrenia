@@ -3,7 +3,7 @@
     <div v-if="isOpen" class="modal-overlay">
       <div class="auth-modal" id="login-modal">
         <h1>¡Hola!</h1>
-        <button class="close-button" @click="closeLogin">
+        <button class="close-modal-button" @click="closeLogin">
           <font-awesome-icon :icon="['fas', 'xmark']" />
         </button>
         <form class="login-body" @submit.prevent="handleLogin">
@@ -28,7 +28,7 @@
             <div class="reset-password-link">
               ¿Has olvidado tu contraseña? <a class="ref-link" href="#" @click.prevent="switchToEnterEmailModal">Restablécela</a>
             </div>
-            <button type="submit" class="submit-button" :disabled="isLoading">
+            <button type="submit" class="app-button" :disabled="isLoading">
               <span v-if="!isLoading">Iniciar sesión</span>
               <span v-else>
                 <font-awesome-icon icon="spinner" spin />
@@ -45,6 +45,7 @@
 </template>
 
 <style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';
