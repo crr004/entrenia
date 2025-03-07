@@ -3,22 +3,53 @@
     <div class="navbar-title">
       <router-link to="/">EntrenIA</router-link>
     </div>
-    <div class="navbar-links">
-      <router-link to="/">Inicio</router-link>
-      <span id="nav-separator"> | </span>
-      <router-link to="/about">Sobre EntrenIA</router-link>
+    
+    <div class="burger-menu" @click="toggleBurgerMenu">
+      <div :class="['bar', {'active': burgerMenuOpen}]"></div>
+      <div :class="['bar', {'active': burgerMenuOpen}]"></div>
+      <div :class="['bar', {'active': burgerMenuOpen}]"></div>
     </div>
-    <div class="navbar-personal" v-if="!authStore.isAuthenticated">
-      <span class="navbar-username" @click="toggleLoginModal">Iniciar sesión</span>
-      <span id="nav-separator"></span>
-      <span class="navbar-username" id="register-button" @click="toggleSignupModal">Registrarse</span>
+    
+    <div :class="['nav-content', {'active': burgerMenuOpen}]">
+      <div class="navbar-links">
+        <router-link to="/" @click="closeBurgerMenu">Inicio</router-link>
+        <span id="nav-separator" class="desktop-only"> | </span>
+        <router-link to="/about" @click="closeBurgerMenu">Sobre EntrenIA</router-link>
+      </div>
+      
+      <div class="navbar-personal" v-if="!authStore.isAuthenticated">
+        <span class="navbar-username" @click="handleLoginClick">Iniciar sesión</span>
+        <span id="nav-separator" class="desktop-only"></span>
+        <span class="navbar-username" id="register-button" @click="handleSignupClick">Registrarse</span>
+      </div>
+      <div class="navbar-personal" v-else>
+        <div class="desktop-only user-container">
+          <span class="navbar-username user-profile" @click="toggleUserDropdown">
+            <font-awesome-icon :icon="['fas', 'user']" class="user-icon" />
+            {{ displayName }}
+          </span>
+          <UserDropdown v-if="isUserDropdownOpen" @close="closeUserDropdown" />
+        </div>
+        
+        <div class="burger-only user-menu-burger">
+          <hr>
+          <div class="user-greeting-burger">
+            <span class="username-burger">{{ displayName }}</span>
+          </div>
+          <div class="user-links-burger">
+            <router-link to="/account" @click="closeBurgerMenu" class="user-link-burger">
+              <font-awesome-icon :icon="['fas', 'user-cog']" class="link-icon" fixed-width />
+              Mi cuenta
+            </router-link>
+            <a href="#" @click.prevent="handleLogout" class="user-link-burger logout-link">
+              <font-awesome-icon :icon="['fas', 'sign-out-alt']" class="link-icon" fixed-width />
+              Cerrar sesión
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="navbar-personal" v-else>
-      <span class="navbar-username user-profile">
-        <font-awesome-icon :icon="['fas', 'user']" class="user-icon" />
-        {{ displayName }}
-      </span>
-    </div>
+    
     <SignupModal 
       :isOpen="isSignupModalOpen"
       @close="closeSignupModal"
@@ -28,22 +59,56 @@
       :isOpen="isLoginModalOpen"
       @close="closeLoginModal"
       @switchToSignup="switchToSignup"
+      @switchToEnterEmailModal="switchToEnterEmailModal"
       @loginSuccess="loginSuccess"
     />
+    <EnterEmailModal 
+      :isOpen="isEnterEmailModalOpen"
+      @close="closeEnterEmailModal"
+    />
   </nav>
-  
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import SignupModal from './SignupModal.vue';
 import LoginModal from './LoginModal.vue';
+import EnterEmailModal from './EnterEmailModal.vue';
+import UserDropdown from './UserDropdown.vue';
+import { notifyError } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 
+const router = useRouter();
 const isSignupModalOpen = ref(false);
 const isLoginModalOpen = ref(false);
+const isEnterEmailModalOpen = ref(false);
+const isUserDropdownOpen = ref(false);
+const burgerMenuOpen = ref(false);
 const authStore = useAuthStore();
+
+const toggleBurgerMenu = () => {
+  burgerMenuOpen.value = !burgerMenuOpen.value;
+  
+  if (!burgerMenuOpen.value) {
+    isUserDropdownOpen.value = false;
+  }
+};
+
+const closeBurgerMenu = () => {
+  burgerMenuOpen.value = false;
+};
+
+const handleLoginClick = () => {
+  toggleLoginModal();
+  closeBurgerMenu();
+};
+
+const handleSignupClick = () => {
+  toggleSignupModal();
+  closeBurgerMenu();
+};
 
 const toggleSignupModal = () => {
   isSignupModalOpen.value = true;
@@ -55,12 +120,24 @@ const toggleLoginModal = () => {
   isSignupModalOpen.value = false; 
 };
 
+const toggleUserDropdown = () => {
+  isUserDropdownOpen.value = !isUserDropdownOpen.value;
+};
+
 const closeSignupModal = () => {
   isSignupModalOpen.value = false;
 };
 
 const closeLoginModal = () => {
   isLoginModalOpen.value = false;
+};
+
+const closeEnterEmailModal = () => {
+  isEnterEmailModalOpen.value = false;
+};
+
+const closeUserDropdown = () => {
+  isUserDropdownOpen.value = false;
 };
 
 const switchToLogin = () => {
@@ -73,14 +150,23 @@ const switchToSignup = () => {
   isSignupModalOpen.value = true;
 };
 
+const switchToEnterEmailModal = () => {
+  isLoginModalOpen.value = false;
+  isEnterEmailModalOpen.value = true;
+};
+
 const loginSuccess = async () => {
   try{
     const response = await axios.get('/users/own');
-
     const user = response.data;
     authStore.setUser(user);
   } catch (error) {
-    console.error('Error fetching user data:', error);
+    authStore.isAuthenticated = false;
+    console.error('Error fetching user data after login:', error);
+    notifyError(
+      "Error inesperado", 
+      "Ha ocurrido un error al iniciar sesión. Por favor, inténtalo de nuevo más tarde."
+    );
   }
 };
 
@@ -88,12 +174,54 @@ const displayName = computed(() => {
   const user = authStore.user;
   if (!user) return 'Usuario';
   
-  if (user.full_name) {
-    return `${user.full_name}`;
+  let name = user.full_name || user.username || 'Usuario';
+  
+  if (name.length > 40) {
+    name = name.substring(0, 40) + '...';
   }
   
-  return user.username || 'Usuario';
+  return name;
 });
+
+const handleClickOutside = (event) => {
+  const profileElement = document.querySelector('.user-profile');
+  const dropdownElement = document.querySelector('.user-dropdown-container');
+  const burgerMenu = document.querySelector('.burger-menu');
+  
+  if (
+    isUserDropdownOpen.value &&
+    (!profileElement || !profileElement.contains(event.target)) &&
+    (!dropdownElement || !dropdownElement.contains(event.target))
+  ) {
+    isUserDropdownOpen.value = false;
+  }
+  
+  if (
+    burgerMenuOpen.value &&
+    (!burgerMenu || !burgerMenu.contains(event.target)) &&
+    event.target.closest('.nav-content') === null
+  ) {
+    burgerMenuOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
+const handleLogout = () => {
+  try {
+    authStore.logout();
+    closeBurgerMenu();
+    router.push('/');
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
+};
 </script>
 
 
@@ -113,6 +241,7 @@ const displayName = computed(() => {
   border-bottom: 1px solid #b4b4b4;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   background-color: #FFFDF5;
+  z-index: 100;
 }
 
 .navbar-title a{
@@ -129,9 +258,19 @@ const displayName = computed(() => {
   transform: scale(1.05);
 }
 
+.nav-content {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  justify-content: space-between;
+}
+
 .navbar-links {
   justify-content: center;
   margin-left: 30px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .navbar-links a {
@@ -143,36 +282,41 @@ const displayName = computed(() => {
   font-weight: 500;
 }
 
-.navbar-links a:hover {
-  background-color: rgba(245, 235, 204, 0.4);
-  padding: 2px 5px;
-  border-radius: 4px;
-  margin: 0 5px;
-}
-
 .navbar-links a.router-link-exact-active {
   color: rgb(34, 134, 141);
+}
+
+.desktop-only {
+  display: inline-block;
+}
+
+.burger-only {
+  display: none;
 }
 
 .navbar-personal {
   margin-left: auto;
   margin-right: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .navbar-username {
   color: white;
   background-color: #555;
-  padding: 5px;
+  padding: 5px 10px;
   border-radius: 5px;
   text-decoration: none;
   font-size: 1.3em;
-  transition: transform 0.2s ease;
   display: inline-block;
-}
-
-.navbar-username:hover {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
   cursor: pointer;
-  transform: scale(1.05);
+  margin: 0 5px;
 }
 
 #register-button{
@@ -184,28 +328,238 @@ const displayName = computed(() => {
   color: #b4b4b4;
 }
 
-/* Responsive Styles */
+@media (min-width: 769px) {
+  .navbar-links a {
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .navbar-links a:hover {
+    background-color: rgba(245, 235, 204, 0.4);
+    border-radius: 4px;
+  }
+
+  .navbar-username {
+    transition: transform 0.2s ease;
+  }
+
+  .navbar-username:hover {
+    transform: scale(1.05);
+  }
+  
+  .burger-only {
+    display: none !important;
+  }
+}
+
+.burger-menu {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 21px;
+  cursor: pointer;
+  z-index: 110;
+}
+
+.bar {
+  height: 3px;
+  width: 100%;
+  background-color: #333;
+  border-radius: 10px;
+  transition: all 0.3s ease-in-out;
+}
+
+.burger-menu .bar.active:nth-child(1) {
+  transform: translateY(9px) rotate(45deg);
+}
+
+.burger-menu .bar.active:nth-child(2) {
+  opacity: 0;
+}
+
+.burger-menu .bar.active:nth-child(3) {
+  transform: translateY(-9px) rotate(-45deg);
+}
+
+.user-menu-burger {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 15px;
+}
+
+.user-greeting-burger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.username-burger {
+  color: black;
+  font-size: 16px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: 10px;
+}
+
+.user-links-burger {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  font-weight: 500;
+  align-items: center;
+}
+
+.user-link-burger {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  color: black;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.user-link-burger:hover {
+  background-color: rgba(245, 235, 204, 0.7);
+}
+
+.link-icon {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid #666;
+  margin: 8px 0;
+}
+
 @media (max-width: 768px) {
   .navbar {
     padding: 10px;
+    will-change: contents; 
   }
   
   .navbar-title a {
     margin-left: 0;
-    font-size: 1.2em;
+    font-size: 1.5em;
+  }
+  
+  .burger-menu {
+    display: flex;
+  }
+  
+  .nav-content {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background-color: #FFFDF5;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    
+    transform: translateY(-100vh);
+    transition: transform 0.3s ease-in-out;
+    
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
+    
+    z-index: 90;
+  }
+  
+  .nav-content.active {
+    transform: translateY(0);
+    height: auto;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
   }
   
   .navbar-links {
-    margin-left: 10px;
+    margin: 0;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .navbar-links a {
+    margin: 10px 0;
+    font-size: 1.2em;
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    transition: none;
+    background-color: transparent;
+  }
+  
+  .navbar-links a:hover {
+    background-color: rgba(245, 235, 204, 0.7);
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+    transform: none;
+  }
+  
+  .navbar-personal {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
   }
   
   .navbar-username {
-    padding: 6px;
-    font-size: 13px;
+    margin: 5px 0;
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    max-width: none;
+    transition: none;
   }
   
-  #nav-separator {
-    margin: 0 5px;
+  .navbar-username:hover {
+    transform: none;
+    background-color: rgba(85, 85, 85, 0.9);
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .burger-only {
+    display: block;
+  }
+  
+  .user-dropdown-container {
+    position: fixed;
+    top: auto;
+    right: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .navbar-username {
+    font-size: 1em;
+    max-width: 150px;
+  }
+  
+  .navbar-links a {
+    font-size: 1em;
   }
 }
 </style>

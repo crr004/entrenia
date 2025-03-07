@@ -1,10 +1,10 @@
 <template>
   <div id="app">
-    <NavBar />
+    <NavBar v-if="$route.meta.showNav !== false" />
     <main class="content">
       <RouterView />
     </main>
-    <Footer />
+    <Footer v-if="$route.meta.showFooter !== false" />
   </div>
 </template>
 

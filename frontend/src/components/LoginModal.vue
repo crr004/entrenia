@@ -6,7 +6,7 @@
         <button class="close-button" @click="closeLogin">
           <font-awesome-icon :icon="['fas', 'xmark']" />
         </button>
-        <form class="signup-body" @submit.prevent="handleLogin">
+        <form class="login-body" @submit.prevent="handleLogin">
           <div class="auth-modal-form">
             <LoginNameField
               ref="usernameFieldRef"
@@ -23,12 +23,12 @@
               placeholder="Introduce tu contraseña"
               :error="passwordError"
               hint="La contraseña debe tener al menos 9 caracteres."
-              id="signup-password"
+              id="login-password"
             />
             <div class="reset-password-link">
-              ¿Has olvidado tu contraseña? <a class="ref-link">Restablécela</a>
+              ¿Has olvidado tu contraseña? <a class="ref-link" href="#" @click.prevent="switchToEnterEmailModal">Restablécela</a>
             </div>
-            <button type="submit" class="submit-button">
+            <button type="submit" class="submit-button" :disabled="isLoading">
               <span v-if="!isLoading">Iniciar sesión</span>
               <span v-else>
                 <font-awesome-icon icon="spinner" spin />
@@ -69,7 +69,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'switchToSignup', 'loginSuccess']);
+const emit = defineEmits(['close', 'switchToSignup', 'switchToEnterEmailModal', 'loginSuccess']);
 
 watch(() => props.isOpen, async (newValue) => {
   if (newValue) {
@@ -102,6 +102,11 @@ const closeLogin = () => {
 
 const switchToSignup = () => {
   emit('switchToSignup');
+  resetForm();
+};
+
+const switchToEnterEmailModal = () => {
+  emit('switchToEnterEmailModal');
   resetForm();
 };
 
@@ -148,7 +153,6 @@ const handleLogin = async () => {
   
   if (isValid) {
     try {
-      isLoading.value = true;
       
       const formData = new URLSearchParams();
       formData.append('username', username.value);
@@ -221,7 +225,7 @@ const handleLogin = async () => {
             );
         }
       } else if (error.request) {
-        // La petición fue realizada pero no se recibió respuesta
+        // La petición fue realizada pero no se recibe respuesta
         notifyError(
           "Error de conexión", 
           "No se pudo conectar con el servidor. Verifica tu conexión a internet."
@@ -230,9 +234,11 @@ const handleLogin = async () => {
         // Error al configurar la petición
         notifyError(
           "Error", 
-          "Los datos de acceso son incorrectos."
+          "Ha ocurrido un problema al procesar tu solicitud."
         );
       }
+    } finally {
+      isLoading.value = false;
     }
   }
 };

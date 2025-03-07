@@ -5,13 +5,32 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomeView
+    component: HomeView,
+    meta: { showNav: true, showFooter: true }
   },
   {
     path: '/about',
     name: 'about',
-    // Carga perezosa (lazy-loading) para mejorar el rendimiento
-    component: () => import('../views/AboutView.vue')
+    component: () => import('../views/AboutView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('../views/ResetPasswordView.vue'),
+    meta: { showNav: false, showFooter: false }
+  },
+  {
+    path: '/account',
+    name: 'account',
+    component: () => import('../views/AccountView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('../views/NotFoundView.vue'),
+    meta: { showNav: false, showFooter: false }
   }
 ]
 

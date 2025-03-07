@@ -76,6 +76,7 @@ async def recover_password(
 
     Raises:
         HTTPException[404]: Si el usuario con ese correo no se encuentra en el sistema.
+        HTTPException[403]: Si el usuario no está verificado o su cuenta está desactivada.
 
     Returns:
         Message: Mensaje de confirmación.
@@ -87,6 +88,14 @@ async def recover_password(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this email does not exist in the system",
+        )
+    elif not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
+        )
+    elif not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Unverified user"
         )
 
     password_reset_token = create_password_reset_token(email=email)
