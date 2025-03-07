@@ -9,21 +9,14 @@
         <form class="login-body" @submit.prevent="handleLogin">
           <div class="auth-modal-form">
             <LoginNameField
-              ref="usernameFieldRef"
               v-model="username"
-              label="Nombre de usuario o correo electrónico*"
-              placeholder="Introduce tu nombre o correo"
               :error="usernameError"
-              icon="user"
               @input="removeSpaces"
+              ref="usernameFieldRef"
             />
             <PasswordField 
               v-model="password"
-              label="Contraseña*"
-              placeholder="Introduce tu contraseña"
               :error="passwordError"
-              hint="La contraseña debe tener al menos 9 caracteres."
-              id="login-password"
             />
             <div class="reset-password-link">
               ¿Has olvidado tu contraseña? <a class="ref-link" href="#" @click.prevent="switchToEnterEmailModal">Restablécela</a>

@@ -10,7 +10,6 @@
           <div class="auth-modal-form">
             <FullNameField
               v-model="fullName"
-              label="Nombre completo"
               :error="fullNameError"
               @input="validateFullName"
               ref="fullNameFieldRef"
@@ -27,11 +26,7 @@
             />
             <PasswordField 
               v-model="password"
-              label="Contraseña*"
-              placeholder="Introduce tu contraseña"
               :error="passwordError"
-              hint="La contraseña debe tener al menos 9 caracteres."
-              id="signup-password"
               @input="validatePassword"
             />
             <button type="submit" class="app-button" :disabled="isLoading">
@@ -109,7 +104,7 @@ const validateFullName = () => {
 };
 
 const validateUsername = () => {
-  const usernameRegex = /^(?=.*[a-z]{3})[a-z0-9_]+$/;
+  const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
   
   if (!username.value) {
     usernameError.value = 'El nombre de usuario es obligatorio.';

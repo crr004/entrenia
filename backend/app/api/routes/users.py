@@ -155,7 +155,7 @@ async def update_user_own(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this username already exists",
             )
-        if not re.match(r"^(?=.*[a-z]{3})[a-z0-9_]+$", user_in.username):
+        if not re.match(r"^(?=(?:.*[a-z]){3})[a-z0-9_]+$", user_in.username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="The username can only contain lowercase letters, numbers and underscores, and must contain at least 3 letters",
