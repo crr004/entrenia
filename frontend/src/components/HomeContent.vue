@@ -22,7 +22,6 @@ onMounted(async () => {
 
         await axios.post(`/signup/account-verification?token=${token}`, {});
         
-        // Verificación exitosa
         notifySuccess(
           'Cuenta verificada', 
           'Tu cuenta ha sido verificada con éxito. Ahora puedes iniciar sesión.'
@@ -30,23 +29,26 @@ onMounted(async () => {
         
         
       } catch (error) {
-        // Error en la verificación
         if (error.response) {
-          // Manejar diferentes tipos de errores de la API
           const status = error.response.status;
           const detail = error.response.data.detail || 'Error desconocido';
           
           if (status === 400) {
-            notifyError('Error de verificación', 'El token de verificación no es válido o ha expirado.');
+            notifyError('Error de verificación', 
+            'El token de verificación no es válido o ha expirado.');
           } else if (status === 404) {
-            notifyError('Error de verificación', 'No se encontró ninguna cuenta asociada.');
+            notifyError('Error de verificación', 
+            'No se encontró ninguna cuenta asociada.');
           } else if (status === 409) {
-            notifyInfo('Cuenta verificada anteriormente', 'Tu identidad ya ha sido verificada anteriormente. Puedes iniciar sesión.');
+            notifyInfo('Cuenta verificada anteriormente', 
+            'Tu identidad ya ha sido verificada anteriormente. Puedes iniciar sesión.');
           } else {
-            notifyError('Error de verificación', detail);
+            notifyError('Error de verificación', 
+            "Ha ocurrido un error de verificación.");
           }
         } else {
-          notifyError('Error de conexión', 'No se pudo conectar con el servidor. Por favor, inténtalo más tarde.');
+          notifyError('Error de conexión', 
+          'No se pudo conectar con el servidor. Verifica tu conexión a internet.');
         }
       } finally {
         // Limpiar el token de la URL sin recargar la página
@@ -54,7 +56,7 @@ onMounted(async () => {
       }
     }
   } catch (e) {
-    console.error('Error while processing the verification:', e);
+    console.error('Error while processing the verification: ', e);
   }
 });
 </script>

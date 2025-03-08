@@ -18,9 +18,12 @@
         :placeholder="placeholder"
         aria-label="Email address"
         class="text-input has-icon"
+        :disabled="disabled"
+        :class="['text-input has-icon', { 'disabled': disabled }]"
       />
     </div>
     <span v-if="error" class="error">{{ error }}</span>
+    <span v-if="hint" class="hint">{{ hint }}</span>
   </div>
 </template>
 
@@ -39,6 +42,14 @@ defineProps({
     type: String,
     default: 'email'
   },
+  hint: {
+    type: String,
+    default: ''
+  },
+  disabled: {
+    type: Boolean,
+    default: false
+  },
   error: String,
 });
 
@@ -56,3 +67,10 @@ const handleInput = (event) => {
 </script>
 
 <style scoped src="@/assets/styles/form_fields.css"></style>
+
+<style scoped>
+input:disabled {
+  cursor: not-allowed !important;
+  background-color: #b1b1b1 !important;
+}
+</style>

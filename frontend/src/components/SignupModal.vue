@@ -66,14 +66,12 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'switchToLogin']);
 
-// Campos del formulario
 const fullName = ref('');
 const username = ref('');
 const email = ref('');
 const password = ref('');
 const fullNameFieldRef = ref(null);
 
-// Mensajes de error
 const fullNameError = ref('');
 const usernameError = ref('');
 const emailError = ref('');
@@ -199,7 +197,7 @@ const handleSignup = async () => {
   
     closeSignup();
   } catch (error) {
-    console.error('Error durante el registro:', error);
+    console.error('Singup error: ', error);
     
     if (error.response) {
       const status = error.response.status;
@@ -207,24 +205,22 @@ const handleSignup = async () => {
       
       switch (status) {
         case 400:
-          // Errores de validación específicos
           if (detail.includes("username")) {
             usernameError.value = "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos, y debe tener al menos 3 letras.";
           } else if (detail.includes("full name")) {
-            fullNameError.value = "El nombre completo contiene caracteres no permitidos.";
+            fullNameError.value = "El nombre completo contiene caracteres no válidos.";
           } else {
-            notifyError("Error de validación", detail);
+            notifyError("Error de validación", "Ha ocurrido un error de validación.");
           }
           break;
           
         case 409:
-          // Conflictos con recursos existentes
           if (detail.includes("username")) {
             usernameError.value = "Este nombre de usuario ya está en uso.";
           } else if (detail.includes("email")) {
             emailError.value = "Este correo electrónico ya está registrado en el sistema.";
           } else {
-            notifyError("Error de registro", detail);
+            notifyError("Conflicto", "Los datos ya existen en el sistema.");
           }
           break;
           
@@ -242,16 +238,16 @@ const handleSignup = async () => {
           );
       }
     } else if (error.request) {
-      // La petición fue realizada pero no se recibe respuesta
+      // La petición fue realizada pero no se recibe respuesta.
       notifyError(
         "Error de conexión", 
         "No se pudo conectar con el servidor. Verifica tu conexión a internet."
       );
     } else {
-      // Error al configurar la petición
+      // Error al configurar la petición.
       notifyError(
-        "Error", 
-        "Ha ocurrido un problema al procesar tu solicitud."
+        "Error inesperado", 
+        "Ha ocurrido un problema."
       );
     }
   } finally {

@@ -13,10 +13,12 @@
               :error="usernameError"
               @input="removeSpaces"
               ref="usernameFieldRef"
+              label="Nombre de usuario o correo electrónico"
             />
             <PasswordField 
               v-model="password"
               :error="passwordError"
+              label="Contraseña"
             />
             <div class="reset-password-link">
               ¿Has olvidado tu contraseña? <a class="ref-link" href="#" @click.prevent="switchToEnterEmailModal">Restablécela</a>
@@ -124,7 +126,7 @@ const handleLogin = async () => {
       }
     } else {
       // Validación para nombre de usuario: al menos 3 letras minúsculas y solo puede contener letras minúsculas, números y guiones bajos
-      const usernameRegex = /^(?=.*[a-z]{3})[a-z0-9_]+$/;
+      const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
       if (!usernameRegex.test(username.value)) {
         usernameError.value = 'Por favor, introduce un nombre de usuario válido.';
         isValid = false;
@@ -165,7 +167,7 @@ const handleLogin = async () => {
           emit('loginSuccess');
           closeLogin();
         } catch (storeError) {
-          console.error('Error while saving the token:', storeError);
+          console.error('Error while saving the token: ', storeError);
           notifyError(
             "Error de autenticación",
             "No se pudo completar el inicio de sesión."
@@ -175,7 +177,7 @@ const handleLogin = async () => {
         throw new Error('Acces token not found in response');
       }
     } catch (error) {
-      console.error('Complete error:', error);
+      console.error('Error: ', error);
       isLoading.value = false;
       if (error.response) {
         const status = error.response.status;
@@ -201,7 +203,8 @@ const handleLogin = async () => {
                 "Debes verificar tu identidad para poder acceder. Por favor, revisa tu correo electrónico."
               );
             } else {
-              notifyError("Acceso denegado", detail);
+              notifyError("Acceso denegado", 
+              "No tienes permiso para realizar esta acción.");
             }
             break;
             
@@ -213,10 +216,8 @@ const handleLogin = async () => {
             break;
             
           default:
-            notifyError(
-              "Error inesperado", 
-              "Ha ocurrido un error al iniciar sesión. Por favor, inténtalo de nuevo más tarde."
-            );
+            notifyError("Error en el servidor", 
+            "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.");
         }
       } else if (error.request) {
         // La petición fue realizada pero no se recibe respuesta
@@ -227,8 +228,8 @@ const handleLogin = async () => {
       } else {
         // Error al configurar la petición
         notifyError(
-          "Error", 
-          "Ha ocurrido un problema al procesar tu solicitud."
+          "Error inesperado", 
+          "Ha ocurrido un problema.."
         );
       }
     } finally {

@@ -162,7 +162,7 @@ const loginSuccess = async () => {
     authStore.setUser(user);
   } catch (error) {
     authStore.isAuthenticated = false;
-    console.error('Error fetching user data after login:', error);
+    console.error('Error fetching user data after login: ', error);
     notifyError(
       "Error inesperado", 
       "Ha ocurrido un error al iniciar sesión. Por favor, inténtalo de nuevo más tarde."
@@ -219,7 +219,7 @@ const handleLogout = () => {
     closeBurgerMenu();
     router.push('/');
   } catch (error) {
-    console.error('Logout failed:', error);
+    console.error('Logout failed: ', error);
   }
 };
 </script>

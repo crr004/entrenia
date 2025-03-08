@@ -19,11 +19,17 @@ export const useAuthStore = defineStore('auth', {
       this.token = token;
       this.isAuthenticated = !!token;
       
-      // Configurar axios para incluir el token en las cabeceras
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       } else {
         delete axios.defaults.headers.common['Authorization'];
+      }
+    },
+
+    setAuthHeader(){
+      const token = this.token;
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
     },
     

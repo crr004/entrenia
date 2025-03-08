@@ -31,15 +31,9 @@ const emit = defineEmits(['close']);
 const router = useRouter();
 
 const logout = () => {
-    try {
-        authStore.logout();
-        emit('close');
-        router.push('/');
-    } catch (error) {
-        console.error('Logout failed:', error);
-        emit('close');
-
-    }
+  authStore.logout();
+  emit('close');
+  router.push('/');
 };
 </script>
 
@@ -49,8 +43,8 @@ const logout = () => {
   text-align: left;
   position: absolute;
   width: 200px;
-  top: 50px;
-  right: 10px;
+  top: 38px;
+  right: 5px;
   background-color: #555;
   border-radius: 8px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);

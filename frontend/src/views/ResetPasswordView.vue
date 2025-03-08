@@ -2,29 +2,24 @@
   <div class="modal-overlay">
     <div class="auth-modal reset-password-card">
       <h1>Restablecer contraseña</h1>
-      
       <div v-if="isLoading" class="loading-state">
         <font-awesome-icon :icon="['fas', 'spinner']" spin class="spinner" />
         <p>Verificando tu solicitud...</p>
       </div>
-      
       <div v-else-if="tokenStatus === 'invalid'" class="error-state">
         <font-awesome-icon :icon="['fas', 'exclamation-triangle']" class="error-icon" />
         <h2>Enlace inválido o expirado</h2>
         <p>El enlace que has utilizado no es válido o ha expirado. Por favor, solicita un nuevo enlace para restablecer tu contraseña.</p>
         <button @click="goToHome" class="app-button">Volver al inicio</button>
       </div>
-      
       <div v-else-if="tokenStatus === 'success'" class="success-state">
         <font-awesome-icon :icon="['fas', 'check-circle']" class="success-icon" />
         <h2>¡Contraseña actualizada!</h2>
         <p>Tu contraseña ha sido actualizada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
         <button @click="goToHome" class="app-button">Volver al inicio</button>
       </div>
-      
       <form v-else-if="tokenStatus === 'valid'" class="auth-modal-form reset-password-form" @submit.prevent="handleSubmit">
         <p class="form-description">Por favor, introduce tu nueva contraseña.</p>
-        
         <PasswordField 
           v-model="password"
           label="Nueva contraseña*"
@@ -32,7 +27,6 @@
           :error="passwordError"
           @input="validatePassword"
         />
-        
         <PasswordField 
           v-model="confirmPassword"
           label="Confirmar contraseña*"
@@ -40,7 +34,6 @@
           :error="confirmPasswordError"
           @input="validateConfirmPassword"
         />
-        
         <button type="submit" class="app-button" :disabled="isSubmitting">
           <span v-if="!isSubmitting">Restablecer contraseña</span>
           <font-awesome-icon v-else :icon="['fas', 'spinner']" spin />
@@ -117,7 +110,7 @@ onMounted(async () => {
     isLoading.value = false;
   } catch (error) {
     tokenStatus.value = 'invalid';
-    console.error('Error validando token:', error);
+    console.error('Error while validating token: ', error);
     isLoading.value = false;
   }
 });
@@ -140,11 +133,11 @@ const handleSubmit = async () => {
     
     tokenStatus.value = 'success';
     notifySuccess(
-      'Contraseña actualizada',
-      'Tu contraseña ha sido cambiada exitosamente.'
+      "Contraseña actualizada",
+      "Tu contraseña ha sido cambiada correctamente."
     );
   } catch (error) {
-    console.error('Error al restablecer contraseña:', error);
+    console.error('Error while reseting password: ', error);
     
     if (error.response) {
       const status = error.response.status;
@@ -153,27 +146,31 @@ const handleSubmit = async () => {
       switch (status) {
         case 400:
           if (detail.includes("You cannot reuse")) {
-            passwordError.value = 'No puedes reutilizar tu contraseña anterior.';
+            passwordError.value = 'La nueva contraseña no puede ser igual a la actual.';
           } else {
-            notifyError('Error', 'El token es inválido o ha expirado.');
+            notifyError("Error", 
+            "El token es inválido o ha expirado.");
             tokenStatus.value = 'invalid';
           }
           break;
         case 403:
-          notifyError('Error', 'Esta cuenta está desactivada. Contacta con soporte.');
+          notifyError("Cuenta desactivada", 
+          "Tu cuenta está desactivada. Por favor, contacta con soporte.");
           tokenStatus.value = 'invalid';
           break;
         case 404:
-          notifyError('Error', 'No se encontró un usuario asociado a este token.');
+          notifyError("Error", 
+          "No se encontró un usuario asociado a este token.");
           tokenStatus.value = 'invalid';
           break;
         default:
-          notifyError('Error', 'No se pudo restablecer tu contraseña. Por favor, inténtalo de nuevo.');
+          notifyError("Error en el servidor", 
+          "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.");
       }
     } else {
       notifyError(
-        'Error de conexión',
-        'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
+        "Error de conexión",
+        "No se pudo conectar con el servidor. Verifica tu conexión a internet."
       );
     }
   } finally {

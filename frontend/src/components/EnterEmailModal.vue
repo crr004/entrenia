@@ -105,7 +105,7 @@ const handleResetPassword = async () => {
     closeEnterEmailModal();
     
   } catch (error) {
-    console.error('Error al solicitar recuperación de contraseña:', error);
+    console.error('Error while requesting password reset: ', error);
     
     if (error.response) {
       const status = error.response.status;
@@ -113,12 +113,10 @@ const handleResetPassword = async () => {
       
       switch (status) {
         case 404:
-          // El email no existe en el sistema
           emailError.value = 'No existe ninguna cuenta con este correo electrónico.';
           break;
           
         case 403:
-          // Según la API, 403 puede ser por usuario no verificado o inactivo
           if (detail.includes("Unverified")) {
             notifyError(
                 "Cuenta sin verificar", 
@@ -130,24 +128,25 @@ const handleResetPassword = async () => {
                 "Tu cuenta está desactivada. Por favor, contacta con soporte."
               );
           } else {
-            notifyError("Acceso denegado", detail);
+            notifyError("Acceso denegado", 
+            "No tienes permiso para realizar esta acción.");
           }
           break;
         default:
           notifyError(
-            'Error', 
+            'Error en el servidor', 
             'No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.'
           );
       }
     } else if (error.request) {
       notifyError(
-        'Error de conexión', 
+        'Error de conexión',
         'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
       );
     } else {
       notifyError(
-        'Error', 
-        'Ocurrió un error al procesar tu solicitud.'
+        'Error inesperado', 
+        'Ha ocurrido un problema.'
       );
     }
   } finally {
