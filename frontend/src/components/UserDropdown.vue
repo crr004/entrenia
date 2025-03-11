@@ -4,6 +4,13 @@
             <router-link to="/">Home</router-link>
             <router-link to="/about">About</router-link>
             <hr>
+            <router-link v-if="isAdmin" to="/admin">
+                <span class="icon-container">
+                    <font-awesome-icon :icon="['fas', 'shield-alt']" fixed-width />
+                </span>
+                Panel de admin
+            </router-link>
+            <hr v-if="isAdmin">
             <router-link to="/account">
                 <span class="icon-container">
                     <font-awesome-icon :icon="['fas', 'user-cog']" fixed-width />
@@ -24,11 +31,15 @@
 <script setup>
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
+import { computed } from 'vue';
 
 const authStore = useAuthStore();
 const emit = defineEmits(['close']);
-
 const router = useRouter();
+
+const isAdmin = computed(() => {
+  return authStore.user && authStore.user.is_admin === true;
+});
 
 const logout = () => {
   authStore.logout();

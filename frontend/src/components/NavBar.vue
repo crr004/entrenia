@@ -3,20 +3,17 @@
     <div class="navbar-title">
       <router-link to="/">EntrenIA</router-link>
     </div>
-    
     <div class="burger-menu" @click="toggleBurgerMenu">
       <div :class="['bar', {'active': burgerMenuOpen}]"></div>
       <div :class="['bar', {'active': burgerMenuOpen}]"></div>
       <div :class="['bar', {'active': burgerMenuOpen}]"></div>
     </div>
-    
     <div :class="['nav-content', {'active': burgerMenuOpen}]">
       <div class="navbar-links">
         <router-link to="/" @click="closeBurgerMenu">Inicio</router-link>
         <span id="nav-separator" class="desktop-only"> | </span>
         <router-link to="/about" @click="closeBurgerMenu">Sobre EntrenIA</router-link>
       </div>
-      
       <div class="navbar-personal" v-if="!authStore.isAuthenticated">
         <span class="navbar-username" @click="handleLoginClick">Iniciar sesión</span>
         <span id="nav-separator" class="desktop-only"></span>
@@ -26,17 +23,33 @@
         <div class="desktop-only user-container">
           <span class="navbar-username user-profile" @click="toggleUserDropdown">
             <font-awesome-icon :icon="['fas', 'user']" class="user-icon" />
-            {{ displayName }}
+            <span class="username-text">{{ displayName }}</span>
+            <span v-if="isAdmin" class="admin-badge" title="Administrador">
+              <font-awesome-icon :icon="['fas', 'crown']" />
+            </span>
           </span>
           <UserDropdown v-if="isUserDropdownOpen" @close="closeUserDropdown" />
         </div>
-        
         <div class="burger-only user-menu-burger">
           <hr>
           <div class="user-greeting-burger">
-            <span class="username-burger">{{ displayName }}</span>
+            <span class="username-burger">
+              {{ displayName }}
+              <span v-if="isAdmin" class="admin-badge-mobile">
+                <font-awesome-icon :icon="['fas', 'crown']" /> Admin
+              </span>
+            </span>
           </div>
           <div class="user-links-burger">
+            <router-link 
+              v-if="isAdmin" 
+              to="/admin" 
+              @click="closeBurgerMenu" 
+              class="user-link-burger admin-link-mobile"
+            >
+              <font-awesome-icon :icon="['fas', 'shield-alt']" class="link-icon" fixed-width />
+              Panel de admin
+            </router-link>
             <router-link to="/account" @click="closeBurgerMenu" class="user-link-burger">
               <font-awesome-icon :icon="['fas', 'user-cog']" class="link-icon" fixed-width />
               Mi cuenta
@@ -49,7 +62,6 @@
         </div>
       </div>
     </div>
-    
     <SignupModal 
       :isOpen="isSignupModalOpen"
       @close="closeSignupModal"
@@ -222,6 +234,11 @@ const handleLogout = () => {
     console.error('Logout failed: ', error);
   }
 };
+
+// Computed property para verificar si el usuario es admin
+const isAdmin = computed(() => {
+  return authStore.user && authStore.user.is_admin === true;
+});
 </script>
 
 
@@ -310,13 +327,17 @@ const handleLogout = () => {
   border-radius: 5px;
   text-decoration: none;
   font-size: 1.3em;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+.username-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 400px;
-  cursor: pointer;
-  margin: 0 5px;
+  max-width: 350px; /* Ajusta este valor según sea necesario */
 }
 
 #register-button{
@@ -558,8 +579,35 @@ hr {
     max-width: 150px;
   }
   
+  .username-text {
+    max-width: 120px; /* Ajustar para pantallas medianas */
+  }
+  
   .navbar-links a {
     font-size: 1em;
   }
+}
+
+.admin-badge {
+  display: inline-flex;
+  margin-left: 5px;
+  color: gold;
+  font-size: 0.8em;
+  flex-shrink: 0; 
+}
+
+.admin-badge-mobile {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  color: gold;
+  font-size: 0.9em;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.user-icon {
+  margin-right: 8px;
 }
 </style>

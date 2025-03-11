@@ -41,7 +41,7 @@
               hint="El correo electrónico no se puede modificar."
             />
             <FullNameField
-              placeholder=""
+              placeholder="Aún no has indicado tu nombre completo"
               v-model="fullName"
               :error="fullNameError"
               @input="validateFullName"
@@ -113,7 +113,7 @@
             </ul>
             <p class="warning-text">Esta acción no se puede deshacer.</p>
             <div v-if="!showDeleteConfirmation" class="danger-action">
-              <button class="danger-button" @click="showDeleteConfirmation = true">
+              <button class="delete-button" @click="showDeleteConfirmation = true">
                 <font-awesome-icon :icon="['fas', 'trash-alt']" class="button-icon" />
                 Eliminar mi cuenta
               </button>
@@ -142,12 +142,11 @@
                   Cancelar
                 </button>
                 <button 
-                  class="danger-button confirm-button" 
+                  class="delete-button" 
                   :disabled="deleteConfirmationText !== 'ELIMINAR'"
                   @click="deleteAccount"
                 >
                   <font-awesome-icon v-if="isLoading" :icon="['fas', 'circle-notch']" spin class="button-icon" />
-                  <font-awesome-icon v-else :icon="['fas', 'trash-alt']" class="button-icon" />
                   Confirmar eliminación
                 </button>
               </div>
@@ -349,7 +348,7 @@ const updateProfile = async () => {
     authStore.setUser(updatedUser);
     
     notifySuccess("Datos actualizados", 
-    "Tus datos se han actualizado correctamente.");
+    "Tus datos se han actualizado con éxito.");
   } catch (error) {
     console.error('Error while updating data: ', error);
     handleApiError(error);
@@ -379,7 +378,7 @@ const changePassword = async () => {
     confirmNewPassword.value = '';
     
     notifySuccess("Contraseña actualizada", 
-    "Tu contraseña ha sido cambiada correctamente.");
+    "Tu contraseña ha sido cambiada con éxito.");
   } catch (error) {
     console.error('Error while changing password: ', error);
     handleApiError(error);
@@ -446,7 +445,7 @@ const handleApiError = (error) => {
         
       case 403:
         if(data.detail.includes("Admins")){
-          notifyError("Acceso denegado", 
+          notifyError("Acción denegada", 
           "Los administradores no pueden eliminarse a sí mismos.");
         } else if(data.detail.includes("credentials")){
           notifyInfo("Sesión expirada", 
@@ -462,6 +461,8 @@ const handleApiError = (error) => {
       case 404:
         notifyError("Usuario no encontrado", 
         "El usuario no existe en el sistema.");
+        authStore.logout();
+        router.push('/');
         break;
         
       default:
@@ -627,44 +628,6 @@ onMounted(fetchUserData);
   margin: 20px 0;
 }
 
-.danger-button {
-  background-color: #d32f2f;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.2s;
-}
-
-.danger-button:hover {
-  background-color: #b71c1c;
-}
-
-.danger-button:disabled {
-  background-color: #efb8b8;
-  cursor: not-allowed;
-}
-
-.cancel-button {
-  background-color: #e0e0e0;
-  color: #555;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  margin-right: 10px;
-  transition: background-color 0.2s;
-}
-
-.cancel-button:hover {
-  background-color: #c9c9c9;
-}
-
 .delete-confirmation {
   margin-top: 20px;
   padding-top: 20px;
@@ -696,11 +659,6 @@ onMounted(fetchUserData);
 .form-field input.has-icon:focus {
   border-color: #d32f2f;
   box-shadow: 0 0 0 1px rgba(211, 47, 47, 0.25);
-}
-
-.confirm-button {
-  padding: 10px 20px;
-  font-weight: 500;
 }
 
 /* Responsive */

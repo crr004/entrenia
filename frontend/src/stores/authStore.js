@@ -52,7 +52,19 @@ export const useAuthStore = defineStore('auth', {
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
+    },
+    updateUserData(userData) {
+    this.user = userData;
+    
+    if (userData) {
+      const currentAuthData = JSON.parse(localStorage.getItem('auth') || '{}');
+      const updatedAuthData = {
+        ...currentAuthData,
+        user: userData
+      };
+      localStorage.setItem('auth', JSON.stringify(updatedAuthData));
     }
+  }
   },
   /*
   persist: {

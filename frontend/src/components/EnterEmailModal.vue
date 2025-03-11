@@ -98,7 +98,7 @@ const handleResetPassword = async () => {
     await axios.post(`/login/password-recovery/${encodeURIComponent(email.value)}`);
 
     notifySuccess(
-      'Operación exitosa', 
+      'Correo enviado', 
       'Te hemos enviado un correo con instrucciones para restablecer tu contraseña.'
     );
     

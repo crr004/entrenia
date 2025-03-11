@@ -27,6 +27,12 @@ const routes = [
     meta: { showNav: true, showFooter: true }
   },
   {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('../views/AdminView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),

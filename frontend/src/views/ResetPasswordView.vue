@@ -134,7 +134,7 @@ const handleSubmit = async () => {
     tokenStatus.value = 'success';
     notifySuccess(
       "Contraseña actualizada",
-      "Tu contraseña ha sido cambiada correctamente."
+      "Tu contraseña ha sido cambiada con éxito."
     );
   } catch (error) {
     console.error('Error while reseting password: ', error);
@@ -148,7 +148,7 @@ const handleSubmit = async () => {
           if (detail.includes("You cannot reuse")) {
             passwordError.value = 'La nueva contraseña no puede ser igual a la actual.';
           } else {
-            notifyError("Error", 
+            notifyError("Enlace no válido", 
             "El token es inválido o ha expirado.");
             tokenStatus.value = 'invalid';
           }
@@ -159,7 +159,7 @@ const handleSubmit = async () => {
           tokenStatus.value = 'invalid';
           break;
         case 404:
-          notifyError("Error", 
+          notifyError("Usuario no encontrado", 
           "No se encontró un usuario asociado a este token.");
           tokenStatus.value = 'invalid';
           break;
