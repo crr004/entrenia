@@ -28,7 +28,7 @@
     </div>
     <div class="admin-content">
       <div class="table-wrapper">
-        <div class="users-table-container">
+        <div class="table-container users-table-container">
           <div v-if="isLoading || isSearchTransitioning" class="loading-container">
             <font-awesome-icon :icon="['fas', 'circle-notch']" spin size="2x" />
             <p>Cargando usuarios...</p>
@@ -44,10 +44,10 @@
             </template>
           </div>
           <div v-else-if="paginatedResults.length > 0">
-            <table class="users-table">
+            <table class="data-table users-table">
               <thead>
                 <tr>
-                  <th>Email</th>
+                  <th>Correo</th>
                   <th>Nombre</th>
                   <th>Usuario</th>
                   <th class="center-column">Admin</th>
@@ -57,7 +57,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="user in paginatedResults" :key="user.id" :class="{ 'inactive-user': !user.is_active }">
+                <tr v-for="user in paginatedResults" :key="user.id" :class="{ 'inactive-row': !user.is_active }">
                   <td>
                     <span class="truncate" :title="user.email">
                       {{ truncateText(user.email, 31) }}
@@ -651,6 +651,8 @@ const truncateText = (text, maxLength) => {
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
+<style scoped src="@/assets/styles/search.css"></style>
+<style scoped src="@/assets/styles/table.css"></style>
 <style scoped>
 .admin-view {
   padding: 20px;
@@ -697,303 +699,10 @@ const truncateText = (text, maxLength) => {
   overflow-x: auto;
 }
 
-
-/* Barra de búsqueda */
-.search-container {
-  padding: 15px;
-  background-color: transparent;
-  z-index: 1;
-}
-
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  color: #888;
-  cursor: pointer;
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 36px 10px 40px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background-color: white;
-  color: #333;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #aaa;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
-  background-color: white;
-}
-
-.clear-search-button {
-  position: absolute;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 5%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
-
-.search-highlight {
-  background-color: rgba(255, 235, 59, 0.3);
-  padding: 0 2px;
-  border-radius: 2px;
-}
-
-.search-term {
-  font-weight: bold;
-  font-style: italic;
-}
-
-/* Tabla */
-.table-wrapper {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  min-width: 100%;
-  overflow-x: auto;
-  display: table;
-  width: 100%;
-}
-
-.users-table-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.users-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-spacing: 0;
-  text-align: left;
-  margin-bottom: 0;
-  min-width: max-content;
-}
-
-.users-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background-color: #f4f4f4;
-  white-space: nowrap;
-}
-
-.users-table th,
-.users-table td {
-  padding: 12px 15px;
-  border-bottom: 1px solid #ddd;
-  box-sizing: border-box;
-}
-
-.users-table th {
-  font-weight: 600;
-}
-
-.admin-view .users-table .center-column {
-  text-align: center;
-  width: 100px;
-}
-
-.admin-view .users-table .actions-column {
-  text-align: center;
-  width: 80px;
-}
-
-.users-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.users-table tbody tr:hover {
-  background-color: #f9f9f9;
-}
-
-.inactive-user {
-  opacity: 0.7;
-}
-
-/* Acciones y badges */
-.actions-menu {
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-
-.action-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 4px;
-  color: #555;
-}
-
-.action-button:hover {
-  background-color: #f0f0f0;
-}
-
-.admin-badge {
-  color: gold;
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.8em;
-  font-weight: 600;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.status-badge.verified,
-.status-badge.active {
-  background-color: #e6f7e6;
-  color: #2d862d;
-}
-
-.status-badge.inactive {
-  background-color: #f7e6e6;
-  color: #b30000;
-}
-
-.status-badge.unverified {
-  background-color: #fff3e0;
-  color: #e65100;
-}
-
-/* Paginación */
-.pagination-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10px 15px;
-  background-color: #f9f9f9;
-  border-radius: 0 0 8px 8px;
-  border-top: 1px solid #eee;
-  width: 100%;
-  box-sizing: border-box;
-  gap: 20px;
-}
-
-.pagination-actions {
-  display: flex;
-  align-items: center;
-}
-
-.pagination-button {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 6px 12px;
-  margin: 0 5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.pagination-button:hover:not(:disabled) {
-  background-color: #f0f0f0;
-}
-
-.pagination-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination-icon {
-  color: #333;
-}
-
-.pagination-info {
-  font-size: 0.9rem;
-  color: #666;
-  margin: 0 12px;
-}
-
-.page-size-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.page-size-select {
-  padding: 4px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: #333;
-}
-
-.page-size-select option {
-  color: #333;
-  background-color: white;
-}
-
-.page-size-select:focus {
-  outline: none;
-  border-color: #aaa;
-}
-
-/* Etados de carga y vacío */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 0;
-  color: #666;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 0;
-  color: #666;
-  gap: 10px;
-}
-
-/* Truncar texto */
-.truncate {
-  display: block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+/* Estilos específicos para la tabla de usuarios */
 .users-table th:nth-child(1), 
 .users-table td:nth-child(1) {
-  max-width: 205px; /* Email */
+  max-width: 205px; /* Correo */
 }
 
 .users-table th:nth-child(2), 
@@ -1006,40 +715,18 @@ const truncateText = (text, maxLength) => {
   max-width: 150px; /* Usuario */
 }
 
-/* Responsive */
-@media (max-width: 992px) {
-  .admin-view .users-table .center-column {
-    width: 90px;
-  }
-  
-  .users-table th,
-  .users-table td {
-    padding: 10px 8px;
-    font-size: 0.9em;
-  }
-  
-  .status-badge {
-    font-size: 0.75em;
-    padding: 2px 6px;
-  }
+.admin-badge {
+  color: gold;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .admin-view {
     padding: 10px;
-  }
-  
-  .search-container {
-    padding: 10px;
-  }
-  
-  .search-input {
-    font-size: 0.9rem;
-    padding: 8px 32px 8px 36px;
-  }
-  
-  .search-icon {
-    left: 10px;
   }
   
   .admin-header {
@@ -1050,35 +737,6 @@ const truncateText = (text, maxLength) => {
   
   .admin-view .admin-header .add-user-button {
     width: 100%;
-  }
-  
-  .users-table th,
-  .users-table td {
-    padding: 8px;
-    font-size: 0.9em;
-  }
-  
-  .admin-view .users-table .center-column {
-    width: 65px;
-  }
-  
-  .status-badge {
-    font-size: 0.7em;
-    padding: 2px 4px;
-  }
-  
-  .status-badge .status-text {
-    display: none;
-  }
-  
-  .pagination-info {
-    font-size: 0.8rem;
-    margin: 0 5px;
-  }
-  
-  .pagination-button {
-    padding: 4px 8px;
-    margin: 0 3px;
   }
 }
 </style>
