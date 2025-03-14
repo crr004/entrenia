@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="modal-overlay">
-    <div class="auth-modal modal-container">
+    <div class="modal-container">
       <div class="modal-header">
         <h3>{{ title }}</h3>
         <button class="close-confirmation-button" @click="$emit('cancel')">
@@ -21,8 +21,6 @@
   </div>
 </template>
 
-<style scoped src="@/assets/styles/buttons.css"></style>
-
 <script setup>
 defineProps({
   isOpen: {
@@ -31,11 +29,11 @@ defineProps({
   },
   title: {
     type: String,
-    default: 'Confirmar acción',
+    default: 'Confirmar eliminación',
   },
   message: {
     type: String,
-    default: '¿Estás seguro de que quieres realizar esta acción?',
+    default: '¿Estás seguro de que quieres eliminar el elemento?',
   },
   confirmText: {
     type: String,
@@ -54,6 +52,7 @@ defineProps({
 defineEmits(['confirm', 'cancel']);
 </script>
 
+<style scoped src="@/assets/styles/buttons.css"></style>
 <style scoped>
 .modal-overlay {
   position: fixed;

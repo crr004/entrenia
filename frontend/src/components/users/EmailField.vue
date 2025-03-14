@@ -67,10 +67,3 @@ const handleInput = (event) => {
 </script>
 
 <style scoped src="@/assets/styles/form_fields.css"></style>
-
-<style scoped>
-input:disabled {
-  cursor: not-allowed !important;
-  background-color: #b1b1b1 !important;
-}
-</style>

@@ -6,12 +6,10 @@
         <button class="close-modal-button" @click="closeModal">
           <font-awesome-icon :icon="['fas', 'xmark']" />
         </button>
-
         <div v-if="isLoadingUser" class="loading-container">
           <font-awesome-icon :icon="['fas', 'circle-notch']" spin size="2x" />
           <p>Cargando datos del usuario...</p>
         </div>
-
         <form v-else class="signup-body" @submit.prevent="handleEditUser">
           <div class="auth-modal-form">
             <FullNameField
@@ -42,7 +40,6 @@
               :error="passwordError"
               @input="validatePassword"
             />
-            
             <div class="admin-options">
               <div class="admin-option-item">
                 <input type="checkbox" id="is_active_edit" v-model="isActive" />
@@ -57,7 +54,6 @@
                 <label for="is_admin_edit">Administrador</label>
               </div>
             </div>
-            
             <button type="submit" class="app-button" :disabled="isSaving || !hasValidChanges">
               <span v-if="!isSaving">Guardar cambios</span>
               <span v-else>
@@ -71,35 +67,18 @@
   </Teleport>
 </template>
 
-<style scoped src="@/assets/styles/auth.css"></style>
-<style scoped src="@/assets/styles/buttons.css"></style>
-
-<style scoped>
-.edit-user-modal {
-  max-width: 500px;
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 0;
-  color: #666;
-  gap: 15px;
-}
-</style>
-
 <script setup>
 import { ref, computed, nextTick } from 'vue';
-import FullNameField from '@/components/FullNameField.vue';
-import UsernameField from '@/components/UsernameField.vue';
-import EmailField from '@/components/EmailField.vue';
-import PasswordField from '@/components/PasswordField.vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
+
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
-import { useRouter } from 'vue-router';
+import FullNameField from '@/components/users/FullNameField.vue';
+import UsernameField from '@/components/users/UsernameField.vue';
+import EmailField from '@/components/users/EmailField.vue';
+import PasswordField from '@/components/users/PasswordField.vue';
+
 
 const props = defineProps({
   isOpen: {
@@ -135,40 +114,35 @@ const authStore = useAuthStore();
 const originalUserData = ref(null);
 const isFirstOpen = ref(true);
 
-// Verificar si hay cambios válidos para habilitar el botón
 const hasValidChanges = computed(() => {
-  // Si hay errores de validación, no hay cambios válidos
   if (fullNameError.value || usernameError.value || emailError.value || passwordError.value) {
     return false;
   }
   
-  // Si no hay datos originales, no podemos comparar
+// Si no hay datos originales, no se puede comparar.
   if (!originalUserData.value) return false;
   
-  // Verificar si hay algún cambio en los campos
+  // Verificar si hay algún cambio en los campos.
   const hasFullNameChanged = fullName.value !== (originalUserData.value.full_name || '');
   const hasUsernameChanged = username.value !== originalUserData.value.username;
   const hasEmailChanged = email.value !== originalUserData.value.email;
-  const hasPasswordChanged = password.value !== ''; // Si hay algo en password, es un cambio
+  const hasPasswordChanged = password.value !== ''; // Si hay algo en password, es un cambio (ya que esta no se muestra en el formulario).
   const hasAdminChanged = isAdmin.value !== originalUserData.value.is_admin;
   const hasActiveChanged = isActive.value !== originalUserData.value.is_active;
   const hasVerifiedChanged = isVerified.value !== originalUserData.value.is_verified;
   
-  // Hay cambios válidos si algún campo ha cambiado
   return hasFullNameChanged || hasUsernameChanged || hasEmailChanged || 
          hasPasswordChanged || hasAdminChanged || hasActiveChanged || hasVerifiedChanged;
 });
 
-// Simple método para comprobar si el usuario está editando su propia cuenta
 const isEditingSelf = () => {
   const currentUser = authStore.getUser;
   return currentUser && currentUser.id === props.userId;
 };
 
-// Método para iniciar la carga de datos - Se llama desde el template cuando isOpen cambia
+// Cargar datos del usuario. Se llama desde el template cuando se monta el componente.
 async function onOpen() {
   if (props.isOpen && props.userId) {
-    // Verificar si es edición propia
     if (isEditingSelf()) {
       notifyInfo(
         "Modificación de cuenta propia",
@@ -178,10 +152,9 @@ async function onOpen() {
       return;
     }
     
-    // No es edición propia, cargar los datos
     await loadUserData();
     
-    // Enfocar el primer campo después de cargar
+    // Foco en el campo de nombre completo al abrir el modal.
     await nextTick();
     const inputElement = fullNameFieldRef.value?.$el.querySelector('input');
     if (inputElement) {
@@ -190,7 +163,6 @@ async function onOpen() {
   }
 }
 
-// Cargar datos del usuario
 const loadUserData = async () => {
   if (!props.userId) return;
   
@@ -198,14 +170,16 @@ const loadUserData = async () => {
   resetForm();
   
   try {
+    // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
     authStore.setAuthHeader();
+
     const response = await axios.get(`/users/${props.userId}`);
     const userData = response.data;
     
-    // Almacenar los datos originales para comparar cambios
+    // Almacenar los datos originales para comparar cambios.
     originalUserData.value = { ...userData };
     
-    // Llenar el formulario con los datos del usuario
+    // Llenar el formulario con los datos originales.
     fullName.value = userData.full_name || '';
     username.value = userData.username || '';
     email.value = userData.email || '';
@@ -213,7 +187,7 @@ const loadUserData = async () => {
     isActive.value = !!userData.is_active;
     isVerified.value = !!userData.is_verified;
     
-    // La contraseña siempre vacía ya que no se puede recuperar
+    // La contraseña siempre vacía.
     password.value = '';
     
   } catch (error) {
@@ -225,8 +199,8 @@ const loadUserData = async () => {
 };
 
 const validateFullName = () => {
+  // Como el nombre completo es opcional, es válido si está vacío.
   if (!fullName.value.trim()) {
-    // Si está vacío, es opcional
     fullNameError.value = '';
     return true;
   }
@@ -273,7 +247,7 @@ const validateEmail = () => {
 };
 
 const validatePassword = () => {
-  // La contraseña es opcional al editar
+  // La contraseña es opcional al editar.
   if (!password.value) {
     passwordError.value = '';
     return true;
@@ -309,9 +283,7 @@ const closeModal = () => {
   isFirstOpen.value = true;
 };
 
-// Eliminar la verificación duplicada en handleEditUser
 const handleEditUser = async () => {
-  // La verificación ya se hizo en onOpen y no llegaríamos aquí si fuera edición propia
   
   const isValidFullName = validateFullName();
   const isValidUsername = validateUsername();
@@ -325,10 +297,13 @@ const handleEditUser = async () => {
   try {
     isSaving.value = true;
     
-    // Asegurar que el token de autenticación esté configurado
-    authStore.setAuthHeader();
+    // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
+    const hasToken = !!localStorage.getItem('token') || !!authStore.token;
+    if(hasToken){
+      authStore.setAuthHeader();
+    }
     
-    // Crear objeto para la actualización siguiendo el formato exacto del API
+    // Crear objeto para la actualización siguiendo el formato de la API.
     const updateData = {
       email: email.value,
       username: username.value,
@@ -338,7 +313,7 @@ const handleEditUser = async () => {
       is_verified: isVerified.value
     };
     
-    // Solo incluir contraseña si se ha modificado
+    // Solo se incluye la contraseña si se ha proporcionado (para no sobrescribirla con un valor vacío).
     if (password.value) {
       updateData.password = password.value;
     }
@@ -350,12 +325,11 @@ const handleEditUser = async () => {
       `Se ha actualizado el usuario ${username.value} con éxito.`
     );
     
-    // Emitir evento con los datos actualizados
     emit('userUpdated', response.data);
     closeModal();
     
   } catch (error) {
-    console.error('Error completo:', error);
+    console.error('Error while editing user: ', error);
     handleApiError(error);
   } finally {
     isSaving.value = false;
@@ -363,13 +337,12 @@ const handleEditUser = async () => {
 };
 
 const handleApiError = (error) => {
-  console.error('Error al editar usuario:', error);
   
   if (error.response) {
     const status = error.response.status;
-    const detail = error.response.data.detail || "Error desconocido";
+    const detail = error.response.data.detail || "Unknown error";
     
-    console.log('Respuesta de error:', error.response.data);
+    console.error('Error response: ', error.response.data);
     
     switch (status) {
       case 400:
@@ -378,31 +351,30 @@ const handleApiError = (error) => {
         } else if (detail.includes("full name")) {
           fullNameError.value = "El nombre completo contiene caracteres no válidos.";
         } else {
-          notifyError("Error de validación", "Ha ocurrido un error de validación.");
+          notifyError("Error de validación", 
+          "Ha ocurrido un error de validación.");
         }
-        break;
-        
-      case 401:
-        notifyError("Sesión expirada", "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
-        authStore.logout();
-        router.push('/');
         break;
         
       case 403:
         if (detail.includes("credentials")) {
-          notifyInfo("Sesión expirada", "Por favor, inicia sesión de nuevo.");
+          notifyInfo("Sesión expirada", 
+          "Por favor, inicia sesión de nuevo.");
           authStore.logout();
           router.push('/');
         } else if (detail.includes("privileges")) {
-          notifyError("Acceso denegado", "No tienes permisos suficientes para realizar esta acción.");
+          notifyError("Acceso denegado", 
+          "No tienes permisos suficientes para realizar esta acción.");
           router.push('/');
         } else {
-          notifyError("Acceso denegado", "No tienes permisos suficientes para realizar esta acción.");
+          notifyError("Acceso denegado", 
+          "No tienes permisos suficientes para realizar esta acción.");
         }
         break;
         
       case 404:
-        notifyError("Usuario no encontrado", "El usuario que intentas editar no existe en el sistema.");
+        notifyError("Usuario no encontrado", 
+        "El usuario que intentas editar no existe en el sistema.");
         break;
         
       case 409:
@@ -411,33 +383,33 @@ const handleApiError = (error) => {
         } else if (detail.includes("email")) {
           emailError.value = "Este correo electrónico ya está registrado en el sistema.";
         } else {
-          notifyError("Conflicto", "Los datos ya existen en el sistema.");
+          notifyError("Conflicto", 
+          "Los datos ya existen en el sistema.");
         }
         break;
         
       case 422:
-        notifyError(
-          "Error de validación", 
+        notifyError("Error de validación", 
           "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada."
         );
         break;
         
       default:
-        notifyError(
-          "Error en el servidor", 
+        notifyError("Error en el servidor", 
           "No se pudo completar la actualización del usuario. Por favor, inténtalo de nuevo más tarde."
         );
     }
   } else if (error.request) {
-    notifyError(
-      "Error de conexión", 
+    notifyError("Error de conexión", 
       "No se pudo conectar con el servidor. Verifica tu conexión a internet."
     );
   } else {
-    notifyError(
-      "Error inesperado", 
+    notifyError("Error inesperado", 
       "Ha ocurrido un problema al actualizar el usuario."
     );
   }
 };
 </script>
+
+<style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>

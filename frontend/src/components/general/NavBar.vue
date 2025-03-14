@@ -83,14 +83,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import SignupModal from './SignupModal.vue';
-import LoginModal from './LoginModal.vue';
-import EnterEmailModal from './EnterEmailModal.vue';
-import UserDropdown from './UserDropdown.vue';
-import { notifyError } from '@/utils/notifications';
-import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+
+import { notifyError } from '@/utils/notifications';
+import { useAuthStore } from '@/stores/authStore';
+import SignupModal from '@/components/users/SignupModal.vue';
+import LoginModal from '@/components/users/LoginModal.vue';
+import EnterEmailModal from '@/components/users/EnterEmailModal.vue';
+import UserDropdown from '@/components/general/UserDropdown.vue';
+
 
 const router = useRouter();
 const isSignupModalOpen = ref(false);
@@ -167,6 +169,8 @@ const switchToEnterEmailModal = () => {
   isEnterEmailModalOpen.value = true;
 };
 
+// Función llamada cuando hay un inicio de sesión exitoso en el Login Modal.
+// Esta función se encarga de obtener los datos del usuario autenticado y almacenarlos en el store de autenticación.
 const loginSuccess = async () => {
   try{
     const response = await axios.get('/users/own');
@@ -175,13 +179,12 @@ const loginSuccess = async () => {
   } catch (error) {
     authStore.isAuthenticated = false;
     console.error('Error fetching user data after login: ', error);
-    notifyError(
-      "Error inesperado", 
-      "Ha ocurrido un error al iniciar sesión. Por favor, inténtalo de nuevo más tarde."
-    );
+    notifyError("Error inesperado", 
+    "Ha ocurrido un error al iniciar sesión. Por favor, inténtalo de nuevo más tarde.");
   }
 };
 
+// Muestra el nombre del usuario/nombre completo en la barra de navegación.
 const displayName = computed(() => {
   const user = authStore.user;
   if (!user) return 'Usuario';
@@ -195,6 +198,9 @@ const displayName = computed(() => {
   return name;
 });
 
+
+// Esconder menús cuando se hace clic fuera de ellos.
+// Los menús son: el menú desplegable de usuario y el menú de hamburguesa (este último solo aparece cuando la ventana es pequeña).
 const handleClickOutside = (event) => {
   const profileElement = document.querySelector('.user-profile');
   const dropdownElement = document.querySelector('.user-dropdown-container');
@@ -225,22 +231,17 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 
+// El cierre de sesión elimina el usuario del store de autenticación y redirige a la página de inicio.
 const handleLogout = () => {
-  try {
-    authStore.logout();
-    closeBurgerMenu();
-    router.push('/');
-  } catch (error) {
-    console.error('Logout failed: ', error);
-  }
+  authStore.logout();
+  closeBurgerMenu();
+  router.push('/');
 };
 
-// Computed property para verificar si el usuario es admin
 const isAdmin = computed(() => {
   return authStore.user && authStore.user.is_admin === true;
 });
 </script>
-
 
 <style scoped>
 .navbar {
@@ -261,7 +262,7 @@ const isAdmin = computed(() => {
   z-index: 100;
 }
 
-.navbar-title a{
+.navbar-title a {
   margin-left: 10px;
   color: black;
   font-weight: bold;
@@ -270,7 +271,6 @@ const isAdmin = computed(() => {
 }
 
 .navbar-title a:hover {
-  color: black;
   text-shadow: 0 0 10px rgba(77, 182, 172, 0.8);
   transform: scale(1.05);
 }
@@ -303,13 +303,6 @@ const isAdmin = computed(() => {
   color: rgb(34, 134, 141);
 }
 
-.desktop-only {
-  display: inline-block;
-}
-
-.burger-only {
-  display: none;
-}
 
 .navbar-personal {
   margin-left: auto;
@@ -337,11 +330,11 @@ const isAdmin = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 350px; /* Ajusta este valor según sea necesario */
+  max-width: 350px;
 }
 
-#register-button{
-  background-color: #1877F2;
+#register-button {
+  background-color: rgb(34, 134, 141);
 }
 
 #nav-separator {
@@ -349,29 +342,30 @@ const isAdmin = computed(() => {
   color: #b4b4b4;
 }
 
-@media (min-width: 769px) {
-  .navbar-links a {
-    transition: background-color 0.2s, color 0.2s;
-  }
-
-  .navbar-links a:hover {
-    background-color: rgba(245, 235, 204, 0.4);
-    border-radius: 4px;
-  }
-
-  .navbar-username {
-    transition: transform 0.2s ease;
-  }
-
-  .navbar-username:hover {
-    transform: scale(1.05);
-  }
-  
-  .burger-only {
-    display: none !important;
-  }
+.admin-badge {
+  display: inline-flex;
+  margin-left: 5px;
+  color: gold;
+  font-size: 0.8em;
+  flex-shrink: 0;
 }
 
+.admin-badge-mobile {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  color: gold;
+  font-size: 0.9em;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.user-icon {
+  margin-right: 8px;
+}
+
+/* Menú hamburguesa */
 .burger-menu {
   display: none;
   flex-direction: column;
@@ -463,6 +457,56 @@ hr {
   margin: 8px 0;
 }
 
+/* Visibilidad */
+.desktop-only {
+  display: inline-block;
+}
+
+.burger-only {
+  display: none;
+}
+
+/* Responsive */
+@media (min-width: 769px) {
+  .navbar-links a {
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .navbar-links a:hover {
+    background-color: rgba(245, 235, 204, 0.4);
+    border-radius: 4px;
+  }
+
+  .navbar-username {
+    transition: transform 0.2s ease;
+  }
+
+  .navbar-username:hover {
+    transform: scale(1.05);
+  }
+  
+  .burger-only {
+    display: none;
+  }
+}
+
+/* Pantallas/Ventanas medianas */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .navbar-username {
+    font-size: 1em;
+    max-width: 150px;
+  }
+  
+  .username-text {
+    max-width: 120px;
+  }
+  
+  .navbar-links a {
+    font-size: 1em;
+  }
+}
+
+/* Pantallas/Ventanas pequeñas */
 @media (max-width: 768px) {
   .navbar {
     padding: 10px;
@@ -488,14 +532,8 @@ hr {
     align-items: stretch;
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    
     transform: translateY(-100vh);
     transition: transform 0.3s ease-in-out;
-    
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform-style: preserve-3d;
-    
     z-index: 90;
   }
   
@@ -507,9 +545,7 @@ hr {
   }
   
   .navbar-links {
-    margin: 0;
-    margin-bottom: 20px;
-    display: flex;
+    margin: 0 0 20px 0;
     flex-direction: column;
     align-items: center;
   }
@@ -520,23 +556,17 @@ hr {
     width: 100%;
     text-align: center;
     padding: 10px;
-    transition: none;
     background-color: transparent;
   }
   
   .navbar-links a:hover {
     background-color: rgba(245, 235, 204, 0.7);
-    padding: 10px;
     border-radius: 4px;
-    margin: 10px 0;
-    transform: none;
   }
   
   .navbar-personal {
     margin: 0;
-    display: flex;
     flex-direction: column;
-    align-items: center;
     width: 100%;
   }
   
@@ -546,16 +576,16 @@ hr {
     text-align: center;
     padding: 10px;
     max-width: none;
-    transition: none;
+    display: flex;
+    justify-content: center;
   }
   
   .navbar-username:hover {
-    transform: none;
     background-color: rgba(85, 85, 85, 0.9);
   }
   
   .desktop-only {
-    display: none !important;
+    display: none;
   }
   
   .burger-only {
@@ -571,43 +601,9 @@ hr {
     margin: 0;
     border-radius: 0;
   }
-}
 
-@media (min-width: 769px) and (max-width: 1024px) {
-  .navbar-username {
-    font-size: 1em;
-    max-width: 150px;
+  #register-button:hover {
+    background-color: #3da59b;
   }
-  
-  .username-text {
-    max-width: 120px; /* Ajustar para pantallas medianas */
-  }
-  
-  .navbar-links a {
-    font-size: 1em;
-  }
-}
-
-.admin-badge {
-  display: inline-flex;
-  margin-left: 5px;
-  color: gold;
-  font-size: 0.8em;
-  flex-shrink: 0; 
-}
-
-.admin-badge-mobile {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  color: gold;
-  font-size: 0.9em;
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.user-icon {
-  margin-right: 8px;
 }
 </style>

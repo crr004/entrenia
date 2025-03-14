@@ -3,5 +3,5 @@
 </template>
 
 <script setup>
-    import HomeContent from '@/components/HomeContent.vue'
+    import HomeContent from '@/components/general/HomeContent.vue'
 </script>

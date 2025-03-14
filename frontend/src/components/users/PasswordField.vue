@@ -55,22 +55,3 @@ const showPassword = ref(false);
 </script>
 
 <style scoped src="@/assets/styles/form_fields.css"></style>
-
-<style scoped>
-.visibility-toggle {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #777;
-  padding: 5px;
-  font-size: 16px;
-  transition: color 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-</style>

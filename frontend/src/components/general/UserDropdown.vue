@@ -29,9 +29,11 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/authStore';
-import { useRouter } from 'vue-router';
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { useAuthStore } from '@/stores/authStore';
+
 
 const authStore = useAuthStore();
 const emit = defineEmits(['close']);

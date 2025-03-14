@@ -45,17 +45,16 @@
   </Teleport>
 </template>
 
-<style scoped src="@/assets/styles/auth.css"></style>
-<style scoped src="@/assets/styles/buttons.css"></style>
-
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-import FullNameField from '@/components/FullNameField.vue';
-import UsernameField from '@/components/UsernameField.vue';
-import EmailField from '@/components/EmailField.vue';
-import PasswordField from '@/components/PasswordField.vue';
 import axios from 'axios';
+
 import { notifyError, notifySuccess } from '@/utils/notifications';
+import FullNameField from '@/components/users/FullNameField.vue';
+import UsernameField from '@/components/users/UsernameField.vue';
+import EmailField from '@/components/users/EmailField.vue';
+import PasswordField from '@/components/users/PasswordField.vue';
+
 
 const props = defineProps({
   isOpen: {
@@ -79,6 +78,7 @@ const passwordError = ref('');
 
 const isLoading = ref(false);
 
+// Foco en el campo de nombre completo al abrir el modal.
 watch(() => props.isOpen, async (newValue) => {
   if (newValue) {
     await nextTick();
@@ -167,13 +167,16 @@ const switchToLogin = () => {
 };
 
 const handleSignup = async () => {
-  const isValidFullName = true;
-  if(!(fullName.value.trim()=="")){
-    const isValidFullName = validateFullName();
+
+  let isValidFullName = true;
+  if (fullName.value.trim() !== "") {
+    isValidFullName = validateFullName();
   }
+  
   const isValidUsername = validateUsername();
   const isValidEmail = validateEmail();
   const isValidPassword = validatePassword();
+  
   if (!isValidFullName || !isValidUsername || !isValidEmail || !isValidPassword) {
     return;
   }
@@ -190,68 +193,66 @@ const handleSignup = async () => {
     
     const response = await axios.post('/signup', userData);
     
-    notifySuccess(
-      "Cuenta creada correctamente", 
-      "Revisa tu correo para verificar tu identidad antes de poder iniciar sesión."
-    );
+    notifySuccess("Cuenta creada", 
+    "Revisa tu correo para verificar tu identidad antes de poder iniciar sesión.");
   
     closeSignup();
   } catch (error) {
-    console.error('Singup error: ', error);
-    
-    if (error.response) {
-      const status = error.response.status;
-      const detail = error.response.data.detail || "Error desconocido";
-      
-      switch (status) {
-        case 400:
-          if (detail.includes("username")) {
-            usernameError.value = "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos, y debe tener al menos 3 letras.";
-          } else if (detail.includes("full name")) {
-            fullNameError.value = "El nombre completo contiene caracteres no válidos.";
-          } else {
-            notifyError("Error de validación", "Ha ocurrido un error de validación.");
-          }
-          break;
-          
-        case 409:
-          if (detail.includes("username")) {
-            usernameError.value = "Este nombre de usuario ya está en uso.";
-          } else if (detail.includes("email")) {
-            emailError.value = "Este correo electrónico ya está registrado en el sistema.";
-          } else {
-            notifyError("Conflicto", "Los datos ya existen en el sistema.");
-          }
-          break;
-          
-        case 422:
-          notifyError(
-            "Error de validación", 
-            "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada."
-          );
-          break;
-          
-        default:
-          notifyError(
-            "Error en el servidor", 
-            "No se pudo completar el registro. Por favor, inténtalo de nuevo más tarde."
-          );
-      }
-    } else if (error.request) {
-      // La petición fue realizada pero no se recibe respuesta.
-      notifyError(
-        "Error de conexión", 
-        "No se pudo conectar con el servidor. Verifica tu conexión a internet."
-      );
-    } else {
-      // Error al configurar la petición.
-      notifyError(
-        "Error inesperado", 
-        "Ha ocurrido un problema."
-      );
-    }
+    console.error('Signup error: ', error);
+    handleApiError(error);
   } finally {
     isLoading.value = false;
   }
 };
+
+const handleApiError = (error) => {
+  if (error.response) {
+    const status = error.response.status;
+    const detail = error.response.data.detail || "Unknown error";
+
+    console.error('Error response: ', error.response.data);
+    
+    switch (status) {
+      case 400:
+        if (detail.includes("username")) {
+          usernameError.value = "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos, y debe tener al menos 3 letras.";
+        } else if (detail.includes("full name")) {
+          fullNameError.value = "El nombre completo contiene caracteres no válidos.";
+        } else {
+          notifyError("Error de validación", 
+          "Ha ocurrido un error de validación.");
+        }
+        break;
+        
+      case 409:
+        if (detail.includes("username")) {
+          usernameError.value = "Este nombre de usuario ya está en uso.";
+        } else if (detail.includes("email")) {
+          emailError.value = "Este correo electrónico ya está registrado en el sistema.";
+        } else {
+          notifyError("Conflicto", 
+          "Los datos ya existen en el sistema.");
+        }
+        break;
+        
+      case 422:
+        notifyError("Error de validación", 
+        "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada.");
+        break;
+        
+      default:
+        notifyError("Error en el servidor", 
+        "No se pudo completar el registro. Por favor, inténtalo de nuevo más tarde.");
+    }
+  } else if (error.request) {
+      notifyError("Error de conexión", 
+      "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
+  } else {
+      notifyError("Error inesperado", 
+      "Ha ocurrido un problema.");
+  }
+};
 </script>
+
+<style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>

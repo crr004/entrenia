@@ -33,7 +33,6 @@
               :error="passwordError"
               @input="validatePassword"
             />
-            
             <div class="admin-options">
               <div class="admin-option-item">
                 <input type="checkbox" id="is_active" v-model="isActive" />
@@ -48,7 +47,6 @@
                 <label for="is_verified">Cuenta verificada</label>
               </div>
             </div>
-            
             <button type="submit" class="app-button" :disabled="isLoading">
               <span v-if="!isLoading">Añadir usuario</span>
               <span v-else>
@@ -62,25 +60,18 @@
   </Teleport>
 </template>
 
-<style scoped src="@/assets/styles/auth.css"></style>
-<style scoped src="@/assets/styles/buttons.css"></style>
-
-<style scoped>
-.add-user-modal {
-  max-width: 500px;
-}
-</style>
-
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-import FullNameField from '@/components/FullNameField.vue';
-import UsernameField from '@/components/UsernameField.vue';
-import EmailField from '@/components/EmailField.vue';
-import PasswordField from '@/components/PasswordField.vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
+
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
-import { useRouter } from 'vue-router';
+import FullNameField from '@/components/users/FullNameField.vue';
+import UsernameField from '@/components/users/UsernameField.vue';
+import EmailField from '@/components/users/EmailField.vue';
+import PasswordField from '@/components/users/PasswordField.vue';
+
 
 const props = defineProps({
   isOpen: {
@@ -97,8 +88,8 @@ const username = ref('');
 const email = ref('');
 const password = ref('');
 const isAdmin = ref(false);
-const isActive = ref(true); // Por defecto activo
-const isVerified = ref(true); // Por defecto verificado
+const isActive = ref(true);
+const isVerified = ref(true);
 const fullNameFieldRef = ref(null);
 
 const fullNameError = ref('');
@@ -109,6 +100,7 @@ const passwordError = ref('');
 const isLoading = ref(false);
 const authStore = useAuthStore();
 
+// Foco en el campo de nombre completo al abrir el modal.
 watch(() => props.isOpen, async (newValue) => {
   if (newValue) {
     await nextTick();
@@ -120,8 +112,8 @@ watch(() => props.isOpen, async (newValue) => {
 });
 
 const validateFullName = () => {
+  // Como el nombre completo es opcional, es válido si está vacío.
   if (!fullName.value.trim()) {
-    // Si está vacío, es opcional
     fullNameError.value = '';
     return true;
   }
@@ -201,7 +193,6 @@ const closeModal = () => {
 };
 
 const handleAddUser = async () => {
-  // Validación de campos
   const isValidFullName = validateFullName();
   const isValidUsername = validateUsername();
   const isValidEmail = validateEmail();
@@ -214,11 +205,14 @@ const handleAddUser = async () => {
   try {
     isLoading.value = true;
     
-    // Asegurar que el token de autenticación esté configurado
-    authStore.setAuthHeader();
+    // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
+    const hasToken = !!localStorage.getItem('token') || !!authStore.token;
+    if(hasToken){
+      authStore.setAuthHeader();
+    }
     
     const userData = {
-      full_name: fullName.value || null, // Si está vacío, enviar null
+      full_name: fullName.value || null,
       username: username.value,
       email: email.value,
       password: password.value,
@@ -238,65 +232,82 @@ const handleAddUser = async () => {
     closeModal();
     
   } catch (error) {
-    console.error('Error al crear usuario:', error);
-    
-    if (error.response) {
-      const status = error.response.status;
-      const detail = error.response.data.detail || "Error desconocido";
-      
-      switch (status) {
-        case 400:
-          if (detail.includes("username")) {
-            usernameError.value = "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos, y debe tener al menos 3 letras.";
-          } else if (detail.includes("full name")) {
-            fullNameError.value = "El nombre completo contiene caracteres no válidos.";
-          } else {
-            notifyError("Error de validación", "Ha ocurrido un error de validación.");
-          }
-          break;
-          
-        case 403:
-          notifyInfo("Sesión expirada", "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
-          authStore.logout();
-          router.push('/');
-          break;
-          
-        case 409:
-          if (detail.includes("username")) {
-            usernameError.value = "Este nombre de usuario ya está en uso.";
-          } else if (detail.includes("email")) {
-            emailError.value = "Este correo electrónico ya está registrado en el sistema.";
-          } else {
-            notifyError("Conflicto", "Los datos ya existen en el sistema.");
-          }
-          break;
-          
-        case 422:
-          notifyError(
-            "Error de validación", 
-            "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada."
-          );
-          break;
-          
-        default:
-          notifyError(
-            "Error en el servidor", 
-            "No se pudo completar la creación del usuario. Por favor, inténtalo de nuevo más tarde."
-          );
-      }
-    } else if (error.request) {
-      notifyError(
-        "Error de conexión", 
-        "No se pudo conectar con el servidor. Verifica tu conexión a internet."
-      );
-    } else {
-      notifyError(
-        "Error inesperado", 
-        "Ha ocurrido un problema al crear el usuario."
-      );
-    }
+    console.error('Error while creating user: ', error);
+    handleApiError(error);
   } finally {
     isLoading.value = false;
   }
 };
+
+const handleApiError = (error) => {
+  
+  if (error.response) {
+    const status = error.response.status;
+    const detail = error.response.data.detail || "Unknown error";
+    
+    console.error('Error response: ', error.response.data);
+    
+    switch (status) {
+      case 400:
+        if (detail.includes("username")) {
+          usernameError.value = "El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos, y debe tener al menos 3 letras.";
+        } else if (detail.includes("full name")) {
+          fullNameError.value = "El nombre completo contiene caracteres no válidos.";
+        } else {
+          notifyError("Error de validación", 
+          "Ha ocurrido un error de validación.");
+        }
+        break;
+        
+      case 403:
+        if (detail.includes("credentials")) {
+          notifyInfo("Sesión expirada", 
+          "Por favor, inicia sesión de nuevo.");
+          authStore.logout();
+          router.push('/');
+        } else if (detail.includes("privileges")) {
+          notifyError("Acceso denegado", 
+          "No tienes permisos suficientes para realizar esta acción.");
+          router.push('/');
+        } else {
+          notifyError("Acceso denegado", 
+          "No tienes permisos suficientes para realizar esta acción.");
+        }
+        break;
+        
+      case 409:
+        if (detail.includes("username")) {
+          usernameError.value = "Este nombre de usuario ya está en uso.";
+        } else if (detail.includes("email")) {
+          emailError.value = "Este correo electrónico ya está registrado en el sistema.";
+        } else {
+          notifyError("Conflicto", 
+          "Los datos ya existen en el sistema.");
+        }
+        break;
+        
+      case 422:
+        notifyError("Error de validación", 
+          "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada."
+        );
+        break;
+        
+      default:
+        notifyError("Error en el servidor", 
+          "No se pudo completar la creación del usuario. Por favor, inténtalo de nuevo más tarde."
+        );
+    }
+  } else if (error.request) {
+    notifyError("Error de conexión", 
+      "No se pudo conectar con el servidor. Verifica tu conexión a internet."
+    );
+  } else {
+    notifyError("Error inesperado", 
+      "Ha ocurrido un problema al crear el usuario."
+    );
+  }
+};
 </script>
+
+<style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>

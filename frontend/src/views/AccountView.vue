@@ -161,13 +161,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
 import axios from 'axios';
-import EmailField from '@/components/EmailField.vue';
-import UsernameField from '@/components/UsernameField.vue';
-import FullNameField from '@/components/FullNameField.vue';
-import PasswordField from '@/components/PasswordField.vue';
+
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
+import { useAuthStore } from '@/stores/authStore';
+import EmailField from '@/components/users/EmailField.vue';
+import UsernameField from '@/components/users/UsernameField.vue';
+import FullNameField from '@/components/users/FullNameField.vue';
+import PasswordField from '@/components/users/PasswordField.vue';
+
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -204,6 +206,7 @@ const hasProfileChanges = computed(() => {
 });
 
 const validateFullName = () => {
+  // El nombre completo es opcional, por lo que es válido si está vacío.
   if (!fullName.value) {
     fullNameError.value = '';
     return;
@@ -211,7 +214,7 @@ const validateFullName = () => {
   
   const nameRegex = /^[A-Za-zÁ-ÿà-ÿ]+(?:[ '-][A-Za-zÁ-ÿà-ÿ]+)*$/;
   if (!nameRegex.test(fullName.value)) {
-    fullNameError.value = 'El nombre solo puede contener letras, espacios, guiones y apóstrofes.';
+    fullNameError.value = 'El nombre completo contiene caracteres inválidos.';
     return false;
   }
   
@@ -221,8 +224,8 @@ const validateFullName = () => {
 
 const validateUsername = () => {
   if (!username.value) {
-    usernameError.value = '';
-    return;
+    usernameError.value = 'El nombre de usuario es obligatorio.';
+    return false;
   }
   
   const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
@@ -291,7 +294,7 @@ const fetchUserData = async () => {
     const response = await axios.get('/users/own');
     email.value = response.data.email;
     fullName.value = response.data.full_name || '';
-    username.value = response.data.username || '';
+    username.value = response.data.username;
     
     originalFullName.value = fullName.value;
     originalUsername.value = username.value;
@@ -302,7 +305,7 @@ const fetchUserData = async () => {
       if (hasToken) {
         handleApiError(error);
       } else {
-        console.log('Unauthorized access, redirecting to home page...');
+        console.error('Unauthorized access, redirecting to home page...');
         router.push('/');
         return;
       }
@@ -332,9 +335,9 @@ const updateProfile = async () => {
   
   isLoading.value = true;
   try {
-    const response = await axios.patch('users/own', userData);
+    const response = await axios.patch('/users/own', userData);
     fullName.value = response.data.full_name || '';
-    username.value = response.data.username || '';
+    username.value = response.data.username;
     
     originalFullName.value = fullName.value;
     originalUsername.value = username.value;
@@ -368,7 +371,7 @@ const changePassword = async () => {
   
   isLoading.value = true;
   try {
-    await axios.patch('users/own/password', {
+    await axios.patch('/users/own/password', {
       current_password: currentPassword.value,
       new_password: newPassword.value
     });
@@ -377,8 +380,8 @@ const changePassword = async () => {
     newPassword.value = '';
     confirmNewPassword.value = '';
     
-    notifySuccess("Contraseña actualizada", 
-    "Tu contraseña ha sido cambiada con éxito.");
+    notifySuccess("Contraseña modificada", 
+    "Tu contraseña se ha modificado con éxito.");
   } catch (error) {
     console.error('Error while changing password: ', error);
     handleApiError(error);
@@ -399,7 +402,7 @@ const deleteAccount = async () => {
   
   isLoading.value = true;
   try {
-    await axios.delete('users/own');
+    await axios.delete('/users/own');
     
     authStore.logout();
     
@@ -417,6 +420,8 @@ const deleteAccount = async () => {
 const handleApiError = (error) => {
   if (error.response) {
     const { status, data } = error.response;
+
+    console.error("Error response: ", data);
     
     switch (status) {
       case 400:
@@ -471,11 +476,9 @@ const handleApiError = (error) => {
         break;
     }
   } else if (error.request) {
-    // La petición fue realizada pero no se recibió respuesta.
     notifyError("Error de conexión", 
     "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
   } else {
-    // Error al configurar la petición.
     notifyError("Error inesperado", 
     "Ha ocurrido un problema.");
   }
@@ -713,7 +716,7 @@ onMounted(fetchUserData);
   }
 }
 
-/* Para pantallas muy pequeñas */
+/* Para pantallas/ventanas pequeñas */
 @media (max-width: 480px) {
   .sidebar {
     flex-direction: column;

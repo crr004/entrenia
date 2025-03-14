@@ -57,37 +57,36 @@ const props = defineProps({
   }
 });
 
-// Definir emisiones estáticas para todos los posibles eventos
-const emit = defineEmits(['edit', 'delete', 'view', 'close', 'activate', 'deactivate', 'verify', 'pin', 'publish', 'unpublish']);
+// Definir emisiones para todos los posibles eventos.
+const emit = defineEmits(['edit', 'delete']);
 
-// Función para manejar cualquier acción
+// Función para manejar cualquier acción de las que haya en el menú.
 const handleAction = (eventName) => {
   emit(eventName, props.item);
 };
 
 const actionMenuRef = ref(null);
-// Flag para controlar la visibilidad
 const isVisible = ref(false);
 
-// Calcular la posición del menú basándose en el elemento que lo abrió
+// Calcular la posición del menú basándose en el elemento que lo abre.
 const menuStyle = reactive({
   position: 'fixed',
   top: '0px',
   left: '0px',
   zIndex: 9999,
-  opacity: 0, // Inicialmente invisible (para el cálculo de dimensiones)
+  opacity: 0, // Inicialmente invisible (para el cálculo de dimensiones).
 });
 
-// Posicionar el menú basado en el botón que lo activó
+// Posicionar el menú según en el botón que lo activó.
 const updateMenuPosition = () => {
-  isVisible.value = false; // Ocultar primero
+  isVisible.value = false;
   
-  // Pequeño timeout para asegurar que esté oculto primero
+  // Pequeño timeout para asegurar que esté oculto primero.
   setTimeout(() => {
-    // Usar itemId para identificar exactamente el botón correcto
+    // Usar itemId para identificar el botón que lo activó.
     const actionButton = document.querySelector(`.action-button[data-item-id="${props.itemId}"][data-active="true"]`);
     if (!actionButton) {
-      console.warn('No se pudo encontrar el botón activo para el elemento:', props.itemId);
+      console.warn('Button not found: ', props.itemId);
       return;
     }
     
@@ -95,17 +94,14 @@ const updateMenuPosition = () => {
     const menuElement = actionMenuRef.value;
     if (!menuElement) return;
     
-    // Calcular posición con el menú invisible pero en el DOM
+    // Calcular posición con el menú invisible pero en el DOM.
     menuStyle.opacity = '0';
     
-    // Precalcular el tamaño del menú sin esperar a que sea visible
-    const precalculatedHeight = menuElement.offsetHeight || 100; // Valor por defecto si no se puede calcular
-    const precalculatedWidth = menuElement.offsetWidth || 150;  // Valor por defecto si no se puede calcular
+    // Precalcular el tamaño del menú sin esperar a que sea visible.
+    const precalculatedHeight = menuElement.offsetHeight || 100;
+    const precalculatedWidth = menuElement.offsetWidth || 150;
     
-    // Modifica esta sección para cambiar la posición
-    // Posicionar en función de las preferencias (arriba/abajo, izquierda/derecha)
     if (props.position.top) {
-      // Ponemos el menú arriba del botón pero un poco más abajo (menos distancia del botón)
       menuStyle.top = `${buttonRect.top - precalculatedHeight + 20}px`;
     } else {
       menuStyle.top = `${buttonRect.bottom + 20}px`;
@@ -114,11 +110,10 @@ const updateMenuPosition = () => {
     if (props.position.right) {
       menuStyle.left = `${buttonRect.right - precalculatedWidth}px`;
     } else {
-      // Desplazamos más a la izquierda
       menuStyle.left = `${buttonRect.left - 30}px`;
     }
     
-    // Ajustar si el menú se sale de la pantalla
+    // Ajustar si el menú se sale de la pantalla.
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
@@ -140,22 +135,16 @@ const updateMenuPosition = () => {
       menuStyle.top = `${buttonRect.bottom + 5}px`;
     }
     
-    // Hacer visible el menú una vez posicionado
+    // Hacer visible el menú una vez posicionado.
     menuStyle.opacity = '1';
     isVisible.value = true;
   }, 5);
 };
 
-// Cerrar el menú cuando se hace clic fuera de él
+// Cerrar el menú cuando se hace clic fuera de él.
 const handleClickOutside = (event) => {
-  // No cerrar cuando se hace clic en un diálogo o sus elementos
-  if (event.target.closest('.confirmation-modal') || 
-      event.target.closest('.modal-overlay')) {
-    return;
-  }
-  
-  // No cerramos automáticamente si se hace clic en cualquier botón de acción,
-  // dejamos que el componente padre maneje esto con toggleActionsMenu
+
+  // Sin esto, se cerraría al hacer clic en el botón de acción (osea, se cierra en cuanto se abre).
   if (event.target.closest('.action-button')) {
     return;
   }
@@ -165,7 +154,7 @@ const handleClickOutside = (event) => {
   }
 };
 
-// Observar cambios en las props para reposicionar el menú si es necesario
+// Observar cambios en las props para reposicionar el menú si es necesario (responsive).
 watch(() => props.position, () => {
   updateMenuPosition();
 }, { deep: true });
@@ -176,10 +165,11 @@ watch(() => props.itemId, () => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-  // Pequeño retraso para dar tiempo a que el DOM se actualice, pero no mostrar todavía
+
+  // Pequeño retraso para dar tiempo a que el DOM se actualice.
   setTimeout(updateMenuPosition, 5);
   
-  // Añadir listener para redimensionamiento de ventana
+  // Añadir listener para redimensionamiento de ventana (responsive).
   window.addEventListener('resize', updateMenuPosition);
 });
 

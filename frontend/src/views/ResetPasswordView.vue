@@ -47,13 +47,15 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
-import PasswordField from '@/components/PasswordField.vue';
+
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import PasswordField from '@/components/users/PasswordField.vue';
+
 
 const router = useRouter();
 const route = useRoute();
 
-const tokenStatus = ref('pending'); // 'pending', 'valid', 'invalid', 'success'
+const tokenStatus = ref('pending'); // Puede ser 'pending', 'valid', 'invalid' o 'success'.
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 
@@ -97,7 +99,6 @@ const goToHome = () => {
 };
 
 onMounted(async () => {
-
   token.value = route.query.token;
   
   if (!token.value) {
@@ -105,14 +106,10 @@ onMounted(async () => {
     isLoading.value = false;
     return;
   }
-  try {
-    tokenStatus.value = 'valid';
-    isLoading.value = false;
-  } catch (error) {
-    tokenStatus.value = 'invalid';
-    console.error('Error while validating token: ', error);
-    isLoading.value = false;
-  }
+
+  // Se marca como válido (si existe) temporalmente, ya que el token se valida en el backend al enviar la solicitud.
+  tokenStatus.value = 'valid';
+  isLoading.value = false;
 });
 
 const handleSubmit = async () => {
@@ -132,56 +129,57 @@ const handleSubmit = async () => {
     });
     
     tokenStatus.value = 'success';
-    notifySuccess(
-      "Contraseña actualizada",
-      "Tu contraseña ha sido cambiada con éxito."
-    );
+    notifySuccess("Contraseña restablecida",
+    "Tu contraseña se ha restablecido con éxito.");
   } catch (error) {
     console.error('Error while reseting password: ', error);
-    
-    if (error.response) {
-      const status = error.response.status;
-      const detail = error.response.data.detail || 'Error desconocido';
-      
-      switch (status) {
-        case 400:
-          if (detail.includes("You cannot reuse")) {
-            passwordError.value = 'La nueva contraseña no puede ser igual a la actual.';
-          } else {
-            notifyError("Enlace no válido", 
-            "El token es inválido o ha expirado.");
-            tokenStatus.value = 'invalid';
-          }
-          break;
-        case 403:
-          notifyError("Cuenta desactivada", 
-          "Tu cuenta está desactivada. Por favor, contacta con soporte.");
-          tokenStatus.value = 'invalid';
-          break;
-        case 404:
-          notifyError("Usuario no encontrado", 
-          "No se encontró un usuario asociado a este token.");
-          tokenStatus.value = 'invalid';
-          break;
-        default:
-          notifyError("Error en el servidor", 
-          "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.");
-      }
-    } else {
-      notifyError(
-        "Error de conexión",
-        "No se pudo conectar con el servidor. Verifica tu conexión a internet."
-      );
-    }
+    handleApiError(error);
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+const handleApiError = (error) => {
+  if (error.response) {
+    const status = error.response.status;
+    const detail = error.response.data.detail || 'Unknown error';
+
+    console.error('Error response: ', error.response.data);
+    
+    switch (status) {
+      case 400:
+        if (detail.includes("You cannot reuse")) {
+          passwordError.value = 'La nueva contraseña no puede ser igual a la actual.';
+        } else {
+          notifyError("Enlace no válido", 
+          "El token es inválido o ha expirado.");
+          tokenStatus.value = 'invalid';
+        }
+        break;
+      case 403:
+        notifyError("Cuenta desactivada", 
+        "Tu cuenta está desactivada. Por favor, contacta con soporte.");
+        tokenStatus.value = 'invalid';
+        break;
+      case 404:
+        notifyError("Usuario no encontrado", 
+        "No se encontró un usuario asociado a este token.");
+        tokenStatus.value = 'invalid';
+        break;
+      default:
+        notifyError("Error en el servidor", 
+        "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.");
+    }
+  } else {
+    notifyError(
+      "Error de conexión",
+      "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
   }
 };
 </script>
 
 <style scoped src="@/assets/styles/auth.css"></style>
 <style scoped src="@/assets/styles/buttons.css"></style>
-
 <style scoped>
 .reset-password-card {
   transform: none;

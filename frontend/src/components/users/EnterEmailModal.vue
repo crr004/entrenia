@@ -14,7 +14,6 @@
               @input="validateEmail" 
               ref="emailFieldRef"
             />
-            
             <button type="submit" class="app-button" :disabled="isLoading || !email">
               <span v-if="!isLoading">Enviar instrucciones</span>
               <span v-else>
@@ -28,14 +27,13 @@
   </Teleport>
 </template>
 
-<style scoped src="@/assets/styles/auth.css"></style>
-<style scoped src="@/assets/styles/buttons.css"></style>
-
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-import { notifySuccess, notifyError } from '@/utils/notifications';
-import EmailField from '@/components/EmailField.vue';
 import axios from 'axios';
+
+import { notifySuccess, notifyError } from '@/utils/notifications';
+import EmailField from '@/components/users/EmailField.vue';
+
 
 const props = defineProps({
   isOpen: {
@@ -51,6 +49,7 @@ const emailError = ref('');
 const emailFieldRef = ref(null);
 const isLoading = ref(false);
 
+// Foco en el campo de correo electrónico al abrir el modal.
 watch(() => props.isOpen, async (newValue) => {
   if (newValue) {
     await nextTick();
@@ -97,8 +96,7 @@ const handleResetPassword = async () => {
     
     await axios.post(`/login/password-recovery/${encodeURIComponent(email.value)}`);
 
-    notifySuccess(
-      'Correo enviado', 
+    notifySuccess('Instrucciones enviadas', 
       'Te hemos enviado un correo con instrucciones para restablecer tu contraseña.'
     );
     
@@ -106,51 +104,54 @@ const handleResetPassword = async () => {
     
   } catch (error) {
     console.error('Error while requesting password reset: ', error);
-    
-    if (error.response) {
-      const status = error.response.status;
-      const detail = error.response.data.detail || 'Error desconocido';
-      
-      switch (status) {
-        case 404:
-          emailError.value = 'No existe ninguna cuenta con este correo electrónico.';
-          break;
-          
-        case 403:
-          if (detail.includes("Unverified")) {
-            notifyError(
-                "Cuenta sin verificar", 
-                "Debes verificar tu identidad para poder restablecer tu contraseña. Por favor, revisa tu correo electrónico."
-              );
-          } else if (detail.includes("Inactive")) {
-            notifyError(
-                "Cuenta desactivada", 
-                "Tu cuenta está desactivada. Por favor, contacta con soporte."
-              );
-          } else {
-            notifyError("Acceso denegado", 
-            "No tienes permiso para realizar esta acción.");
-          }
-          break;
-        default:
-          notifyError(
-            'Error en el servidor', 
-            'No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.'
-          );
-      }
-    } else if (error.request) {
-      notifyError(
-        'Error de conexión',
-        'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
-      );
-    } else {
-      notifyError(
-        'Error inesperado', 
-        'Ha ocurrido un problema.'
-      );
-    }
+    handleApiError(error);
   } finally {
     isLoading.value = false;
   }
 };
+
+const handleApiError = (error) => {
+  if (error.response) {
+    const status = error.response.status;
+    const detail = error.response.data.detail || 'Unknown error';
+
+    console.error('Error response: ', error.response.data);
+    
+    switch (status) {
+      case 404:
+        emailError.value = 'No existe ninguna cuenta con este correo electrónico.';
+        break;
+        
+      case 403:
+        if (detail.includes("Unverified")) {
+          notifyError("Cuenta sin verificar", 
+              "Debes verificar tu identidad para poder restablecer tu contraseña. Por favor, revisa tu correo electrónico."
+            );
+        } else if (detail.includes("Inactive")) {
+          notifyError("Cuenta desactivada", 
+              "Tu cuenta está desactivada. Por favor, contacta con soporte."
+            );
+        } else {
+          notifyError("Acceso denegado", 
+          "No tienes permiso para realizar esta acción.");
+        }
+        break;
+      default:
+        notifyError("Error en el servidor", 
+          "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde."
+        );
+    }
+  } else if (error.request) {
+    notifyError("Error de conexión",
+      "No se pudo conectar con el servidor. Verifica tu conexión a internet."
+    );
+  } else {
+    notifyError("Error inesperado", 
+      "Ha ocurrido un problema."
+    );
+  }
+};
 </script>
+
+<style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/buttons.css"></style>

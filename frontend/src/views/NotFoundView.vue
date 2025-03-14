@@ -12,7 +12,6 @@
 </template>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
-
 <style scoped>
 
 .not-found-content {
