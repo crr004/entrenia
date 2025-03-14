@@ -50,6 +50,7 @@ import { ref, watch, nextTick } from 'vue';
 import axios from 'axios';
 
 import { notifyError, notifySuccess } from '@/utils/notifications';
+import { userValidationRegex } from '@/utils/validations.js';
 import FullNameField from '@/components/users/FullNameField.vue';
 import UsernameField from '@/components/users/UsernameField.vue';
 import EmailField from '@/components/users/EmailField.vue';
@@ -90,10 +91,13 @@ watch(() => props.isOpen, async (newValue) => {
 });
 
 const validateFullName = () => {
-  const nameRegex = /^[A-Za-zÁ-ÿà-ÿ]+(?:[ '-][A-Za-zÁ-ÿà-ÿ]+)*$/;
+  const nameRegex = userValidationRegex.fullname;
 
   if (!nameRegex.test(fullName.value)) {
     fullNameError.value = 'El nombre completo contiene caracteres inválidos.';
+    return false;
+  } else if(fullName.value.length > 75) {
+    fullNameError.value = 'El nombre completo no puede tener más de 75 caracteres.';
     return false;
   } else {
     fullNameError.value = '';
@@ -102,13 +106,16 @@ const validateFullName = () => {
 };
 
 const validateUsername = () => {
-  const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
+  const usernameRegex = userValidationRegex.username;
   
   if (!username.value) {
     usernameError.value = 'El nombre de usuario es obligatorio.';
     return false;
   } else if (!usernameRegex.test(username.value)) {
-    usernameError.value = 'Solo letras, números y guiones bajos. Debe contener al menos 3 letras.';
+    usernameError.value = 'Solo letras minúsculas, números y guiones bajos. Debe contener al menos 3 letras.';
+    return false;
+  } else if (username.value.length > 20) {
+    usernameError.value = 'El nombre de usuario no puede tener más de 20 caracteres.';
     return false;
   } else {
     usernameError.value = '';
@@ -117,7 +124,7 @@ const validateUsername = () => {
 };
 
 const validateEmail = () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = userValidationRegex.email;
   
   if (!email.value) {
     emailError.value = 'El correo electrónico es obligatorio.';
@@ -137,6 +144,9 @@ const validatePassword = () => {
     return false;
   } else if (password.value.length < 9) {
     passwordError.value = 'La contraseña debe tener al menos 9 caracteres.';
+    return false;
+  } else if(password.value.length > 50) {
+    passwordError.value = 'La contraseña no puede tener más de 50 caracteres.';
     return false;
   } else {
     passwordError.value = '';

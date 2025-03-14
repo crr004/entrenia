@@ -66,6 +66,7 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
+import { userValidationRegex } from '@/utils/validations.js';
 import { useAuthStore } from '@/stores/authStore';
 import FullNameField from '@/components/users/FullNameField.vue';
 import UsernameField from '@/components/users/UsernameField.vue';
@@ -118,10 +119,13 @@ const validateFullName = () => {
     return true;
   }
   
-  const nameRegex = /^[A-Za-zÁ-ÿà-ÿ]+(?:[ '-][A-Za-zÁ-ÿà-ÿ]+)*$/;
+  const nameRegex = userValidationRegex.fullname;
 
   if (!nameRegex.test(fullName.value)) {
     fullNameError.value = 'El nombre completo contiene caracteres inválidos.';
+    return false;
+  } else if(fullName.value.length > 170) {
+    fullNameError.value = 'El nombre completo no puede tener más de 170 caracteres.';
     return false;
   } else {
     fullNameError.value = '';
@@ -130,13 +134,16 @@ const validateFullName = () => {
 };
 
 const validateUsername = () => {
-  const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
+  const usernameRegex = userValidationRegex.username;
   
   if (!username.value) {
     usernameError.value = 'El nombre de usuario es obligatorio.';
     return false;
   } else if (!usernameRegex.test(username.value)) {
     usernameError.value = 'Solo letras minúsculas, números y guiones bajos. Debe contener al menos 3 letras.';
+    return false;
+  } else if (username.value.length > 20) {
+    usernameError.value = 'El nombre de usuario no puede tener más de 20 caracteres.';
     return false;
   } else {
     usernameError.value = '';
@@ -145,7 +152,7 @@ const validateUsername = () => {
 };
 
 const validateEmail = () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = userValidationRegex.email;
   
   if (!email.value) {
     emailError.value = 'El correo electrónico es obligatorio.';
@@ -165,6 +172,9 @@ const validatePassword = () => {
     return false;
   } else if (password.value.length < 9) {
     passwordError.value = 'La contraseña debe tener al menos 9 caracteres.';
+    return false;
+  } else if(password.value.length > 50) {
+    passwordError.value = 'La contraseña no puede tener más de 50 caracteres.';
     return false;
   } else {
     passwordError.value = '';
@@ -223,10 +233,8 @@ const handleAddUser = async () => {
     
     const response = await axios.post('/users/', userData);
     
-    notifySuccess(
-      "Usuario creado", 
-      `Se ha creado el usuario ${username.value} con éxito.`
-    );
+    notifySuccess("Usuario creado", 
+    `Se ha creado el usuario ${username.value} con éxito.`);
     
     emit('userAdded', response.data);
     closeModal();
@@ -288,23 +296,19 @@ const handleApiError = (error) => {
         
       case 422:
         notifyError("Error de validación", 
-          "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada."
-        );
+        "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada.");
         break;
         
       default:
         notifyError("Error en el servidor", 
-          "No se pudo completar la creación del usuario. Por favor, inténtalo de nuevo más tarde."
-        );
+        "No se pudo completar la creación del usuario. Por favor, inténtalo de nuevo más tarde.");
     }
   } else if (error.request) {
     notifyError("Error de conexión", 
-      "No se pudo conectar con el servidor. Verifica tu conexión a internet."
-    );
+    "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
   } else {
     notifyError("Error inesperado", 
-      "Ha ocurrido un problema al crear el usuario."
-    );
+    "Ha ocurrido un problema al crear el usuario.");
   }
 };
 </script>

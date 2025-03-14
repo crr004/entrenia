@@ -165,6 +165,7 @@ import axios from 'axios';
 
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
+import { userValidationRegex } from '@/utils/validations.js';
 import EmailField from '@/components/users/EmailField.vue';
 import UsernameField from '@/components/users/UsernameField.vue';
 import FullNameField from '@/components/users/FullNameField.vue';
@@ -212,9 +213,12 @@ const validateFullName = () => {
     return;
   }
   
-  const nameRegex = /^[A-Za-zÁ-ÿà-ÿ]+(?:[ '-][A-Za-zÁ-ÿà-ÿ]+)*$/;
+  const nameRegex = userValidationRegex.fullname;
   if (!nameRegex.test(fullName.value)) {
     fullNameError.value = 'El nombre completo contiene caracteres inválidos.';
+    return false;
+  } else if(fullName.value.length > 75) {
+    fullNameError.value = 'El nombre completo no puede tener más de 75 caracteres.';
     return false;
   }
   
@@ -228,9 +232,12 @@ const validateUsername = () => {
     return false;
   }
   
-  const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
+  const usernameRegex = userValidationRegex.username;
   if (!usernameRegex.test(username.value)) {
-    usernameError.value = 'El nombre de usuario solo puede contener letras minúsculas, números y guiones bajos, y debe tener al menos 3 letras.';
+    usernameError.value = 'Solo letras minúsculas, números y guiones bajos. Debe contener al menos 3 letras.';
+    return false;
+  } else if (username.value.length > 20) {
+    usernameError.value = 'El nombre de usuario no puede tener más de 20 caracteres.';
     return false;
   }
   
@@ -256,7 +263,10 @@ const validateNewPassword = () => {
   if (newPassword.value.length < 9) {
     newPasswordError.value = 'La contraseña debe tener al menos 9 caracteres.';
     return false;
-  }
+  } else if(newPassword.value.length > 50) {
+    newPasswordError.value = 'La contraseña no puede tener más de 50 caracteres.';
+    return false;
+  } 
   
   if (newPassword.value === currentPassword.value) {
     newPasswordError.value = 'La nueva contraseña no puede ser igual a la actual.';
@@ -461,6 +471,11 @@ const handleApiError = (error) => {
           notifyError("Acceso denegado", 
           "No tienes permiso para realizar esta acción.");
         }
+        break;
+      
+      case 422:
+        notifyError("Error de validación", 
+        "Los datos proporcionados no son válidos. Por favor, verifica la información ingresada.");
         break;
         
       case 404:

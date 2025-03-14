@@ -46,6 +46,7 @@ import axios from 'axios';
 
 import { notifyError } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
+import { userValidationRegex } from '@/utils/validations';
 import PasswordField from '@/components/users/PasswordField.vue';
 import LoginNameField from '@/components/users/LoginNameField.vue';
 
@@ -113,13 +114,13 @@ const validateUsername = () => {
   
   // Comprobar si es un email (contiene @) o un nombre de usuario.
   if (username.value.includes('@')) {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = userValidationRegex.email;
     if (!emailRegex.test(username.value)) {
       usernameError.value = 'Por favor, introduce un correo electrónico válido.';
       return false;
     }
   } else {
-    const usernameRegex = /^(?=(?:.*[a-z]){3})[a-z0-9_]+$/;
+    const usernameRegex = userValidationRegex.username;
     if (!usernameRegex.test(username.value)) {
       usernameError.value = 'Por favor, introduce un nombre de usuario válido.';
       return false;
@@ -131,7 +132,7 @@ const validateUsername = () => {
 };
 
 const validatePassword = () => {
-  const passwordRegex = /^.{9,}$/;
+  const passwordRegex = /^.{9,50}$/;
   if (!password.value) {
     passwordError.value = 'Por favor, introduce tu contraseña.';
     return false;

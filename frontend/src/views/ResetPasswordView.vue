@@ -72,6 +72,9 @@ const validatePassword = () => {
   } else if (password.value.length < 9) {
     passwordError.value = 'La contraseña debe tener al menos 9 caracteres.';
     return false;
+  } else if(password.value.length > 50) {
+    passwordError.value = 'La contraseña no puede tener más de 50 caracteres.';
+    return false;
   } else {
     passwordError.value = '';
     if (confirmPassword.value) {

@@ -58,9 +58,21 @@
               </thead>
               <tbody>
                 <tr v-for="user in paginatedResults" :key="user.id" :class="{ 'inactive-user': !user.is_active }">
-                  <td>{{ user.email }}</td>
-                  <td>{{ user.full_name || '-' }}</td>
-                  <td>{{ user.username || '-' }}</td>
+                  <td>
+                    <span class="truncate" :title="user.email">
+                      {{ truncateText(user.email, 31) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="truncate" :title="user.full_name || '-'">
+                      {{ truncateText(user.full_name, 20) || '-' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="truncate" :title="user.username">
+                      {{ truncateText(user.username, 20) }}
+                    </span>
+                  </td>
                   <td class="center-column">
                     <span v-if="user.is_admin" class="admin-badge" title="Administrador">
                       <font-awesome-icon :icon="['fas', 'crown']" />
@@ -630,6 +642,12 @@ onMounted(() => {
   
   fetchUsers();
 });
+
+// Truncar campos de texto largos.
+const truncateText = (text, maxLength) => {
+  if (!text) return null;
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
@@ -962,6 +980,30 @@ onMounted(() => {
   padding: 40px 0;
   color: #666;
   gap: 10px;
+}
+
+/* Truncar texto */
+.truncate {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.users-table th:nth-child(1), 
+.users-table td:nth-child(1) {
+  max-width: 205px; /* Email */
+}
+
+.users-table th:nth-child(2), 
+.users-table td:nth-child(2) {
+  max-width: 180px; /* Nombre */
+}
+
+.users-table th:nth-child(3), 
+.users-table td:nth-child(3) {
+  max-width: 150px; /* Usuario */
 }
 
 /* Responsive */

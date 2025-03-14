@@ -32,6 +32,7 @@ import { ref, watch, nextTick } from 'vue';
 import axios from 'axios';
 
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { userValidationRegex } from '@/utils/validations';
 import EmailField from '@/components/users/EmailField.vue';
 
 
@@ -61,7 +62,7 @@ watch(() => props.isOpen, async (newValue) => {
 });
 
 const validateEmail = () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = userValidationRegex.email;
   
   if (!email.value) {
     emailError.value = 'El correo electrónico es obligatorio.';
@@ -96,9 +97,8 @@ const handleResetPassword = async () => {
     
     await axios.post(`/login/password-recovery/${encodeURIComponent(email.value)}`);
 
-    notifySuccess('Instrucciones enviadas', 
-      'Te hemos enviado un correo con instrucciones para restablecer tu contraseña.'
-    );
+    notifySuccess("Instrucciones enviadas", 
+    "Te hemos enviado un correo con instrucciones para restablecer tu contraseña.");
     
     closeEnterEmailModal();
     
@@ -125,12 +125,10 @@ const handleApiError = (error) => {
       case 403:
         if (detail.includes("Unverified")) {
           notifyError("Cuenta sin verificar", 
-              "Debes verificar tu identidad para poder restablecer tu contraseña. Por favor, revisa tu correo electrónico."
-            );
+          "Debes verificar tu identidad para poder restablecer tu contraseña. Por favor, revisa tu correo electrónico.");
         } else if (detail.includes("Inactive")) {
           notifyError("Cuenta desactivada", 
-              "Tu cuenta está desactivada. Por favor, contacta con soporte."
-            );
+          "Tu cuenta está desactivada. Por favor, contacta con soporte.");
         } else {
           notifyError("Acceso denegado", 
           "No tienes permiso para realizar esta acción.");
@@ -138,17 +136,14 @@ const handleApiError = (error) => {
         break;
       default:
         notifyError("Error en el servidor", 
-          "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde."
-        );
+        "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.");
     }
   } else if (error.request) {
     notifyError("Error de conexión",
-      "No se pudo conectar con el servidor. Verifica tu conexión a internet."
-    );
+    "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
   } else {
     notifyError("Error inesperado", 
-      "Ha ocurrido un problema."
-    );
+    "Ha ocurrido un problema.");
   }
 };
 </script>
