@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="isOpen" class="modal-overlay" @vue:mounted="onOpen">
+    <div v-if="isOpen" class="modal-overlay">
       <div class="auth-modal edit-user-modal">
         <h1>Editar usuario</h1>
         <button class="close-modal-button" @click="closeModal">
@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -114,13 +114,14 @@ const isSaving = ref(false);
 const authStore = useAuthStore();
 const originalUserData = ref(null);
 const isFirstOpen = ref(true);
+let isModalInitialized = false;
 
 const hasValidChanges = computed(() => {
   if (fullNameError.value || usernameError.value || emailError.value || passwordError.value) {
     return false;
   }
   
-// Si no hay datos originales, no se puede comparar.
+  // Si no hay datos originales, no se puede comparar.
   if (!originalUserData.value) return false;
   
   // Verificar si hay algún cambio en los campos.
@@ -141,9 +142,8 @@ const isEditingSelf = () => {
   return currentUser && currentUser.id === props.userId;
 };
 
-// Cargar datos del usuario. Se llama desde el template cuando se monta el componente.
-async function onOpen() {
-  if (props.isOpen && props.userId) {
+watch(() => props.isOpen, async (newValue) => {
+  if (newValue && props.userId && !isLoadingUser.value) {
     if (isEditingSelf()) {
       notifyInfo("Modificación de cuenta propia",
       "Los administradores deben modificar sus propios datos desde la sección 'Mi cuenta'.");
@@ -160,7 +160,7 @@ async function onOpen() {
       inputElement.focus();
     }
   }
-}
+});
 
 const loadUserData = async () => {
   if (!props.userId) return;

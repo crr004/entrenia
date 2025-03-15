@@ -34,7 +34,6 @@
               label="Correo electrónico"
               v-model="email"
               :error="emailError"
-              @input="validateEmail"
               id="email"
               placeholder=""
               :disabled="true"
