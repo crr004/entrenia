@@ -8,7 +8,7 @@ from app.models.users import User
 from app.crud import users
 
 DB_URL = os.environ["POSTGRES_URL"].replace("postgresql://", "postgresql+asyncpg://")
-engine = create_async_engine(DB_URL, future=True)
+engine = create_async_engine(DB_URL, echo=True, future=True)
 
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
