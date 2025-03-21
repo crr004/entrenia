@@ -2,11 +2,13 @@ import { defineStore } from 'pinia';
 
 export const userPreferencesStore = defineStore('preferences', {
   state: () => ({
-    adminPageSize: 10
+    adminPageSize: 10,
+    datasetPageSize: 5 
   }),
   
   getters: {
-    getAdminPageSize: (state) => state.adminPageSize
+    getAdminPageSize: (state) => state.adminPageSize,
+    getDatasetPageSize: (state) => state.datasetPageSize
   },
   
   actions: {
@@ -14,11 +16,16 @@ export const userPreferencesStore = defineStore('preferences', {
       this.adminPageSize = size;
     },
     
+    setDatasetPageSize(size) {
+      this.datasetPageSize = size;
+    },
+    
     resetPreferences() {
       this.adminPageSize = 10;
+      this.datasetPageSize = 5;
     }
   },
-  
+
   /*
   persist: {
     enabled: true,
@@ -26,15 +33,16 @@ export const userPreferencesStore = defineStore('preferences', {
       {
         key: 'user-preferences',
         storage: localStorage,
-        paths: ['adminPageSize']
+        paths: ['adminPageSize', 'datasetPageSize']
       }
     ]
   }
     */
+  
   persist: {
     enabled: true,
     storage: window.sessionStorage,
     key: 'preferences-store',
-    paths: ['adminPageSize']
+    paths: ['adminPageSize', 'datasetPageSize']
   }
 });

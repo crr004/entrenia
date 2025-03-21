@@ -67,6 +67,9 @@ class DatasetReturn(DatasetBase):
     category_count: int = Field(
         default=0, description="Número de categorías en el dataset"
     )
+    username: str | None = Field(
+        default=None, description="Nombre de usuario del propietario"
+    )
 
 
 class DatasetsReturn(SQLModel):
@@ -84,4 +87,27 @@ class DatasetUpdate(SQLModel):
     )
     description: str | None = Field(
         default=None, max_length=1000, description="Descripción del dataset"
+    )
+
+
+class DatasetCategoryDetail(SQLModel):
+    """Modelo de detalles de una categoría en un dataset."""
+
+    name: str = Field(description="Nombre de la categoría")
+    image_count: int = Field(description="Número de imágenes en esta categoría")
+
+
+class DatasetLabelDetailsReturn(SQLModel):
+    """Modelo para retornar detalles de las etiquetas y categorías de un dataset."""
+
+    dataset_id: uuid.UUID = Field(description="ID del dataset")
+    categories: list[DatasetCategoryDetail] = Field(
+        description="Detalles de cada categoría del dataset"
+    )
+    count: int = Field(description="Número total de categorías en el dataset")
+    labeled_images: int = Field(
+        description="Número de imágenes etiquetadas en el dataset"
+    )
+    unlabeled_images: int = Field(
+        description="Número de imágenes sin etiquetar en el dataset"
     )

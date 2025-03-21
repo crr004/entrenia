@@ -76,6 +76,8 @@
   user-select: none;
 }
 
+.edit-dataset-modal,
+.add-dataset-modal,
 .edit-user-modal,
 .add-user-modal {
   max-width: 500px;

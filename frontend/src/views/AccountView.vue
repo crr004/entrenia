@@ -499,12 +499,13 @@ const handleApiError = (error) => {
 };
 
 // Cargar datos del usuario al montar el componente.
-onMounted(fetchUserData);
+onMounted(async () => {
+  await fetchUserData();
+});
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
 <style scoped src="@/assets/styles/form_fields.css"></style>
-
 <style scoped>
 .account-view {
   padding: 20px 40px;

@@ -217,7 +217,7 @@ const isSearchTransitioning = ref(false);
 
 const allSearchResults = ref([]);  // Almacena todos los resultados de la búsqueda.
 
-const handlePageSizeChange = () => {
+const handlePageSizeChange = async () => {
   isLoading.value = true;
   
   // Guardar el nuevo tamaño de página en las preferencias del usuario.
@@ -234,7 +234,7 @@ const handlePageSizeChange = () => {
     }, 100);
   } else {
     // Para la vista normal, obtener nuevos datos.
-    fetchUsers();
+    await fetchUsers();
   }
 };
 
@@ -250,7 +250,7 @@ const paginatedResults = computed(() => {
 });
 
 // Manejar la búsqueda con debounce.
-const handleSearch = () => {
+const handleSearch = async () => {
   // Activar estado de carga inmediatamente al escribir.
   // Esto mostrará el spinner mientras se completa el debounce.
   isSearchTransitioning.value = true;
@@ -261,14 +261,14 @@ const handleSearch = () => {
   }
   
   // Esperar a que el usuario termine de escribir.
-  searchTimeout.value = setTimeout(() => {
+  searchTimeout.value = setTimeout(async () => {
     // Si la búsqueda está vacía, volver a cargar todos los usuarios.
     if (!searchQuery.value || searchQuery.value.trim() === '') {
       isLoading.value = true;
-      fetchUsers();
+      await fetchUsers();
     } else {
       // Realizar búsqueda local siempre, incluso si la búsqueda anterior no dio resultados.
-      performLocalSearch();
+      await performLocalSearch();
     }
   }, 300);
 };
@@ -282,7 +282,7 @@ const performLocalSearch = async () => {
     
     // Si la búsqueda está vacía, cargar todos los usuarios.
     if (!query) {
-      fetchUsers();
+      await fetchUsers();
       return;
     }
     
@@ -337,7 +337,7 @@ const updateDisplayedUsers = () => {
   users.value = allSearchResults.value.slice(startIndex, endIndex);
 };
 
-const clearSearch = () => {
+const clearSearch = async () => {
   // Activar estado de transición para evitar mensaje intermedio.
   isSearchTransitioning.value = true;
   isLoading.value = true;
@@ -349,7 +349,7 @@ const clearSearch = () => {
   searchQuery.value = '';
   
   // Después carga los usuarios.
-  fetchUsers();
+  await fetchUsers();
 };
 
 const fetchUsers = async () => {
@@ -391,7 +391,7 @@ const fetchUsers = async () => {
   }
 };
 
-const changePage = (page) => {
+const changePage = async (page) => {
   if (page < 1 || page > totalPages.value) return;
   currentPage.value = page;
   
@@ -399,7 +399,7 @@ const changePage = (page) => {
     // Si hay búsqueda activa, actualizar los usuarios mostrados en lugar de hacer una nueva solicitud al backend.
     updateDisplayedUsers();
   } else {
-    fetchUsers();
+    await fetchUsers();
   }
 };
 
@@ -442,9 +442,10 @@ const getMenuPosition = (userId) => {
 
 const showAddUserModal = () => {
   isAddUserModalOpen.value = true;
+  closeActionsMenu();
 };
 
-const handleUserAdded = (newUser) => {
+const handleUserAdded = async (newUser) => {
   // Resetear a la página 1.
   currentPage.value = 1;
   
@@ -468,7 +469,7 @@ const handleUserAdded = (newUser) => {
     }
   } else {
     // Si no hay búsqueda activa, comportamiento normal.
-    fetchUsers();
+    await fetchUsers();
   }
 };
 
@@ -558,7 +559,7 @@ const deleteUser = async () => {
       }
       
       // Refrescar la lista completa para ver el cambio en la paginación.
-      fetchUsers();
+      await fetchUsers();
     }
     
     notifySuccess("Usuario eliminado", 
@@ -586,7 +587,6 @@ const handleApiError = (error) => {
         notifyError("Error de validación", 
         "Los datos proporcionados no son válidos.");
         break;
-        
       case 403:
         if (data.detail && data.detail.includes("Admins")) {
           notifyError("Acción denegada", 
@@ -603,12 +603,10 @@ const handleApiError = (error) => {
           "No tienes permiso para realizar esta acción.");
         }
         break;
-        
       case 404:
         notifyError("Usuario no encontrado", 
         "El usuario no existe en el sistema.");
         break;
-        
       default:
         notifyError("Error en el servidor", 
         "No se pudo procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.");
@@ -624,23 +622,23 @@ const handleApiError = (error) => {
 };
 
 // Observar cambios en el tamaño de página para reiniciar búsquedas.
-watch(pageSize, () => {
+watch(pageSize, async () => {
   if (searchQuery.value.trim()) {
     // Si hay búsqueda activa, actualizar la visualización.
     updateDisplayedUsers();
   } else {
-    fetchUsers();
+    await fetchUsers();
   }
 });
 
-onMounted(() => {
+onMounted(async () => {
   // Restaurar preferencia de tamaño de página.
   const savedPageSize = preferencesStore.adminPageSize;
   if (savedPageSize && pageSizeOptions.includes(parseInt(savedPageSize))) {
     pageSize.value = parseInt(savedPageSize);
   }
   
-  fetchUsers();
+  await fetchUsers();
 });
 
 // Truncar campos de texto largos.

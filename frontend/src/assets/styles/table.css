@@ -85,6 +85,11 @@
   background-color: #f0f0f0;
 }
 
+.action-button[data-active="true"] {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
 /* Status badges */
 .status-badge {
   display: inline-block;

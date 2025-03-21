@@ -41,6 +41,10 @@
             </span>
           </div>
           <div class="user-links-burger">
+            <router-link to="/my-datasets" @click="closeBurgerMenu" class="user-link-burger">
+              <font-awesome-icon :icon="['fas', 'database']" class="link-icon" fixed-width />
+              Mis conjuntos de imágenes
+            </router-link>
             <router-link 
               v-if="isAdmin" 
               to="/admin" 

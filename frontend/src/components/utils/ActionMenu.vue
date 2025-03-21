@@ -58,7 +58,7 @@ const props = defineProps({
 });
 
 // Definir emisiones para todos los posibles eventos.
-const emit = defineEmits(['edit', 'delete']);
+const emit = defineEmits(['edit', 'delete', 'view', 'share', 'download']);
 
 // Función para manejar cualquier acción de las que haya en el menú.
 const handleAction = (eventName) => {
@@ -101,8 +101,13 @@ const updateMenuPosition = () => {
     const precalculatedHeight = menuElement.offsetHeight || 100;
     const precalculatedWidth = menuElement.offsetWidth || 150;
     
+    // Calcular ajuste vertical basado en número de elementos.
+    const itemHeight = 35; // Altura aproximada de cada elemento del menú.
+    const numberOfItems = props.actions.length;
+    const verticalAdjustment = numberOfItems > 2 ? itemHeight : 0;
+    
     if (props.position.top) {
-      menuStyle.top = `${buttonRect.top - precalculatedHeight + 20}px`;
+      menuStyle.top = `${buttonRect.top - precalculatedHeight + 20 - verticalAdjustment}px`;
     } else {
       menuStyle.top = `${buttonRect.bottom + 20}px`;
     }
@@ -213,7 +218,7 @@ onUnmounted(() => {
   margin-right: 8px;
 }
 
-.menu-item.edit {
+.menu-item {
   color: black;
 }
 
