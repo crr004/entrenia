@@ -172,7 +172,7 @@ async def get_user_datasets_sorted(
     user_id: uuid.UUID | None = None,
     admin_view: bool = False,
 ) -> tuple[list[Dataset] | list[tuple[Dataset, str]], int, bool]:
-    """Obtiene datasets con ordenamiento avanzado, paginación y búsqueda.
+    """Obtiene datasets con ordenación avanzada, paginación y búsqueda.
 
     Args:
         session (AsyncSession): Sesión asíncrona de la base de datos.

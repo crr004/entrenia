@@ -39,7 +39,7 @@ class Image(ImageBase, table=True):
         ondelete="CASCADE",
         description="ID del dataset al que pertenece",
     )
-    thumbnail: bytes = Field(description="Miniatura de la imagen en formato binario")
+    thumbnail: str = Field(description="Miniatura de la imagen en formato base64")
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True)),
         default_factory=lambda: datetime.now(timezone.utc),
@@ -53,7 +53,10 @@ class Image(ImageBase, table=True):
 class ImageCreate(ImageBase):
     """Modelo de imagen para la creación de una nueva imagen."""
 
-    thumbnail: bytes = Field(description="Miniatura de la imagen en formato binario")
+    dataset_id: uuid.UUID = Field(
+        description="ID del dataset al que pertenece",
+    )
+    thumbnail: str = Field(description="Miniatura de la imagen en formato base64")
 
 
 class ImageReturn(ImageBase):
@@ -61,7 +64,7 @@ class ImageReturn(ImageBase):
 
     id: uuid.UUID = Field(description="ID de la imagen")
     dataset_id: uuid.UUID = Field(description="ID del dataset al que pertenece")
-    thumbnail: bytes = Field(description="Miniatura de la imagen en formato binario")
+    thumbnail: str = Field(description="Miniatura de la imagen en formato base64")
     created_at: datetime = Field(description="Fecha de creación de la imagen")
 
 

@@ -76,6 +76,7 @@
   user-select: none;
 }
 
+.edit-image-modal,
 .edit-dataset-modal,
 .add-dataset-modal,
 .edit-user-modal,

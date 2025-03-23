@@ -34,12 +34,10 @@ async def read_datasets(
 ) -> DatasetsReturn:
     """Obtiene datasets con soporte para ordenación y búsqueda avanzados:
 
-        - Ordenación por: name, created_at, image_count, category_count, is_public, username (solo admin)
-        - Dirección de ordenamiento: asc o desc
-        - Paginación: usando parámetros skip y limit
-        - Búsqueda: filtra datasets por nombre o descripción (también por username si es admin)
-
-        Todas las operaciones respetan los permisos de usuario - usuarios normales solo ven sus propios datasets.
+        - Ordenación por: name, created_at, image_count, category_count, is_public, username (solo admin).
+        - Dirección de ordenación: asc o desc.
+        - Paginación: usando parámetros skip y limit.
+        - Búsqueda: filtra datasets por nombre o descripción (también por username si es admin).
 
     Args:
         session (SessionDep): Sesión de la base de datos.
@@ -48,7 +46,7 @@ async def read_datasets(
         limit (int): Cantidad de datasets a devolver (paginación).
         search (str | None): Texto a buscar en el nombre o descripción del dataset (o username).
         sort_by (str): Campo por el cual ordenar los datasets.
-        sort_order (str): Dirección de ordenamiento.
+        sort_order (str): Dirección de ordenación.
 
 
     Raises:

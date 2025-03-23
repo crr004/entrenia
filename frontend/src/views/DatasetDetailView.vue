@@ -95,18 +95,27 @@
           <p class="empty-hint">Añade imágenes y etiquétalas para crear categorías.</p>
         </div>
       </div>
+      <div class="images-section">
+        <h2>Imágenes</h2>
+        <ImagesTable 
+          v-if="dataset.id" 
+          :datasetId="dataset.id"
+          @refresh-dataset-stats="fetchData(true)"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Chart from 'chart.js/auto';
 
 import { notifyError, notifyInfo } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
+import ImagesTable from '@/components/images/ImagesTable.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -118,13 +127,48 @@ const dataset = ref(null);
 const labelDetails = ref(null);
 const isLoading = ref(true);
 
+const viewScrollPosition = ref(0);
+
+const saveViewScrollPosition = () => {
+  viewScrollPosition.value = window.scrollY;
+};
+
+const restoreViewScrollPosition = () => {
+  nextTick(() => {
+    setTimeout(() => {
+      window.scrollTo({
+        top: viewScrollPosition.value,
+        behavior: 'instant'
+      });
+    }, 10);
+  });
+};
+
+
+//const refreshDatasetStats = async () => {
+//  saveViewScrollPosition();
+//  try {
+//    // ... código existente para refrescar estadísticas ...
+//  } catch (error) {
+//    console.error("Error al refrescar estadísticas:", error);
+//  } finally {
+//    restoreViewScrollPosition();
+//  }
+//};
+
 const totalLabeledImages = computed(() => {
   if (!labelDetails.value || !labelDetails.value.categories) return 0;
   return labelDetails.value.categories.reduce((sum, category) => sum + category.image_count, 0);
 });
 
-const fetchData = async () => {
-  isLoading.value = true;
+const fetchData = async (maintainScrollPosition = false) => {
+  if (maintainScrollPosition) {
+    saveViewScrollPosition();
+  }
+  
+  if (!maintainScrollPosition) {
+    isLoading.value = true;
+  }
   
   try {
     // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
@@ -149,6 +193,10 @@ const fetchData = async () => {
     setTimeout(() => {
       createChart();
     }, 0);
+    
+    if (maintainScrollPosition) {
+      restoreViewScrollPosition();
+    }
     
   } catch (error) {
     console.error('Error while loading dataset data: ', error);
@@ -574,6 +622,18 @@ onMounted(async () => {
   font-size: 0.85rem;
   color: #999;
   margin-top: 5px;
+}
+
+/* Sección de imágenes */
+.images-section {
+  margin-top: 30px;
+}
+
+.images-section h2 {
+  font-size: 1.1rem;
+  color: #444;
+  font-weight: 600;
+  margin-bottom: 15px;
 }
 
 /* Estilos responsive */

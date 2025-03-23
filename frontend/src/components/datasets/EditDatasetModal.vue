@@ -177,10 +177,8 @@ const handleSubmit = async () => {
     
     const response = await axios.patch(`/datasets/${props.dataset.id}`, updateData);
     
-    notifySuccess(
-      "Conjunto de imágenes actualizado", 
-      `Se ha actualizado el conjunto ${datasetData.value.name} con éxito.`
-    );
+    notifySuccess("Conjunto de imágenes actualizado", 
+    `Se ha actualizado el conjunto ${datasetData.value.name} con éxito.`);
     
     emit('dataset-updated', response.data);
     closeModal();

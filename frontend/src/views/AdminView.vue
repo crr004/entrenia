@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -631,6 +631,12 @@ watch(pageSize, async () => {
   }
 });
 
+const handleScroll = () => {
+  if (activeActionsMenu.value !== null) {
+    closeActionsMenu();
+  }
+};
+
 onMounted(async () => {
   // Restaurar preferencia de tamaño de página.
   const savedPageSize = preferencesStore.adminPageSize;
@@ -638,7 +644,13 @@ onMounted(async () => {
     pageSize.value = parseInt(savedPageSize);
   }
   
+  window.addEventListener('scroll', handleScroll, true);
+  
   await fetchUsers();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll, true);
 });
 
 // Truncar campos de texto largos.

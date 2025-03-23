@@ -193,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -615,6 +615,12 @@ const truncateText = (text, maxLength) => {
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 };
 
+const handleScroll = () => {
+  if (activeActionsMenu.value !== null) {
+    closeActionsMenu();
+  }
+};
+
 onMounted(async () => {
   try {
     isSearchTransitioning.value = true;
@@ -625,6 +631,8 @@ onMounted(async () => {
     if (savedPageSize && pageSizeOptions.includes(parseInt(savedPageSize))) {
       pageSize.value = parseInt(savedPageSize);
     }
+    
+    window.addEventListener('scroll', handleScroll, true);
     
     // Obtener parámetros de la URL si existen.
     const urlParams = new URLSearchParams(window.location.search);
@@ -657,6 +665,10 @@ onMounted(async () => {
     isLoading.value = false;
     isSearchTransitioning.value = false;
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll, true);
 });
 
 // Actualizar la URL cuando cambian los parámetros de búsqueda/ordenación.
