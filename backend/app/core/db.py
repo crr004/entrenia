@@ -4,7 +4,7 @@ from sqlmodel import SQLModel, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.models.users import User
+from app.models.users import User, UserCreate
 from app.crud import users
 
 DB_URL = os.environ["POSTGRES_URL"].replace("postgresql://", "postgresql+asyncpg://")
@@ -33,7 +33,7 @@ async def create_first_admin(session: AsyncSession):
     user = await session.execute(select(User).where(User.username == "admin"))
     user = user.first()
     if not user:
-        admin = User(
+        admin = UserCreate(
             username=os.environ["FIRST_ADMIN_USERNAME"],
             email=os.environ["FIRST_ADMIN_EMAIL"],
             password=os.environ["FIRST_ADMIN_PASSWORD"],

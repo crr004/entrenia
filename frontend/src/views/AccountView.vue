@@ -339,7 +339,7 @@ const updateProfile = async () => {
   }
   
   const userData = {};
-  if (fullName.value !== originalFullName.value) userData.full_name = fullName.value;
+  if (fullName.value !== originalFullName.value) userData.full_name = fullName.value || null;
   if (username.value !== originalUsername.value) userData.username = username.value;
   
   isLoading.value = true;
@@ -354,7 +354,7 @@ const updateProfile = async () => {
     const currentUser = authStore.user ? { ...authStore.user } : {};
     const updatedUser = {
       ...currentUser,
-      full_name: fullName.value,
+      full_name: fullName.value || null,
       username: username.value
     };
     authStore.setUser(updatedUser);
