@@ -1,6 +1,7 @@
 import uuid
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 
 from app.models.datasets import (
     DatasetCreate,
@@ -8,6 +9,7 @@ from app.models.datasets import (
     DatasetUpdate,
     DatasetsReturn,
     DatasetLabelDetailsReturn,
+    DatasetUploadResult,
 )
 from app.models.messages import Message
 from app.crud.users import SessionDep, CurrentUser, get_user_by_id
@@ -18,6 +20,7 @@ from app.crud.datasets import (
     get_dataset_label_details,
 )
 import app.crud.datasets as crud_datasets
+import app.crud.images as crud_images
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -214,7 +217,11 @@ async def read_dataset_label_details(
     return DatasetLabelDetailsReturn(**details)
 
 
-@router.post("/", response_model=DatasetReturn)
+@router.post(
+    "/",
+    response_model=DatasetReturn,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_dataset(
     *, session: SessionDep, current_user: CurrentUser, dataset_in: DatasetCreate
 ) -> DatasetReturn:
@@ -351,3 +358,92 @@ async def delete_dataset(
     await crud_datasets.delete_dataset(session=session, dataset=dataset)
 
     return Message(message="Dataset deleted successfully")
+
+
+@router.post(
+    "/{dataset_id}/upload-zip",
+    response_model=DatasetUploadResult,
+)
+async def upload_zip_with_images(
+    dataset_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+    csv_file: Optional[UploadFile] = None,
+    labeling_option: str = Form(default="none"),
+) -> DatasetUploadResult:
+    """Procesa un archivo ZIP con imágenes y opcionalmente etiquetas desde un CSV.
+
+    Args:
+        dataset_id (uuid.UUID): ID del dataset donde se subirán las imágenes.
+        session (SessionDep): Sesión de la base de datos.
+        current_user (CurrentUser): Usuario actual.
+        file (UploadFile): Archivo ZIP con las imágenes.
+        csv_file (Optional[UploadFile], optional): Archivo CSV con etiquetas. Default: None.
+        labeling_option (str, optional): Opción de etiquetado ('none' o 'csv'). Default: "none".
+
+    Raises:
+        HTTPException[404]: Si no existe un dataset con ese ID.
+        HTTPException[403]: Si el usuario no tiene suficientes privilegios.
+        HTTPException[400]: Si el archivo no es un ZIP válido.
+        HTTPException[413]: Si el archivo excede el tamaño máximo permitido.
+
+    Returns:
+        DatasetUploadResult: Resultado del procesamiento con estadísticas detalladas.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    if not current_user.is_admin and dataset.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+
+    # Verificar extensión del archivo.
+    if not file.filename.lower().endswith(".zip"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file must be a ZIP file",
+        )
+
+    # Verificar tamaño máximo (50MB).
+    file_content = await file.read()
+    max_size = 50 * 1024 * 1024
+    if len(file_content) > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File size exceeds the maximum allowed (50MB)",
+        )
+
+    # Procesar el CSV si se proporciona.
+    csv_data = {}
+    if labeling_option == "csv" and csv_file:
+        csv_data = await crud_images.process_csv_file(csv_file)
+
+    # Procesar las imágenes del ZIP.
+    stats = await crud_images.process_zip_with_images(
+        session=session,
+        dataset_id=dataset_id,
+        zip_content=file_content,
+        csv_data=csv_data,
+    )
+
+    # Calcular etiquetas no aplicadas.
+    labels_skipped = len(csv_data) - stats["labels_applied"] if csv_data else 0
+
+    return DatasetUploadResult(
+        message="ZIP file processed successfully",
+        processed_images=stats["processed_images"],
+        skipped_images=stats["skipped_images"],
+        invalid_images=stats["invalid_images"],
+        labels_applied=stats["labels_applied"],
+        labels_skipped=labels_skipped,
+        invalid_image_details=stats.get("invalid_image_details", []),
+        duplicated_image_details=stats.get("duplicated_image_details", []),
+        skipped_label_details=stats.get("skipped_label_details", []),
+    )

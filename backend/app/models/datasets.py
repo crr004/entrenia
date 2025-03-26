@@ -111,3 +111,29 @@ class DatasetLabelDetailsReturn(SQLModel):
     unlabeled_images: int = Field(
         description="Número de imágenes sin etiquetar en el dataset"
     )
+
+
+class DatasetUploadResult(SQLModel):
+    """Modelo para el resultado de la carga de imágenes en un dataset."""
+
+    message: str = Field(description="Mensaje de éxito")
+    processed_images: int = Field(
+        description="Número de imágenes procesadas correctamente"
+    )
+    skipped_images: int = Field(
+        description="Número de imágenes omitidas por ya existir"
+    )
+    invalid_images: int = Field(description="Número de imágenes inválidas")
+    labels_applied: int = Field(
+        description="Número de etiquetas aplicadas correctamente"
+    )
+    labels_skipped: int = Field(description="Número de etiquetas no aplicadas")
+    invalid_image_details: list[str] = Field(
+        default=[], description="Detalles de imágenes inválidas"
+    )
+    duplicated_image_details: list[str] = Field(
+        default=[], description="Detalles de imágenes duplicadas"
+    )
+    skipped_label_details: list[str] = Field(
+        default=[], description="Detalles de etiquetas no aplicadas"
+    )

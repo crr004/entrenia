@@ -90,8 +90,8 @@
                     </span>
                   </td>
                   <td>
-                    <span class="truncate" :title="dataset.description">
-                      {{ truncateText(dataset.description, isAdmin ? 20 : 30) }}
+                    <span class="truncate" :title="dataset.description || '-'">
+                      {{ dataset.description ? truncateText(dataset.description, isAdmin ? 20 : 30) : '-' }}
                     </span>
                   </td>
                   <td class="center-column">{{ dataset.image_count }}</td>

@@ -96,13 +96,44 @@
         </div>
       </div>
       <div class="images-section">
-        <h2>Imágenes</h2>
+        <div class="section-header">
+          <h2>Imágenes</h2>
+          <div class="action-buttons">
+            <button 
+              class="app-button" 
+              @click="handleLabelImages"
+              :disabled="!labelDetails?.unlabeled_images || labelDetails.unlabeled_images === 0"
+            >
+              <font-awesome-icon :icon="['fas', 'tags']" />
+              <span>Etiquetar imágenes</span>
+            </button>
+            <button class="app-button" @click="handleUploadImages">
+              <font-awesome-icon :icon="['fas', 'upload']" />
+              <span>Subir imágenes</span>
+            </button>
+          </div>
+        </div>
         <ImagesTable 
           v-if="dataset.id" 
           :datasetId="dataset.id"
           @refresh-dataset-stats="fetchData(true)"
         />
       </div>
+      <UploadImagesModal 
+        :isOpen="isUploadModalOpen" 
+        :datasetId="dataset?.id"
+        @close="closeUploadModal"
+        @images-uploaded="handleImagesUploaded"
+      />
+      <UploadResultModal
+        :show="showResultModal"
+        :stats="uploadStats"
+        :invalidImageDetails="invalidImageDetails"
+        :duplicatedImageDetails="duplicatedImageDetails"
+        :skippedLabelDetails="skippedLabelDetails"
+        @close="handleCloseResultModal"
+        @view-images="handleViewImages"
+      />
     </div>
   </div>
 </template>
@@ -116,6 +147,8 @@ import Chart from 'chart.js/auto';
 import { notifyError, notifyInfo } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
 import ImagesTable from '@/components/images/ImagesTable.vue';
+import UploadImagesModal from '@/components/images/UploadImagesModal.vue';
+import UploadResultModal from '@/components/images/UploadResultModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -144,17 +177,19 @@ const restoreViewScrollPosition = () => {
   });
 };
 
+const isUploadModalOpen = ref(false);
+const showResultModal = ref(false);
+const uploadStats = ref({
+  processed_images: 0,
+  skipped_images: 0,
+  invalid_images: 0,
+  csv_labels_found: 0
+});
 
-//const refreshDatasetStats = async () => {
-//  saveViewScrollPosition();
-//  try {
-//    // ... código existente para refrescar estadísticas ...
-//  } catch (error) {
-//    console.error("Error al refrescar estadísticas:", error);
-//  } finally {
-//    restoreViewScrollPosition();
-//  }
-//};
+// Detalles del modal de resultados.
+const invalidImageDetails = ref([]);
+const duplicatedImageDetails = ref([]);
+const skippedLabelDetails = ref([]);
 
 const totalLabeledImages = computed(() => {
   if (!labelDetails.value || !labelDetails.value.categories) return 0;
@@ -353,8 +388,59 @@ watch(() => route.params.id, async (newId, oldId) => {
 onMounted(async () => {
   await fetchData();
 });
+
+const handleLabelImages = () => {
+  console.log('Iniciar proceso de etiquetado de imágenes');
+};
+
+const handleUploadImages = () => {
+  isUploadModalOpen.value = true;
+};
+
+const closeUploadModal = () => {
+  isUploadModalOpen.value = false;
+};
+
+const handleImagesUploaded = (result) => {
+  // Cerrar explícitamente el modal de carga.
+  isUploadModalOpen.value = false;
+  
+  // Actualizar estadísticas de carga.
+  uploadStats.value = {
+    processed_images: result.processed_images || 0,
+    skipped_images: result.skipped_images || 0,
+    invalid_images: result.invalid_images || 0,
+    labels_applied: result.labels_applied || 0,
+    labels_skipped: result.labels_skipped || 0
+  };
+  
+  // Actualizar detalles disponibles.
+  invalidImageDetails.value = result.invalid_image_details || [];
+  duplicatedImageDetails.value = result.duplicated_image_details || [];
+  skippedLabelDetails.value = result.skipped_label_details || [];
+  
+  // Mostrar el modal de resultados.
+  showResultModal.value = true;
+  
+  // Recargar datos del dataset (datos de la vista de detalle en la que está el ususario).
+  fetchData();
+};
+
+const handleCloseResultModal = () => {
+  showResultModal.value = false;
+};
+
+// Desplazar a la sección de imágenes después de cerrar el modal de resultados.
+const handleViewImages = () => {
+  showResultModal.value = false;
+  const imagesSection = document.querySelector('.images-section');
+  if (imagesSection) {
+    imagesSection.scrollIntoView({ behavior: 'smooth' });
+  }
+};
 </script>
 
+<style scoped src="@/assets/styles/buttons.css"></style>
 <style scoped>
 .dataset-detail-view {
   padding: 20px;
@@ -636,6 +722,29 @@ onMounted(async () => {
   margin-bottom: 15px;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-buttons .app-button {
+  margin-top: 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  width: auto;
+}
+
+.action-buttons .app-button svg {
+  margin-right: 8px;
+}
+
 /* Estilos responsive */
 @media (max-width: 1100px) {
   .categories-chart {
@@ -709,6 +818,22 @@ onMounted(async () => {
   .categories-table td {
     padding: 8px;
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .action-buttons {
+    width: 100%;
+  }
+  
+  .action-buttons .app-button {
+    flex: 1;
   }
 }
 </style>

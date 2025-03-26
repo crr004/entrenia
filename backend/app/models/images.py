@@ -53,6 +53,10 @@ class Image(ImageBase, table=True):
 class ImageCreate(ImageBase):
     """Modelo de imagen para la creación de una nueva imagen."""
 
+    id: uuid.UUID | None = Field(
+        default=None,
+        description="ID opcional de la imagen (si se proporciona, se usará este ID)",
+    )
     dataset_id: uuid.UUID = Field(
         description="ID del dataset al que pertenece",
     )

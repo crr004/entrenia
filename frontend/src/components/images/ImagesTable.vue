@@ -33,7 +33,7 @@
             </template>
             <template v-else>
               <font-awesome-icon :icon="['fas', 'images']" size="2x" />
-              <p>Este conjunto no tiene imágenes.</p>
+              <p>Este conjunto aún no tiene imágenes.</p>
             </template>
           </div>
           <div v-else>
