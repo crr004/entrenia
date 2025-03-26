@@ -1,6 +1,7 @@
 import uuid
 import os
 import jwt
+import logging
 from typing import Annotated
 from jwt.exceptions import InvalidTokenError
 
@@ -8,14 +9,15 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
 from sqlmodel import Session, select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users import User, UserCreate, UsersReturn, UserUpdate
 from app.models.tokens import TokenData
 from app.utils import tokens
 from app.utils.hashing import hash_password
 from app.core import db
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.datasets import Dataset
+from app.models.images import Image
 
 
 API_PREFIX = os.environ["API_PREFIX"]
@@ -25,6 +27,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=TOKEN_URL)
 
 SessionDep = Annotated[AsyncSession, Depends(db.get_session)]
 TokenDep = Annotated[str, Depends(oauth2_scheme)]
+
+logger = logging.getLogger(__name__)
+
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
 
 
 async def create_user(*, session: AsyncSession, user_in: UserCreate) -> User:
@@ -270,12 +276,36 @@ async def update_password(
 
 
 async def delete_user(*, session: AsyncSession, user: User) -> None:
-    """Elimina un usuario de la base de datos.
+    """Elimina un usuario de la base de datos y todos sus datos asociados (imágenes y modelos).
 
     Args:
         session (Session): Sesión de la base de datos.
         user (User): Usuario a eliminar.
     """
 
+    # Obtener todos los datasets del usuario.
+    datasets_query = select(Dataset).where(Dataset.user_id == user.id)
+    result = await session.execute(datasets_query)
+    datasets = result.scalars().all()
+
+    # Para cada dataset, eliminar manualmente los archivos de imágenes.
+    for dataset in datasets:
+        # Obtener todas las imágenes del dataset.
+        images_query = select(Image).where(Image.dataset_id == dataset.id)
+        images_result = await session.execute(images_query)
+        images = images_result.scalars().all()
+
+        # Eliminar los archivos físicos de cada imagen.
+        for image in images:
+            try:
+                file_path = os.path.join(MEDIA_ROOT, image.file_path)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                logger.error(
+                    f"Error deleting image file {file_path}: {str(e)}", exc_info=True
+                )
+
+    # Eliminar el usuario.
     await session.delete(user)
     await session.commit()

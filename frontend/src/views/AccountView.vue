@@ -107,8 +107,8 @@
             </p>
             <ul class="danger-list">
               <li>Tu perfil y preferencias personales</li>
-              <li>Todo tu historial y registros</li>
-              <li>Cualquier contenido que hayas creado</li>
+              <li>Tus imágenes y conjuntos de imágenes</li>
+              <li>Tus modelos entrenados</li>
             </ul>
             <p class="warning-text">Esta acción no se puede deshacer.</p>
             <div v-if="!showDeleteConfirmation" class="danger-action">

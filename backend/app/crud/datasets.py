@@ -1,4 +1,6 @@
+import os
 import uuid
+import logging
 
 from sqlmodel import select, func
 from sqlalchemy import distinct
@@ -7,6 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.datasets import Dataset, DatasetCreate, DatasetUpdate
 from app.models.images import Image
 from app.models.users import User
+
+logger = logging.getLogger(__name__)
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
 
 
 async def get_dataset_by_id(*, session: AsyncSession, id: uuid.UUID) -> Dataset | None:
@@ -91,13 +96,30 @@ async def update_dataset(
 
 
 async def delete_dataset(*, session: AsyncSession, dataset: Dataset) -> None:
-    """Elimina un dataset de la base de datos.
+    """Elimina un dataset de la base de datos y todas las imágenes asociadas.
 
     Args:
         session (AsyncSession): Sesión asíncrona de la base de datos.
         dataset (Dataset): Dataset a eliminar.
     """
 
+    # Obtener todas las imágenes del dataset.
+    images_query = select(Image).where(Image.dataset_id == dataset.id)
+    images_result = await session.execute(images_query)
+    images = images_result.scalars().all()
+
+    # Eliminar los archivos físicos de cada imagen.
+    for image in images:
+        try:
+            file_path = os.path.join(MEDIA_ROOT, image.file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as e:
+            logger.error(
+                f"Error deleting image file {file_path}: {str(e)}", exc_info=True
+            )
+
+    # Eliminar el dataset.
     await session.delete(dataset)
     await session.commit()
 
