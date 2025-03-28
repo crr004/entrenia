@@ -72,7 +72,7 @@
                 />
                 <div v-if="!csvFile" class="drop-message">
                   <font-awesome-icon :icon="['fas', 'file-csv']" size="lg" />
-                  <p>Selecciona un archivo CSV con las etiquetas</p>
+                  <p>Arrastra tu archivo CSV aquí o haz clic para seleccionarlo</p>
                   <span class="drop-hint">Formato: nombre_imagen,etiqueta</span>
                 </div>
                 <div v-else class="file-selected">
@@ -89,7 +89,7 @@
                 </div>
               </div>
               <div class="csv-format-info">
-                <p>El CSV debe tener dos columnas sin cabecera:</p>
+                <p>El CSV debe tener dos columnas:</p>
                 <div class="csv-columns">
                   <div class="csv-column">
                     <span class="column-number">1</span>
@@ -211,16 +211,16 @@ const handleZipFile = (file) => {
 
   // Validar que sea un ZIP.
   if (file.type !== 'application/zip' && !file.name.toLowerCase().endsWith('.zip')) {
-    notifyError("Error",
-    "Solo se permiten archivos ZIP.");
+    notifyError("Formato no válido",
+    "Por favor, selecciona un archivo ZIP.");
     return;
   }
   
   // Validar tamaño máximo (50MB).
   const maxSize = 50 * 1024 * 1024;
   if (file.size > maxSize) {
-    notifyError("Error",
-    "El archivo no puede superar los 50MB.");
+    notifyError("Archivo demasiado grande",
+    "El tamaño del archivo ZIP no puede superar los 50MB.");
     return;
   }
   
@@ -271,8 +271,8 @@ const handleCsvFile = (file) => {
 
   // Validar que sea un archivo CSV.
   if (file.type !== 'text/csv' && !file.name.toLowerCase().endsWith('.csv')) {
-    notifyError('Error',
-    'Solo se permiten archivos CSV.');
+    notifyError("Formato no válido",
+    "Por favor, selecciona un archivo CSV.");
     return;
   }
   
@@ -418,137 +418,8 @@ watch(() => props.isOpen, (newVal) => {
 
 <style scoped src="@/assets/styles/buttons.css"></style>
 <style scoped src="@/assets/styles/auth.css"></style>
+<style scoped src="@/assets/styles/upload.css"></style>
 <style scoped>
-.upload-images-modal {
-  width: 90%;
-  max-width: 650px;
-  max-height: 85vh;
-  padding: 25px;
-  transform: translateY(0);
-  overflow-y: auto;
-}
-
-h3 {
-  font-size: 1rem;
-  color: #444;
-  margin: 15px 0 10px;
-  text-align: left;
-}
-
-.upload-content {
-  padding: 10px 0;
-}
-
-.radio-hint {
-  font-size: 0.8rem;
-  color: #666;
-  margin-left: 6px;
-  font-style: italic;
-}
-
-/* Zona de drag and drop */
-.drop-zone {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 30px 20px;
-  text-align: center;
-  background-color: #f9f9f9;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  margin-bottom: 15px;
-}
-
-.active-dropzone {
-  border-color: rgb(34, 134, 141);
-  background-color: rgba(34, 134, 141, 0.05);
-}
-
-.file-input {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  z-index: -1;
-}
-
-/* Mensajes para drag and drop */
-.drop-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #666;
-}
-
-.drop-message svg {
-  color: #999;
-  margin-bottom: 10px;
-}
-
-.drop-message p {
-  margin: 5px 0;
-  font-size: 1rem;
-}
-
-.drop-hint {
-  font-size: 0.8rem;
-  color: #999;
-  margin-top: 5px;
-}
-
-/* Archivo seleccionado */
-.file-selected {
-  text-align: left;
-}
-
-.file-preview {
-  display: flex;
-  align-items: center;
-  background-color: #f3f3f3;
-  padding: 10px 15px;
-  border-radius: 6px;
-  position: relative;
-}
-
-.file-preview svg {
-  color: #666;
-  margin-right: 12px;
-}
-
-.file-info {
-  flex-grow: 1;
-}
-
-.file-name {
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: #333;
-  word-break: break-all;
-}
-
-.file-size {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 2px;
-}
-
-.remove-file {
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  font-size: 0.9rem;
-  padding: 5px;
-  transition: color 0.2s;
-}
-
-.remove-file:hover {
-  color: #d32f2f;
-}
-
 /* Opciones de etiquetado */
 .labeling-options {
   background-color: #f9f9f9;
@@ -558,150 +429,11 @@ h3 {
   margin-bottom: 15px;
 }
 
-.radio-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.radio-option input[type="radio"] {
-  margin-right: 10px;
-}
-
-.radio-label {
-  font-size: 0.95rem;
-  color: #333;
-}
-
 /* Zona de archivo CSV */
 .csv-zone {
   margin-top: 15px;
   border-color: #e0e0e0;
   background-color: white;
   padding: 20px;
-}
-
-.csv-format-info {
-  margin-top: 15px;
-  font-size: 0.85rem;
-  color: #666;
-  background-color: #fff;
-  padding: 15px;
-  border-radius: 6px;
-  border: 1px solid #eee;
-  text-align: center;
-}
-
-.csv-format-info p {
-  margin: 5px 0;
-}
-
-.csv-columns {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 15px 0;
-}
-
-.csv-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 45%;
-}
-
-.column-number {
-  background-color: #e3dacc;
-  color: white;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.column-desc {
-  text-align: center;
-  line-height: 1.4;
-}
-
-.example {
-  font-family: monospace;
-  background-color: #f5f5f5;
-  padding: 8px 12px;
-  border-radius: 4px;
-  display: inline-block;
-  margin-top: 10px;
-}
-
-/* Barra de progreso */
-.upload-progress {
-  margin: 15px 0;
-}
-
-.progress-bar {
-  height: 6px;
-  background-color: #f0f0f0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: rgb(34, 134, 141);
-  transition: width 0.3s;
-}
-
-.progress-text {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 5px;
-  text-align: right;
-}
-
-/* Botones de acción */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.app-button {
-  margin-top: 0;
-  width: auto;
-}
-
-.upload-icon {
-  margin-right: 8px;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .upload-images-modal {
-    padding: 20px 15px;
-    max-width: none;
-  }
-  
-  .drop-zone {
-    padding: 20px 15px;
-  }
-  
-  .modal-actions {
-    flex-direction: column-reverse;
-  }
-  
-  .modal-actions button {
-    width: 100%;
-  }
 }
 </style>

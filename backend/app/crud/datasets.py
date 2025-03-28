@@ -7,8 +7,13 @@ from sqlalchemy import distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.datasets import Dataset, DatasetCreate, DatasetUpdate
-from app.models.images import Image
+from app.models.images import (
+    Image,
+    ImageUpdate,
+)
 from app.models.users import User
+from app.crud.images import get_image_by_datasetid_and_name, update_image
+
 
 logger = logging.getLogger(__name__)
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
@@ -526,4 +531,72 @@ async def get_dataset_label_details(
         "count": len(categories),
         "labeled_images": labeled_images,
         "unlabeled_images": unlabeled_images,
+    }
+
+
+async def get_unlabeled_images(
+    *, session: AsyncSession, dataset_id: uuid.UUID
+) -> list[Image]:
+    """Obtiene todas las imágenes sin etiquetar de un dataset.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+
+    Returns:
+        list[Image]: Lista de imágenes sin etiquetar.
+    """
+
+    statement = select(Image).where(
+        Image.dataset_id == dataset_id, Image.label.is_(None)
+    )
+
+    result = await session.execute(statement)
+    images = result.scalars().all()
+
+    return images
+
+
+async def label_images_with_csv(
+    *, session: AsyncSession, dataset_id: uuid.UUID, labels_data: list[dict]
+) -> dict:
+    """Etiqueta múltiples imágenes basadas en datos CSV.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+        labels_data (list[dict]): Lista de diccionarios con image_name y label.
+
+    Returns:
+        dict: Estadísticas del proceso de etiquetado.
+    """
+
+    labeled_count = 0
+    not_found_count = 0
+    not_found_details = []
+
+    for item in labels_data:
+        image_name = item.get("image_name")
+        label = item.get("label")
+
+        if not image_name or not label:
+            continue
+
+        image = await get_image_by_datasetid_and_name(
+            session=session, dataset_id=dataset_id, name=image_name
+        )
+
+        if image:
+            image_update = ImageUpdate(name=image.name, label=label)
+
+            await update_image(session=session, image=image, image_data=image_update)
+            labeled_count += 1
+        else:
+            not_found_count += 1
+            not_found_details.append(f"{image_name},{label}")
+
+    return {
+        "labeled_count": labeled_count,
+        "not_found_count": not_found_count,
+        "not_found_details": not_found_details,
     }

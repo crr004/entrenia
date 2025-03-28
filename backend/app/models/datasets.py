@@ -6,6 +6,8 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
+from app.models.images import ImageReturn
+
 if TYPE_CHECKING:
     from app.models.users import User
     from app.models.images import Image
@@ -136,4 +138,28 @@ class DatasetUploadResult(SQLModel):
     )
     skipped_label_details: list[str] = Field(
         default=[], description="Detalles de etiquetas no aplicadas"
+    )
+
+
+class UnlabeledImagesResponse(SQLModel):
+    """Modelo para la respuesta de imágenes sin etiquetar."""
+
+    images: list[ImageReturn] = Field(description="Lista de imágenes sin etiquetar")
+
+
+class CsvLabelData(SQLModel):
+    """Modelo para los datos de etiquetado CSV."""
+
+    labels: list[dict] = Field(description="Lista de pares {image_name, label}")
+
+
+class CsvLabelingResponse(SQLModel):
+    """Modelo para la respuesta del etiquetado CSV."""
+
+    labeled_count: int = Field(
+        description="Número de imágenes etiquetadas correctamente"
+    )
+    not_found_count: int = Field(description="Número de imágenes no encontradas")
+    not_found_details: list[str] = Field(
+        default=[], description="Detalles de imágenes no encontradas"
     )

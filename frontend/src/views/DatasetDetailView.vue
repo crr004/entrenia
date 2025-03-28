@@ -117,6 +117,7 @@
           v-if="dataset.id" 
           :datasetId="dataset.id"
           @refresh-dataset-stats="fetchData(true)"
+          ref="imagesTableRef"
         />
       </div>
       <UploadImagesModal 
@@ -134,6 +135,29 @@
         @close="handleCloseResultModal"
         @view-images="handleViewImages"
       />
+      <LabelingMethodModal
+        :isOpen="isLabelingMethodModalOpen"
+        :unlabeledCount="labelDetails?.unlabeled_images || 0"
+        @close="closeLabelingMethodModal"
+        @select-method="handleSelectLabelingMethod"
+      />
+      <ManualLabelingModal
+        :isOpen="isManualLabelingModalOpen"
+        :datasetId="dataset?.id"
+        @close="closeManualLabelingModal"
+        @images-labeled="handleImagesLabeled"
+      />
+      <CsvLabelingModal
+        :isOpen="isCsvLabelingModalOpen"
+        :datasetId="dataset?.id"
+        @close="closeCsvLabelingModal"
+        @images-labeled="handleImagesLabeled"
+      />
+      <LabelingResultsModal
+        :isOpen="isLabelingResultModalOpen"
+        :result="labelingResultData"
+        @close="closeLabelingResultModal"
+      />
     </div>
   </div>
 </template>
@@ -149,6 +173,23 @@ import { useAuthStore } from '@/stores/authStore';
 import ImagesTable from '@/components/images/ImagesTable.vue';
 import UploadImagesModal from '@/components/images/UploadImagesModal.vue';
 import UploadResultModal from '@/components/images/UploadResultModal.vue';
+import LabelingMethodModal from '@/components/images/LabelingMethodModal.vue';
+import ManualLabelingModal from '@/components/images/ManualLabelingModal.vue';
+import CsvLabelingModal from '@/components/images/CsvLabelingModal.vue';
+import LabelingResultsModal from '@/components/images/LabelingResultsModal.vue';
+
+const isLabelingMethodModalOpen = ref(false);
+const isManualLabelingModalOpen = ref(false);
+const isCsvLabelingModalOpen = ref(false);
+const isLabelingResultModalOpen = ref(false);
+
+const labelingResultData = ref({
+  labeledCount: 0,
+  notFoundCount: 0,
+  notFoundDetails: []
+});
+
+const imagesTableRef = ref(null);
 
 const route = useRoute();
 const router = useRouter();
@@ -390,7 +431,14 @@ onMounted(async () => {
 });
 
 const handleLabelImages = () => {
-  console.log('Iniciar proceso de etiquetado de imágenes');
+  if (!labelDetails.value?.unlabeled_images || labelDetails.value.unlabeled_images === 0) {
+    notifyInfo("No hay imágenes sin etiquetar", 
+    "Todas las imágenes en este conjunto ya tienen etiquetas.");
+    return;
+  }
+  
+  // Abrir el modal de selección de método de etiquetado.
+  isLabelingMethodModalOpen.value = true;
 };
 
 const handleUploadImages = () => {
@@ -428,6 +476,11 @@ const handleImagesUploaded = (result) => {
 
 const handleCloseResultModal = () => {
   showResultModal.value = false;
+
+  const imagesSection = document.querySelector('.images-section');
+  if (imagesSection) {
+    imagesSection.scrollIntoView({ behavior: 'smooth' });
+  }
 };
 
 // Desplazar a la sección de imágenes después de cerrar el modal de resultados.
@@ -437,6 +490,65 @@ const handleViewImages = () => {
   if (imagesSection) {
     imagesSection.scrollIntoView({ behavior: 'smooth' });
   }
+};
+
+const closeLabelingMethodModal = () => {
+  isLabelingMethodModalOpen.value = false;
+};
+
+const handleSelectLabelingMethod = (method) => {
+  // Cerrar el modal de método de etiquetado.
+  isLabelingMethodModalOpen.value = false;
+  
+  // Abrir el modal correspondiente según el método seleccionado.
+  if (method === 'manual') {
+    isManualLabelingModalOpen.value = true;
+  } else if (method === 'csv') {
+    isCsvLabelingModalOpen.value = true;
+  }
+};
+
+const closeManualLabelingModal = () => {
+  isManualLabelingModalOpen.value = false;
+};
+
+const closeCsvLabelingModal = () => {
+  isCsvLabelingModalOpen.value = false;
+};
+
+const closeLabelingResultModal = () => {
+  isLabelingResultModalOpen.value = false;
+  
+  const imagesSection = document.querySelector('.images-section');
+  if (imagesSection) {
+    imagesSection.scrollIntoView({ behavior: 'smooth' });
+  }
+};
+
+const handleImagesLabeled = (result) => {
+  
+  labelingResultData.value = {
+    labeledCount: result.labeledCount || 0,
+    notFoundCount: result.notFoundCount || 0,
+    notFoundDetails: result.notFoundDetails || []
+  };
+  
+  // Cerrar el modal de etiquetado (tanto manual como CSV).
+  isManualLabelingModalOpen.value = false;
+  isCsvLabelingModalOpen.value = false;
+  
+  // Mostrar el modal de resultados.
+  isLabelingResultModalOpen.value = true;
+  
+  // Actualizar datos del dataset.
+  fetchData();
+  
+  // Actualizar la tabla de imágenes.
+  nextTick(() => {
+    if (imagesTableRef.value && typeof imagesTableRef.value.fetchImages === 'function') {
+      imagesTableRef.value.fetchImages(true);
+    }
+  });
 };
 </script>
 

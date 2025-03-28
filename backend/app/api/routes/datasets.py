@@ -10,6 +10,9 @@ from app.models.datasets import (
     DatasetsReturn,
     DatasetLabelDetailsReturn,
     DatasetUploadResult,
+    UnlabeledImagesResponse,
+    CsvLabelData,
+    CsvLabelingResponse,
 )
 from app.models.messages import Message
 from app.crud.users import SessionDep, CurrentUser, get_user_by_id
@@ -18,6 +21,8 @@ from app.crud.datasets import (
     get_dataset_by_userid_and_name,
     get_dataset_counts,
     get_dataset_label_details,
+    get_unlabeled_images,
+    label_images_with_csv,
 )
 import app.crud.datasets as crud_datasets
 import app.crud.images as crud_images
@@ -446,4 +451,88 @@ async def upload_zip_with_images(
         invalid_image_details=stats.get("invalid_image_details", []),
         duplicated_image_details=stats.get("duplicated_image_details", []),
         skipped_label_details=stats.get("skipped_label_details", []),
+    )
+
+
+@router.get("/{dataset_id}/unlabeled-images", response_model=UnlabeledImagesResponse)
+async def read_unlabeled_images(
+    dataset_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> UnlabeledImagesResponse:
+    """Obtiene todas las imágenes sin etiquetar de un dataset dado su ID.
+
+    Args:
+        dataset_id (uuid.UUID): ID del dataset
+        session (SessionDep): Sesión de base de datos
+        current_user (CurrentUser): Usuario actual
+
+    Raises:
+        HTTPException[404]: Si no existe un dataset con ese ID.
+        HTTPException[403]: Si el usuario no tiene suficientes privilegios.
+
+    Returns:
+        UnlabeledImagesResponse: Lista de imágenes sin etiquetar.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    if dataset.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+
+    images = await get_unlabeled_images(session=session, dataset_id=dataset_id)
+
+    return UnlabeledImagesResponse(images=images)
+
+
+@router.post("/{dataset_id}/csv-label", response_model=CsvLabelingResponse)
+async def process_csv_labeling(
+    dataset_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    csv_data: CsvLabelData,
+) -> CsvLabelingResponse:
+    """Etiqueta múltiples imágenes basadas en datos CSV.
+
+    Args:
+        dataset_id (uuid.UUID): ID del dataset
+        session (SessionDep): Sesión de base de datos
+        current_user (CurrentUser): Usuario actual
+        csv_data (CsvLabelData): Datos con mapeo de nombres de imagen a etiquetas
+
+    Raises:
+        HTTPException[404]: Si no existe un dataset con ese ID.
+        HTTPException[403]: Si el usuario no tiene suficientes privilegios.
+
+    Returns:
+        CsvLabelingResponse: Estadísticas del proceso de etiquetado.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    if dataset.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+
+    result = await label_images_with_csv(
+        session=session, dataset_id=dataset_id, labels_data=csv_data.labels
+    )
+
+    return CsvLabelingResponse(
+        labeled_count=result["labeled_count"],
+        not_found_count=result["not_found_count"],
+        not_found_details=result["not_found_details"],
     )
