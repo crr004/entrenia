@@ -104,7 +104,7 @@ const updateMenuPosition = () => {
     // Calcular ajuste vertical basado en número de elementos.
     const itemHeight = 35; // Altura aproximada de cada elemento del menú.
     const numberOfItems = props.actions.length;
-    const verticalAdjustment = numberOfItems > 2 ? itemHeight : 0;
+    const verticalAdjustment = numberOfItems > 2 ? (itemHeight * (numberOfItems - 2)) : 0;
     
     if (props.position.top) {
       menuStyle.top = `${buttonRect.top - precalculatedHeight + 20 - verticalAdjustment}px`;

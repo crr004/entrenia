@@ -90,6 +90,9 @@ class DatasetUpdate(SQLModel):
     description: str | None = Field(
         default=None, max_length=1000, description="Descripción del dataset"
     )
+    is_public: bool | None = Field(
+        default=None, description="Indica si el dataset es público"
+    )
 
 
 class DatasetCategoryDetail(SQLModel):

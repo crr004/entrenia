@@ -119,10 +119,12 @@
                         :item="dataset" 
                         :itemId="dataset.id"
                         :position="getMenuPosition(dataset.id)"
-                        :actions="datasetMenuActions"
+                        :actions="getDatasetMenuActions(dataset)"
                         @view="viewDataset"
                         @edit="editDataset"
                         @delete="confirmDeleteDataset"
+                        @publish="confirmPublishDataset"
+                        @unpublish="confirmUnpublishDataset"
                         @close="closeActionsMenu"
                       />
                     </div>
@@ -171,12 +173,23 @@
     </div>
     <ConfirmationModal
       :isOpen="isDeleteModalOpen"
-      :title="`Eliminar dataset: ${datasetToDelete?.name || ''}`"
+      :title="`Eliminar conjunto: ${datasetToDelete?.name || ''}`"
       :message="deleteModalMessage"
       confirmText="Eliminar"
       cancelText="Cancelar"
+      buttonType="danger"
       @confirm="deleteDataset"
       @cancel="cancelDelete"
+    />
+    <ConfirmationModal
+      :isOpen="isShareModalOpen"
+      :title="shareModalTitle"
+      :message="shareModalMessage"
+      :confirmText="shareModalAction === 'publish' ? 'Compartir' : 'Privatizar'"
+      cancelText="Cancelar"
+      buttonType="success"
+      @confirm="processShareAction"
+      @cancel="cancelShareAction"
     />
     <AddDatasetModal
       :isOpen="isAddDatasetModalOpen"
@@ -217,13 +230,13 @@ const isAddDatasetModalOpen = ref(false);
 const isEditDatasetModalOpen = ref(false);
 const datasetToEdit = ref(null);
 
-const datasetMenuActions = [
-  { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
-  { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' },
-  { label: 'Eliminar', event: 'delete', icon: ['fas', 'trash-alt'], class: 'delete' }
-];
-
 const isSearchTransitioning = ref(false);
+
+const isShareModalOpen = ref(false);
+const datasetToShare = ref(null);
+const shareModalAction = ref(''); // 'publish' o 'unpublish'.
+const shareModalMessage = ref('');
+const shareModalTitle = ref('');
 
 const preferencesStore = userPreferencesStore();
 const authStore = useAuthStore();
@@ -542,6 +555,75 @@ const deleteDataset = async () => {
   }
 };
 
+const confirmPublishDataset = (dataset) => {
+  closeActionsMenu();
+  datasetToShare.value = dataset;
+  shareModalAction.value = 'publish';
+  shareModalTitle.value = `Compartir conjunto: ${dataset.name}`;
+  shareModalMessage.value = 'Al compartir este conjunto de imágenes, será visible para todos los usuarios de la plataforma. ¿Deseas continuar?';
+  isShareModalOpen.value = true;
+};
+
+const confirmUnpublishDataset = (dataset) => {
+  closeActionsMenu();
+  datasetToShare.value = dataset;
+  shareModalAction.value = 'unpublish';
+  shareModalTitle.value = `Privatizar: ${dataset.name}`;
+  shareModalMessage.value = 'Al dejar de compartir este conjunto de imágenes, ya no será visible para otros usuarios. ¿Deseas continuar?';
+  isShareModalOpen.value = true;
+};
+
+const cancelShareAction = () => {
+  isShareModalOpen.value = false;
+  datasetToShare.value = null;
+  shareModalAction.value = '';
+};
+
+const processShareAction = async () => {
+  if (!datasetToShare.value) return;
+  
+  try {
+    // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
+    const hasToken = !!localStorage.getItem('token') || !!authStore.token;
+    if(hasToken){
+      authStore.setAuthHeader();
+    }
+
+    // Preparar los datos según la acción (publicar o despublicar).
+    const isPublic = shareModalAction.value === 'publish';
+    
+    // Actualizar el dataset.
+    const response = await axios.patch(`/datasets/${datasetToShare.value.id}`, {
+      is_public: isPublic
+    });
+    
+    // Determinar si es necesario recargar toda la tabla.
+    // Se recarga en estos casos:
+    // 1. Si hay una búsqueda activa.
+    // 2. Si se está ordenando por is_public (ya que el cambio afecta la ordenación).
+    if (searchQuery.value.trim() || sortBy.value === 'is_public') {
+      // Recargar todos los datos.
+      await fetchDatasets();
+    } else {
+      // Solo actualizar el dataset en la lista local.
+      const index = datasets.value.findIndex(d => d.id === datasetToShare.value.id);
+      if (index !== -1) {
+        datasets.value[index].is_public = isPublic;
+      }
+    }
+    
+    notifySuccess(isPublic ? "Conjunto compartido" : "Conjunto no compartido", 
+    `El conjunto ${datasetToShare.value.name} ha sido ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
+  } catch (error) {
+    console.error('Error while updating dataset sharing status: ', error);
+    handleApiError(error);
+  } finally {
+    isShareModalOpen.value = false;
+    datasetToShare.value = null;
+    shareModalAction.value = '';
+  }
+};
+
 const handleApiError = (error) => {
   if (error.response) {
     const { status, data } = error.response;
@@ -619,6 +701,41 @@ const handleScroll = () => {
   if (activeActionsMenu.value !== null) {
     closeActionsMenu();
   }
+};
+
+const getDatasetMenuActions = (dataset) => {
+  // Acciones básicas que siempre estarán presentes.
+  const baseActions = [
+    { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
+    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' }
+  ];
+  
+  // Acción de compartir/no compartir según el estado actual.
+  if (dataset.is_public) {
+    baseActions.push({ 
+      label: 'Privatizar', 
+      event: 'unpublish', 
+      icon: ['fas', 'lock'], 
+      class: 'unpublish' 
+    });
+  } else {
+    baseActions.push({ 
+      label: 'Compartir', 
+      event: 'publish', 
+      icon: ['fas', 'globe'], 
+      class: 'publish' 
+    });
+  }
+  
+  // Acción de eliminar (siempre al final).
+  baseActions.push({ 
+    label: 'Eliminar', 
+    event: 'delete', 
+    icon: ['fas', 'trash-alt'], 
+    class: 'delete' 
+  });
+  
+  return baseActions;
 };
 
 onMounted(async () => {
