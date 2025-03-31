@@ -50,7 +50,7 @@
                     <SortIcon :fieldName="'label'" :currentSort="sortBy" :currentOrder="sortOrder" />
                   </th>
                   <th @click="setSortField('created_at')" class="sortable-header">
-                    <span class="header-text">Fecha de adición</span>
+                    <span class="header-text">Fecha de subida</span>
                     <SortIcon :fieldName="'created_at'" :currentSort="sortBy" :currentOrder="sortOrder" />
                   </th>
                   <th class="actions-column">Acciones</th>
@@ -141,7 +141,7 @@
     </div>
     <ConfirmationModal
       :isOpen="isDeleteModalOpen"
-      :title="`Eliminar imagen: ${imageToDelete?.name || ''}`"
+      :title="`Eliminar imagen`"
       :message="deleteModalMessage"
       confirmText="Eliminar"
       cancelText="Cancelar"
@@ -520,7 +520,7 @@ const onImageUpdated = async (updatedImage) => {
 const confirmDeleteImage = (image) => {
   closeActionsMenu();
   imageToDelete.value = image;
-  deleteModalMessage.value = `Estás a punto de eliminar la imagen ${image.name}. Esta acción no se puede deshacer.`;
+  deleteModalMessage.value = `Estás a punto de eliminar la imagen. Esta acción no se puede deshacer.`;
   isDeleteModalOpen.value = true;
 };
 

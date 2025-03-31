@@ -13,11 +13,12 @@
       <div class="modal-footer">
         <button class="cancel-button" @click="$emit('cancel')">{{ cancelText }}</button>
         <button 
-          :class="['confirm-button', buttonType === 'success' ? 'confirm-success' : 'confirm-danger']" 
+          :class="['confirm-button', buttonType === 'success' ? 'confirm-success' : 'confirm-danger', isLoading ? 'loading' : '']"
           @click="$emit('confirm')"
+          :disabled="isLoading"
         >
-          <font-awesome-icon v-if="isLoading" :icon="['fas', 'circle-notch']" spin class="button-icon" />
-          {{ confirmText }}
+          <font-awesome-icon v-if="isLoading" :icon="['fas', 'spinner']"/>
+          <span v-if="!isLoading">{{ confirmText }}</span>
         </button>
       </div>
     </div>
@@ -162,7 +163,7 @@ defineEmits(['confirm', 'cancel']);
 }
 
 .confirm-button:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

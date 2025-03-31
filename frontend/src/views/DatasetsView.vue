@@ -173,7 +173,7 @@
     </div>
     <ConfirmationModal
       :isOpen="isDeleteModalOpen"
-      :title="`Eliminar conjunto: ${datasetToDelete?.name || ''}`"
+      :title="`Eliminar conjunto de imágenes`"
       :message="deleteModalMessage"
       confirmText="Eliminar"
       cancelText="Cancelar"
@@ -501,7 +501,7 @@ const onDatasetUpdated = async (updatedDataset) => {
 const confirmDeleteDataset = (dataset) => {
   closeActionsMenu();
   datasetToDelete.value = dataset;
-  deleteModalMessage.value = `Estás a punto de eliminar el conjunto de imágenes ${dataset.name}. Esta acción eliminará todas las imágenes y etiquetas asociadas y no se puede deshacer.`;
+  deleteModalMessage.value = `Estás a punto de eliminar el conjunto de imágenes. Esta acción eliminará todas las imágenes y etiquetas asociadas y no se puede deshacer.`;
   isDeleteModalOpen.value = true;
 };
 
@@ -559,7 +559,7 @@ const confirmPublishDataset = (dataset) => {
   closeActionsMenu();
   datasetToShare.value = dataset;
   shareModalAction.value = 'publish';
-  shareModalTitle.value = `Compartir conjunto: ${dataset.name}`;
+  shareModalTitle.value = `Compartir conjunto de imágenes`;
   shareModalMessage.value = 'Al compartir este conjunto de imágenes, será visible para todos los usuarios de la plataforma. ¿Deseas continuar?';
   isShareModalOpen.value = true;
 };
@@ -568,7 +568,7 @@ const confirmUnpublishDataset = (dataset) => {
   closeActionsMenu();
   datasetToShare.value = dataset;
   shareModalAction.value = 'unpublish';
-  shareModalTitle.value = `Privatizar: ${dataset.name}`;
+  shareModalTitle.value = `Privatizar conjunto de imágenes`;
   shareModalMessage.value = 'Al dejar de compartir este conjunto de imágenes, ya no será visible para otros usuarios. ¿Deseas continuar?';
   isShareModalOpen.value = true;
 };

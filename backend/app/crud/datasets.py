@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+import shutil
 
 from sqlmodel import select, func
 from sqlalchemy import distinct
@@ -12,11 +13,15 @@ from app.models.images import (
     ImageUpdate,
 )
 from app.models.users import User
-from app.crud.images import get_image_by_datasetid_and_name, update_image
+from app.crud.images import (
+    get_image_by_datasetid_and_name,
+    update_image,
+)
 
 
 logger = logging.getLogger(__name__)
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
+IMAGES_DIR = os.path.join(MEDIA_ROOT, "images")
 
 
 async def get_dataset_by_id(*, session: AsyncSession, id: uuid.UUID) -> Dataset | None:
@@ -600,3 +605,163 @@ async def label_images_with_csv(
         "not_found_count": not_found_count,
         "not_found_details": not_found_details,
     }
+
+
+async def get_public_datasets(
+    *,
+    session: AsyncSession,
+    skip: int = 0,
+    limit: int = 10,
+    search: str | None = None,
+) -> tuple[list[Dataset], int]:
+    """Obtiene todos los datasets públicos ordenados por fecha de creación descendente.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        skip (int): Cantidad de datasets a omitir (paginación).
+        limit (int): Cantidad de datasets a devolver (paginación).
+        search (str | None): Texto a buscar en el nombre, descripción o nombre de usuario.
+
+    Returns:
+        tuple[list[Dataset], int]: Datasets públicos encontrados y conteo total.
+    """
+
+    # Consulta base.
+    query = select(Dataset).where(Dataset.is_public == True)
+
+    # Aplicar búsqueda si se proporciona.
+    if search and search.strip():
+        search_term = f"%{search.strip()}%"
+        # Join con la tabla de usuarios para buscar también por username.
+        query = query.join(User, Dataset.user_id == User.id).where(
+            Dataset.name.ilike(search_term)
+            | Dataset.description.ilike(search_term)
+            | User.username.ilike(search_term)
+        )
+
+    # Ordenar por fecha de creación descendente.
+    query = query.order_by(Dataset.created_at.desc())
+
+    # Consulta para contar el total de resultados.
+    count_query = select(func.count()).select_from(
+        query.with_only_columns(Dataset.id).subquery()
+    )
+    count_result = await session.execute(count_query)
+    total_count = count_result.scalar_one() or 0
+
+    # Aplicar paginación.
+    query = query.offset(skip).limit(limit)
+
+    # Ejecutar consulta.
+    result = await session.execute(query)
+    datasets = result.scalars().all()
+
+    return datasets, total_count
+
+
+async def clone_dataset(
+    *,
+    session: AsyncSession,
+    source_dataset_id: uuid.UUID,
+    target_user_id: uuid.UUID,
+    source_username: str,
+) -> Dataset:
+    """Clona un dataset de un usuario a otro, incluyendo las imágenes asociadas.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        source_dataset_id (uuid.UUID): ID del dataset original.
+        target_user_id (uuid.UUID): ID del usuario destino.
+        source_username (str): Nombre de usuario del propietario original.
+
+    Returns:
+        Dataset: Dataset clonado.
+    """
+
+    # Obtener el dataset original.
+    source_dataset = await get_dataset_by_id(session=session, id=source_dataset_id)
+
+    # Crear un nuevo nombre para el dataset clonado, usando el nombre del usuario original.
+    new_name = f"{source_username} - {source_dataset.name}"
+
+    # Verificar si ya existe un dataset con ese nombre para el usuario destino.
+    existing_dataset = await get_dataset_by_userid_and_name(
+        session=session, user_id=target_user_id, name=new_name
+    )
+
+    # Si ya existe un dataset con ese nombre, añadir un sufijo numérico.
+    if existing_dataset:
+        counter = 1
+        while True:
+            new_name = f"{source_username} - {source_dataset.name} ({counter})"
+            existing_dataset = await get_dataset_by_userid_and_name(
+                session=session, user_id=target_user_id, name=new_name
+            )
+            if not existing_dataset:
+                break
+            counter += 1
+
+    # Crear el nuevo dataset.
+    dataset_create = DatasetCreate(
+        name=new_name,
+        description=source_dataset.description,
+        is_public=False,
+    )
+
+    # Guardar el nuevo dataset en la base de datos.
+    cloned_dataset = await create_dataset(
+        session=session, user_id=target_user_id, dataset_in=dataset_create
+    )
+
+    # Obtener todas las imágenes del dataset original.
+    images_query = select(Image).where(Image.dataset_id == source_dataset_id)
+    result = await session.execute(images_query)
+    source_images = result.scalars().all()
+
+    images_to_add = []
+
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+
+    # Copiar cada imagen al nuevo dataset.
+    for source_image in source_images:
+        # Generar ID para la nueva imagen.
+        new_image_id = uuid.uuid4()
+
+        # Obtener la ruta de la imagen original.
+        source_file_path = os.path.join(MEDIA_ROOT, source_image.file_path)
+
+        # Crear la nueva ruta para la imagen clonada.
+        # Ya que las imágenes están estandarizadas, todas tendrán extensión .jpg.
+        new_file_name = f"{new_image_id}.jpg"
+        new_file_path = os.path.join("images", new_file_name)
+        target_file_path = os.path.join(IMAGES_DIR, new_file_name)
+
+        # Copiar el archivo de imagen si existe.
+        try:
+            if os.path.exists(source_file_path):
+                shutil.copy2(source_file_path, target_file_path)
+            else:
+                logger.warning(f"Source image not found: {source_file_path}")
+        except Exception as e:
+            logger.error(f"Error copying image file: {str(e)}", exc_info=True)
+
+        # Crear imagen.
+        new_image = Image(
+            id=new_image_id,
+            name=source_image.name,
+            file_path=new_file_path,
+            dataset_id=cloned_dataset.id,
+            label=source_image.label,
+            thumbnail=source_image.thumbnail,
+        )
+
+        # Añadir a la lista de imágenes a insertar.
+        images_to_add.append(new_image)
+
+    # Añadir todas las imágenes a la sesión.
+    session.add_all(images_to_add)
+
+    await session.commit()
+    await session.refresh(cloned_dataset)
+
+    return cloned_dataset

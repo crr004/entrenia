@@ -15,7 +15,11 @@ from app.models.datasets import (
     CsvLabelingResponse,
 )
 from app.models.messages import Message
-from app.crud.users import SessionDep, CurrentUser, get_user_by_id
+from app.crud.users import (
+    SessionDep,
+    CurrentUser,
+    get_user_by_id,
+)
 from app.crud.datasets import (
     get_dataset_by_id,
     get_dataset_by_userid_and_name,
@@ -28,6 +32,147 @@ import app.crud.datasets as crud_datasets
 import app.crud.images as crud_images
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
+
+
+@router.get("/public", response_model=DatasetsReturn)
+async def get_public_datasets(
+    *,
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 10,
+    search: str | None = None,
+) -> DatasetsReturn:
+    """Obtiene datasets públicos (campo is_public a true) con soporte para paginación y búsqueda.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        skip (int): Cantidad de datasets a omitir (paginación).
+        limit (int): Cantidad de datasets a devolver (paginación).
+        search (str | None): Texto a buscar en el usuario, nombre o descripción del dataset.
+
+    Returns:
+        DatasetsReturn: Lista de datasets públicos encontrados y su conteo total.
+    """
+
+    datasets, count = await crud_datasets.get_public_datasets(
+        session=session,
+        skip=skip,
+        limit=limit,
+        search=search,
+    )
+
+    dataset_returns = []
+
+    for dataset in datasets:
+        dataset_dict = dataset.model_dump()
+
+        # Obtener conteos de imágenes y categorías.
+        counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
+        dataset_dict["image_count"] = counts.get("image_count", 0)
+        dataset_dict["category_count"] = counts.get("category_count", 0)
+
+        # Obtener el nombre de usuario del propietario del dataset.
+        user = await get_user_by_id(session=session, id=dataset.user_id)
+        if user:
+            dataset_dict["username"] = user.username
+
+        dataset_returns.append(DatasetReturn(**dataset_dict))
+
+    return DatasetsReturn(datasets=dataset_returns, count=count)
+
+
+@router.get("/public/{dataset_id}", response_model=DatasetReturn)
+async def read_public_dataset(
+    session: SessionDep,
+    dataset_id: uuid.UUID,
+    current_user: Optional[CurrentUser] = None,
+) -> DatasetReturn:
+    """Devuelve los datos de un dataset público específico sin requerir autenticación.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        dataset_id (uuid.UUID): Id del dataset a buscar.
+        current_user (Optional[CurrentUser]): Usuario actual (opcional).
+
+    Raises:
+        HTTPException[404]: Si no existe un dataset con ese ID.
+        HTTPException[403]: Si el dataset no es público.
+
+    Returns:
+        DatasetReturn: Datos del dataset público.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    is_owner = current_user and (dataset.user_id == current_user.id)
+    is_admin = current_user and current_user.is_admin
+
+    if not dataset.is_public and not (is_owner or is_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This dataset is not public",
+        )
+
+    dataset_dict = dataset.model_dump()
+
+    # Obtener conteos de imágenes y categorías.
+    counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
+    dataset_dict["image_count"] = counts.get("image_count", 0)
+    dataset_dict["category_count"] = counts.get("category_count", 0)
+
+    # Obtener el nombre de usuario del propietario del dataset.
+    user = await get_user_by_id(session=session, id=dataset.user_id)
+    if user:
+        dataset_dict["username"] = user.username
+
+    return DatasetReturn(**dataset_dict)
+
+
+@router.get(
+    "/public/{dataset_id}/label-details", response_model=DatasetLabelDetailsReturn
+)
+async def read_public_dataset_label_details(
+    session: SessionDep,
+    dataset_id: uuid.UUID,
+    current_user: Optional[CurrentUser] = None,
+) -> DatasetLabelDetailsReturn:
+    """Devuelve detalles de las etiquetas y categorías de un dataset público sin requerir autenticación.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        dataset_id (uuid.UUID): Id del dataset a buscar.
+        current_user (Optional[CurrentUser]): Usuario actual (opcional).
+
+    Raises:
+        HTTPException[404]: Si no existe un dataset con ese ID.
+        HTTPException[403]: Si el dataset no es público.
+
+    Returns:
+        DatasetLabelDetailsReturn: Detalles de etiquetas y categorías del dataset público.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    is_owner = current_user and (dataset.user_id == current_user.id)
+    is_admin = current_user and current_user.is_admin
+
+    if not dataset.is_public and not (is_owner or is_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This dataset is not public",
+        )
+
+    details = await get_dataset_label_details(session=session, dataset_id=dataset_id)
+
+    return DatasetLabelDetailsReturn(**details)
 
 
 @router.get("/", response_model=DatasetsReturn)
@@ -377,7 +522,7 @@ async def upload_zip_with_images(
     csv_file: Optional[UploadFile] = None,
     labeling_option: str = Form(default="none"),
 ) -> DatasetUploadResult:
-    """Procesa un archivo ZIP con imágenes y opcionalmente etiquetas desde un CSV.
+    """Procesa un archivo ZIP con imágenes y opcionalmente etiquetas desde un CSV, para añadirlas a un dataset.
 
     Args:
         dataset_id (uuid.UUID): ID del dataset donde se subirán las imágenes.
@@ -536,3 +681,82 @@ async def process_csv_labeling(
         not_found_count=result["not_found_count"],
         not_found_details=result["not_found_details"],
     )
+
+
+@router.post("/{dataset_id}/clone", response_model=DatasetReturn)
+async def clone_public_dataset(
+    dataset_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> DatasetReturn:
+    """Clona (añade una copia) un dataset público a la biblioteca personal del usuario.
+
+    Args:
+        dataset_id (uuid.UUID): ID del dataset a clonar.
+        session (SessionDep): Sesión de la base de datos.
+        current_user (CurrentUser): Usuario actual.
+
+    Raises:
+        HTTPException[404]: Si no existe un dataset con ese ID.
+        HTTPException[403]: Si el dataset no es público.
+        HTTPException[409]: Si el usuario es el propietario del dataset original.
+
+    Returns:
+        DatasetReturn: Datos del dataset clonado.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    if not dataset.is_public:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The dataset is not public and cannot be cloned",
+        )
+
+    # Verificar si el usuario ya es propietario del dataset.
+    if dataset.user_id == current_user.id:
+        # Si el usuario ya es propietario, redireccionar a la vista de detalle.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already own this dataset",
+            headers={"x-dataset-id": str(dataset_id)},
+        )
+
+    # Obtener el nombre de usuario del propietario original.
+    source_user = await get_user_by_id(session=session, id=dataset.user_id)
+    if not source_user:
+        source_username = "Unknown"
+    else:
+        source_username = source_user.username
+
+    try:
+        cloned_dataset = await crud_datasets.clone_dataset(
+            session=session,
+            source_dataset_id=dataset_id,
+            target_user_id=current_user.id,
+            source_username=source_username,
+        )
+
+        dataset_dict = cloned_dataset.model_dump()
+
+        # Obtener conteos.
+        counts = await get_dataset_counts(session=session, dataset_id=cloned_dataset.id)
+        dataset_dict["image_count"] = counts.get("image_count", 0)
+        dataset_dict["category_count"] = counts.get("category_count", 0)
+
+        # Añadir el nombre del usuario origen.
+        dataset_dict["username"] = source_username
+
+        return DatasetReturn(**dataset_dict)
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error cloning dataset: {str(e)}",
+        )

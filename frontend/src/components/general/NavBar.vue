@@ -12,6 +12,8 @@
       <div class="navbar-links">
         <router-link to="/" @click="closeBurgerMenu">Inicio</router-link>
         <span id="nav-separator" class="desktop-only"> | </span>
+        <router-link to="/explore" @click="closeBurgerMenu">Explorar</router-link>
+        <span id="nav-separator" class="desktop-only"> | </span>
         <router-link to="/about" @click="closeBurgerMenu">Sobre EntrenIA</router-link>
       </div>
       <div class="navbar-personal" v-if="!authStore.isAuthenticated">

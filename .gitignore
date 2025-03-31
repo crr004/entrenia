@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 results.*
+!results.css
 .env
 .vscode/
 .pytest_cache/

@@ -45,6 +45,18 @@ const routes = [
     meta: { showNav: true, showFooter: true }
   },
   {
+    path: '/explore',
+    name: 'explore',
+    component: () => import('../views/ExploreView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
+    path: '/explore/:id',
+    name: 'public-dataset-detail',
+    component: () => import('../views/PublicDatasetDetailView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),
