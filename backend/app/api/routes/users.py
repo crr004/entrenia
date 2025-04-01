@@ -41,20 +41,56 @@ router = APIRouter(prefix="/users", tags=["users"])
     response_model=UsersReturn,
 )
 async def admin_read_users(
-    session: SessionDep, skip: int = 0, limit: int = 100
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    search: str | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
 ) -> UsersReturn:
-    """Devuelve todos los usuarios del sistema.
+    """Devuelve todos los usuarios del sistema con soporte para paginación, búsqueda y ordenación.
 
     Args:
         session (SessionDep): Sesión de la base de datos.
-        skip (int, optional): Cantidad de usuarios a omitir. Por defecto 0.
-        limit (int, optional): Cantidad de usuarios a devolver. Por defecto 100.
+        skip (int): Cantidad de usuarios a omitir. Por defecto 0.
+        limit (int): Cantidad de usuarios a devolver. Por defecto 100.
+        search (str | None): Texto a buscar en email, username o full_name. Por defecto None.
+        sort_by (str): Campo por el que ordenar. Por defecto "created_at".
+        sort_order (str): Orden ascendente ("asc") o descendente ("desc"). Por defecto "desc".
 
     Returns:
-        UsersReturn: Lista de usuarios.
+        UsersReturn: Lista de usuarios y su conteo total.
     """
 
-    users = await get_all_users(session=session, skip=skip, limit=limit)
+    if sort_order not in ["asc", "desc"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid sort_order. Must be 'asc' or 'desc'",
+        )
+
+    valid_sort_fields = [
+        "email",
+        "username",
+        "full_name",
+        "is_admin",
+        "is_active",
+        "is_verified",
+        "created_at",
+    ]
+    if sort_by not in valid_sort_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid sort_by. Must be one of: {', '.join(valid_sort_fields)}",
+        )
+
+    users = await get_all_users(
+        session=session,
+        skip=skip,
+        limit=limit,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
     return users
 

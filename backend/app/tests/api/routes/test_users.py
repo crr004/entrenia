@@ -23,19 +23,23 @@ class TestUserRoutes:
     async def test_admin_read_users_success(
         self, mock_get_all_users, mock_session, mock_users_list
     ):
-        """Prueba de lectura exitosa de usuarios por parte del administrador."""
-
-        # Preparación
+        """Prueba de obtención exitosa de todos los usuarios."""
+        # Configuración
         mock_get_all_users.return_value = mock_users_list
 
         # Ejecución
-        result = await admin_read_users(mock_session, skip=0, limit=100)
+        response = await admin_read_users(session=mock_session, skip=0, limit=100)
 
         # Verificación
+        assert response == mock_users_list
         mock_get_all_users.assert_called_once_with(
-            session=mock_session, skip=0, limit=100
+            session=mock_session,
+            skip=0,
+            limit=100,
+            search=None,
+            sort_by="created_at",
+            sort_order="desc",
         )
-        assert result == mock_users_list
 
     async def test_admin_create_user_success(
         self,

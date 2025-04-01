@@ -4,6 +4,7 @@ import jwt
 import logging
 from typing import Annotated
 from jwt.exceptions import InvalidTokenError
+from sqlalchemy import or_, desc, asc
 
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -108,25 +109,88 @@ async def get_user_by_id(*, session: AsyncSession, id: uuid.UUID) -> User | None
     return user
 
 
-async def get_all_users(*, session: AsyncSession, skip: int, limit: int) -> UsersReturn:
-    """Obtiene todos los usuarios de la base de datos.
+async def get_all_users(
+    *,
+    session: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    search: str | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+) -> UsersReturn:
+    """Obtiene todos los usuarios de la base de datos con soporte para paginación, búsqueda y ordenación.
 
     Args:
         session (AsyncSession): Sesión asíncrona de la base de datos.
-        skip (int): Cantidad de usuarios a omitir.
-        limit (int): Cantidad de usuarios a devolver.
+        skip (int): Cantidad de usuarios a omitir. Por defecto 0.
+        limit (int): Cantidad de usuarios a devolver. Por defecto 100.
+        search (str | None): Texto a buscar en email, username o full_name. Por defecto None.
+        sort_by (str): Campo por el que ordenar. Por defecto "created_at".
+        sort_order (str): Orden ascendente ("asc") o descendente ("desc"). Por defecto "desc".
 
     Returns:
-        UsersReturn: Usuarios encontrados.
+        UsersReturn: Usuarios encontrados y su conteo total.
     """
 
-    count_statement = select(func.count()).select_from(User)
-    count_res = await session.execute(count_statement)
-    count = count_res.scalar()
+    # Crear consulta base.
+    query = select(User)
+    count_query = select(func.count()).select_from(User)
 
-    statement = select(User).offset(skip).limit(limit)
-    res = await session.execute(statement)
-    users = [user for user, in res.all()]
+    # Aplicar filtro de búsqueda si existe.
+    if search:
+        search_term = f"%{search.lower()}%"
+        query = query.where(
+            or_(
+                func.lower(User.email).like(search_term),
+                func.lower(User.username).like(search_term),
+                func.lower(User.full_name).like(search_term),
+            )
+        )
+        count_query = count_query.where(
+            or_(
+                func.lower(User.email).like(search_term),
+                func.lower(User.username).like(search_term),
+                func.lower(User.full_name).like(search_term),
+            )
+        )
+
+    # Aplicar ordenación.
+    valid_sort_fields = [
+        "email",
+        "username",
+        "full_name",
+        "is_admin",
+        "is_active",
+        "is_verified",
+        "created_at",
+    ]
+    if sort_by not in valid_sort_fields:
+        sort_by = "created_at"
+
+    # Definir dirección de ordenación.
+    sort_direction = desc if sort_order.lower() == "desc" else asc
+
+    # Manejar campos booleanos para ordenación coherente.
+    if sort_by in ["is_admin", "is_active", "is_verified"]:
+        # Para campos booleanos, ordenamos descendentemente (True primero) si es "desc"
+        # o ascendentemente (False primero) si es "asc".
+        query = query.order_by(sort_direction(getattr(User, sort_by)))
+    else:
+        query = query.order_by(sort_direction(getattr(User, sort_by)))
+
+    # Añadir created_at como criterio de ordenación secundario.
+    if sort_by != "created_at":
+        query = query.order_by(desc(User.created_at))
+
+    # Aplicar paginación.
+    query = query.offset(skip).limit(limit)
+
+    # Ejecutar consultas.
+    users_res = await session.execute(query)
+    count_res = await session.execute(count_query)
+
+    users = list(users_res.scalars().all())
+    count = count_res.scalar()
 
     return UsersReturn(users=users, count=count)
 

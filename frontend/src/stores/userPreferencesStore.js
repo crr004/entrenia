@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 
 export const userPreferencesStore = defineStore('preferences', {
   state: () => ({
-    adminPageSize: 10,
+    adminPageSize: 5,
     datasetPageSize: 5,
     imagePageSize: 5,
   }),
@@ -27,7 +27,7 @@ export const userPreferencesStore = defineStore('preferences', {
     },
     
     resetPreferences() {
-      this.adminPageSize = 10;
+      this.adminPageSize = 5;
       this.datasetPageSize = 5;
       this.imagePageSize = 5;
     }

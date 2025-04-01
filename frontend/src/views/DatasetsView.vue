@@ -863,30 +863,6 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   background-color: #f8f9fa;
 }
 
-/* Encabezados de tabla y ordenación */
-.sortable-header {
-  cursor: pointer;
-  position: relative;
-  user-select: none;
-  padding-right: 28px;
-}
-
-.data-table thead tr th.sortable-header {
-  padding-right: 28px;
-}
-
-.header-text {
-  display: inline-block;
-  vertical-align: middle;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sortable-header:hover {
-  background-color: #f8f9fa;
-}
-
 /* Anchura de columnas y truncamiento de texto */
 /* Columna de usuario */
 .datasets-table th:nth-child(1), 
@@ -936,10 +912,6 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   
   .add-dataset-button {
     width: 100%;
-  }
-  
-  .data-table thead tr th.sortable-header {
-    padding-right: 24px;
   }
   
   .datasets-table th,

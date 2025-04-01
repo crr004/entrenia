@@ -33,7 +33,7 @@
             <font-awesome-icon :icon="['fas', 'circle-notch']" spin size="2x" />
             <p>Cargando usuarios...</p>
           </div>
-          <div v-else-if="(searchQuery.trim() && paginatedResults.length === 0) || (!searchQuery.trim() && users.length === 0)" class="empty-state">
+          <div v-else-if="users.length === 0" class="empty-state">
             <template v-if="searchQuery.trim()">
               <font-awesome-icon :icon="['fas', 'search']" size="2x" />
               <p>No se encontraron usuarios para "<span class="search-term">{{ searchQuery }}</span>"</p>
@@ -43,21 +43,63 @@
               <p>No hay usuarios en el sistema</p>
             </template>
           </div>
-          <div v-else-if="paginatedResults.length > 0">
+          <div v-else>
             <table class="data-table users-table">
               <thead>
                 <tr>
-                  <th>Correo</th>
-                  <th>Nombre</th>
-                  <th>Usuario</th>
-                  <th class="center-column">Admin</th>
-                  <th class="center-column">Estado</th>
-                  <th class="center-column">Verificado</th>
+                  <th @click="setSortField('email')" class="sortable-header">
+                    <span class="header-text">Correo</span>
+                    <SortIcon 
+                      fieldName="email"
+                      :currentSort="sortBy"
+                      :currentOrder="sortOrder"
+                    />
+                  </th>
+                  <th @click="setSortField('full_name')" class="sortable-header">
+                    <span class="header-text">Nombre</span>
+                    <SortIcon 
+                      fieldName="full_name"
+                      :currentSort="sortBy"
+                      :currentOrder="sortOrder"
+                    />
+                  </th>
+                  <th @click="setSortField('username')" class="sortable-header">
+                    <span class="header-text">Usuario</span>
+                    <SortIcon 
+                      fieldName="username"
+                      :currentSort="sortBy"
+                      :currentOrder="sortOrder"
+                    />
+                  </th>
+                  <th @click="setSortField('is_admin')" class="sortable-header">
+                    <span class="header-text">Admin</span>
+                    <SortIcon 
+                      fieldName="is_admin"
+                      :currentSort="sortBy"
+                      :currentOrder="sortOrder"
+                    />
+                  </th>
+                  <th @click="setSortField('is_active')" class="sortable-header">
+                    <span class="header-text">Estado</span>
+                    <SortIcon 
+                      fieldName="is_active"
+                      :currentSort="sortBy"
+                      :currentOrder="sortOrder"
+                    />
+                  </th>
+                  <th  @click="setSortField('is_verified')" class="sortable-header">
+                    <span class="header-text">Verificado</span>
+                    <SortIcon 
+                      fieldName="is_verified"
+                      :currentSort="sortBy"
+                      :currentOrder="sortOrder"
+                    />
+                  </th>
                   <th class="actions-column">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="user in paginatedResults" :key="user.id" :class="{ 'inactive-row': !user.is_active }">
+                <tr v-for="user in users" :key="user.id" :class="{ 'inactive-row': !user.is_active }">
                   <td>
                     <span class="truncate" :title="user.email">
                       {{ truncateText(user.email, 31) }}
@@ -97,7 +139,7 @@
                         :data-active="activeActionsMenu === user.id ? 'true' : 'false'"
                         :data-item-id="user.id"
                       >
-                        <font-awesome-icon :icon="['fas', 'ellipsis-v']" />
+                        <font-awesome-icon :icon="['fas', 'ellipsis-vertical']" />
                       </button>
                       <ActionMenu 
                         v-if="activeActionsMenu === user.id"
@@ -113,7 +155,7 @@
                 </tr>
               </tbody>
             </table>
-             <div class="pagination-controls">
+            <div class="pagination-controls">
               <div class="pagination-actions">
                 <button 
                   class="pagination-button" 
@@ -132,7 +174,7 @@
                 >
                   <font-awesome-icon :icon="['fas', 'chevron-right']" class="pagination-icon" />
                 </button>
-                </div>
+              </div>
               <div class="page-size-selector">
                 <label for="page-size">Mostrar:</label>
                 <select 
@@ -184,9 +226,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { userPreferencesStore } from '@/stores/userPreferencesStore.js';
 import ActionMenu from '@/components/utils/ActionMenu.vue';
 import ConfirmationModal from '@/components/utils/ConfirmationModal.vue';
+import SortIcon from '@/components/utils/SortIcon.vue';
 import AddUserModal from '@/components/users/AddUserModal.vue';
 import EditUserModal from '@/components/users/EditUserModal.vue';
-
 
 const router = useRouter();
 const users = ref([]);
@@ -203,56 +245,74 @@ const preferencesStore = userPreferencesStore();
 const authStore = useAuthStore();
 
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(5);
 const totalUsers = ref(0);
-const totalPages = computed(() => Math.ceil(totalUsers.value / pageSize.value));
+const totalPages = computed(() => Math.ceil(totalUsers.value / pageSize.value) || 1);
 
-const pageSizeOptions = [10, 25, 50, 100];
+const pageSizeOptions = [5, 10, 25, 50, 100];
 
 const searchQuery = ref('');
 const searchTimeout = ref(null);
 
-// Variable para controlar el estado intermedio entre borrar búsqueda y cargar resultados.
 const isSearchTransitioning = ref(false);
 
-const allSearchResults = ref([]);  // Almacena todos los resultados de la búsqueda.
+const sortBy = ref('created_at');
+const sortOrder = ref('desc');
 
 const handlePageSizeChange = async () => {
-  isLoading.value = true;
-  
-  // Guardar el nuevo tamaño de página en las preferencias del usuario.
-  preferencesStore.setAdminPageSize(pageSize.value);
-  
-  // Primero resetear a la página 1.
-  currentPage.value = 1;
-  
-  // Si estamos en una búsqueda, actualizar los resultados paginados.
-  if (searchQuery.value.trim()) {
-    setTimeout(() => {
-      updateDisplayedUsers(); 
-      isLoading.value = false;
-    }, 100);
-  } else {
-    // Para la vista normal, obtener nuevos datos.
+  try {
+    // Activar estado de transición para evitar parpadeos.
+    isSearchTransitioning.value = true;
+    
+    // Guardar el nuevo tamaño de página en las preferencias del usuario.
+    preferencesStore.setAdminPageSize(pageSize.value);
+    
+    // Calcular la primera entrada de la página actual con el tamaño actual.
+    const currentSize = pageSize.value;
+    const firstItemIndex = (currentPage.value - 1) * currentSize;
+    
+    // Calcular qué página mostrará esa primera entrada con el nuevo tamaño.
+    const newPage = Math.floor(firstItemIndex / currentSize) + 1;
+    currentPage.value = newPage;
+    
+    // Asegurar que no exceda el número total de páginas.
+    const newTotalPages = Math.ceil(totalUsers.value / currentSize) || 1;
+    if (currentPage.value > newTotalPages) {
+      currentPage.value = newTotalPages;
+    }
+    
+    // Recargar datos con el nuevo tamaño de página.
     await fetchUsers();
+  } catch (error) {
+    console.error("Error while changing page size: ", error);
+  } finally {
+    // Desactivar el estado de transición en el siguiente tick.
+    setTimeout(() => {
+      isSearchTransitioning.value = false;
+    }, 0);
   }
 };
 
-const paginatedResults = computed(() => {
-  if (!searchQuery.value.trim()) return users.value;
+const setSortField = async (field) => {
+  isSearchTransitioning.value = true;
   
-  // Calcular el rango de usuarios a mostrar en la página actual.
-  const startIndex = (currentPage.value - 1) * pageSize.value;
-  const endIndex = Math.min(startIndex + pageSize.value, allSearchResults.value.length);
+  if (sortBy.value === field) {
+    // Si ya se está ordenando por este campo, invertir la dirección.
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Si es un nuevo campo, establecerlo y dirección por defecto.
+    sortBy.value = field;
+    // Por defecto ordenar descendentemente (excepto para campos de texto).
+    sortOrder.value = (field === 'email' || field === 'username' || field === 'full_name') ? 'asc' : 'desc';
+  }
   
-  // Devolver solo los usuarios de la página actual.
-  return allSearchResults.value.slice(startIndex, endIndex);
-});
+  // Recargar datos con la nueva ordenación.
+  await fetchUsers();
+};
 
 // Manejar la búsqueda con debounce.
-const handleSearch = async () => {
+const handleSearch = () => {
   // Activar estado de carga inmediatamente al escribir.
-  // Esto mostrará el spinner mientras se completa el debounce.
   isSearchTransitioning.value = true;
   
   // Limpiar el timeout anterior si existe.
@@ -262,98 +322,30 @@ const handleSearch = async () => {
   
   // Esperar a que el usuario termine de escribir.
   searchTimeout.value = setTimeout(async () => {
-    // Si la búsqueda está vacía, volver a cargar todos los usuarios.
-    if (!searchQuery.value || searchQuery.value.trim() === '') {
-      isLoading.value = true;
-      await fetchUsers();
-    } else {
-      // Realizar búsqueda local siempre, incluso si la búsqueda anterior no dio resultados.
-      await performLocalSearch();
-    }
+    // Resetear a la página 1 al hacer una búsqueda.
+    currentPage.value = 1;
+    
+    // Obtener los usuarios que coincidan con la búsqueda.
+    await fetchUsers();
   }, 300);
 };
 
-const performLocalSearch = async () => {
-  isLoading.value = true;
-  closeActionsMenu();
-
-  try {
-    const query = searchQuery.value.trim().toLowerCase();
-    
-    // Si la búsqueda está vacía, cargar todos los usuarios.
-    if (!query) {
-      await fetchUsers();
-      return;
-    }
-    
-    // Cargar todos los usuarios de la base de datos para la búsqueda local.
-    const response = await axios.get(`/users/?skip=0&limit=500`);
-    
-    if (response.data && Array.isArray(response.data.users)) {
-      const allUsers = response.data.users;
-      
-      // Filtrar los usuarios según el criterio de búsqueda.
-      const filteredUsers = allUsers.filter(user => 
-        (user.email && user.email.toLowerCase().includes(query)) ||
-        (user.username && user.username.toLowerCase().includes(query)) ||
-        (user.full_name && user.full_name.toLowerCase().includes(query))
-      );
-      
-      // Guardar todos los resultados de la búsqueda.
-      allSearchResults.value = filteredUsers;
-      totalUsers.value = filteredUsers.length;
-      
-      // Resetear la página actual.
-      currentPage.value = 1;
-      
-      // Actualizar los usuarios mostrados con paginación.
-      updateDisplayedUsers();
-    }
-  } catch (error) {
-    console.error('Error in search: ', error);
-    handleApiError(error);
-  } finally {
-    isLoading.value = false;
-    // Desactivar el estado de transición cuando finaliza la búsqueda.
-    isSearchTransitioning.value = false;
-  }
-};
-
-const updateDisplayedUsers = () => {
-  if (!searchQuery.value.trim() || allSearchResults.value.length === 0) {
-    return;
-  }
-  
-  // Asegurar que currentPage es válida para el nuevo tamaño de página.
-  const maxPossiblePage = Math.ceil(allSearchResults.value.length / pageSize.value);
-  if (currentPage.value > maxPossiblePage) {
-    currentPage.value = Math.max(1, maxPossiblePage);
-  }
-  
-  const startIndex = (currentPage.value - 1) * pageSize.value;
-  const endIndex = Math.min(startIndex + pageSize.value, allSearchResults.value.length);
-  
-  // Actualizar los usuarios mostrados según la página actual.
-  users.value = allSearchResults.value.slice(startIndex, endIndex);
-};
-
 const clearSearch = async () => {
-  // Activar estado de transición para evitar mensaje intermedio.
+  // Activar estado de transición para evitar mensaje intermedio (parpadeo).
   isSearchTransitioning.value = true;
   isLoading.value = true;
   
-  // Limpiar los resultados de búsqueda.
-  allSearchResults.value = [];
-  
-  // Luego limpiar la búsqueda.
+  // Limpiar la búsqueda.
   searchQuery.value = '';
   
-  // Después carga los usuarios.
+  // Resetear a la página 1.
+  currentPage.value = 1;
+  
+  // Obtener todos los usuarios.
   await fetchUsers();
 };
 
 const fetchUsers = async () => {
-  // Si hay una búsqueda activa pero se ha limpiado, no hacemos nada especial.
   isLoading.value = true;
   closeActionsMenu();
   
@@ -363,43 +355,58 @@ const fetchUsers = async () => {
     if(hasToken){
       authStore.setAuthHeader();
     }
+    
 
     const skip = (currentPage.value - 1) * pageSize.value;
-    const response = await axios.get(`/users/?skip=${skip}&limit=${pageSize.value}`);
+    
+    // Construir parámetros de la consulta.
+    const params = {
+      skip,
+      limit: pageSize.value,
+      sort_by: sortBy.value,
+      sort_order: sortOrder.value
+    };
+    
+    // Añadir parámetro de búsqueda si existe.
+    if (searchQuery.value.trim()) {
+      params.search = searchQuery.value.trim();
+    }
+    
+    const response = await axios.get('/users/', { params });
     
     // Procesar la respuesta.
     if (response.data && Array.isArray(response.data.users)) {
       users.value = response.data.users;
       totalUsers.value = response.data.count || users.value.length;
-    } else if (Array.isArray(response.data)) {
-      users.value = response.data;
-      totalUsers.value = response.data.length;
     } else {
       users.value = [];
       totalUsers.value = 0;
     }
-    
-    // Restablecer estado de transición.
-    isSearchTransitioning.value = false;
-    
   } catch (error) {
     console.error('Error fetching users: ', error);
     handleApiError(error);
-    isSearchTransitioning.value = false;
   } finally {
     isLoading.value = false;
+    isSearchTransitioning.value = false;
   }
 };
 
 const changePage = async (page) => {
-  if (page < 1 || page > totalPages.value) return;
+  isSearchTransitioning.value = true;
+  
+  if (page < 1 || page > totalPages.value) {
+    isSearchTransitioning.value = false;
+    return;
+  }
+  
   currentPage.value = page;
   
-  if (searchQuery.value.trim()) {
-    // Si hay búsqueda activa, actualizar los usuarios mostrados en lugar de hacer una nueva solicitud al backend.
-    updateDisplayedUsers();
-  } else {
+  try {
     await fetchUsers();
+  } catch (error) {
+    console.error('Error while changing pages: ', error);
+  } finally {
+    isSearchTransitioning.value = false;
   }
 };
 
@@ -412,7 +419,7 @@ const toggleActionsMenu = (userId) => {
     }
   }
 
-  // Si se hace clic en el mismo botón (el de acciones), cerrar el menú.
+  // Si se hace clic en el mismo botón, cerrar el menú.
   if (activeActionsMenu.value === userId) {
     activeActionsMenu.value = null;
   } else {
@@ -446,31 +453,9 @@ const showAddUserModal = () => {
 };
 
 const handleUserAdded = async (newUser) => {
-  // Resetear a la página 1.
+  // Resetear a la página 1 y recargar datos.
   currentPage.value = 1;
-  
-  // Si hay una búsqueda activa, verificar si el nuevo usuario coincide con la búsqueda.
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.trim().toLowerCase();
-    
-    // Verificar si el nuevo usuario coincide con la búsqueda.
-    const matches = 
-      (newUser.email && newUser.email.toLowerCase().includes(query)) ||
-      (newUser.username && newUser.username.toLowerCase().includes(query)) ||
-      (newUser.full_name && newUser.full_name.toLowerCase().includes(query));
-    
-    if (matches) {
-      // Agregar el nuevo usuario a allSearchResults.
-      allSearchResults.value.unshift(newUser);
-      totalUsers.value = allSearchResults.value.length;
-      
-      // Actualizar la vista.
-      updateDisplayedUsers();
-    }
-  } else {
-    // Si no hay búsqueda activa, comportamiento normal.
-    await fetchUsers();
-  }
+  await fetchUsers();
 };
 
 const editUser = (user) => {
@@ -484,24 +469,9 @@ const closeEditUserModal = () => {
   userToEdit.value = null;
 };
 
-const handleUserUpdated = (updatedUser) => {
-  // Si hay una búsqueda activa, actualizar allSearchResults.
-  if (searchQuery.value.trim()) {
-    // Actualizar el usuario en los resultados de búsqueda.
-    const searchIndex = allSearchResults.value.findIndex(u => u.id === updatedUser.id);
-    if (searchIndex !== -1) {
-      allSearchResults.value[searchIndex] = updatedUser;
-      
-      // Actualizar también los usuarios mostrados en pantalla.
-      updateDisplayedUsers();
-    }
-  } else {
-    // Actualizar el usuario en la lista si existe.
-    const index = users.value.findIndex(u => u.id === updatedUser.id);
-    if (index !== -1) {
-      users.value[index] = updatedUser;
-    }
-  }
+const handleUserUpdated = async (updatedUser) => {
+  // Recargar datos para reflejar cambios.
+  await fetchUsers();
 };
 
 const confirmDeleteUser = (user) => {
@@ -523,7 +493,6 @@ const cancelDelete = () => {
   activeActionsMenu.value = null;
   
   // Dar un pequeño tiempo antes de permitir abrir menús de nuevo.
-  // Para evitar problemas con clics residuales.
   setTimeout(() => {
     const activeButtons = document.querySelectorAll('.action-button[data-active="true"]');
     activeButtons.forEach(button => {
@@ -538,32 +507,16 @@ const deleteUser = async () => {
   try {
     await axios.delete(`/users/${userToDelete.value.id}`);
     
-    // Si hay una búsqueda activa, actualizar allSearchResults.
-    if (searchQuery.value.trim()) {
-      // Eliminar usuario de los resultados de búsqueda.
-      allSearchResults.value = allSearchResults.value.filter(u => u.id !== userToDelete.value.id);
-      totalUsers.value = allSearchResults.value.length;
-      
-      // Verificar si se debe cambiar de página después de eliminar.
-      const maxPossiblePage = Math.max(1, Math.ceil(allSearchResults.value.length / pageSize.value));
-      if (currentPage.value > maxPossiblePage) {
-        currentPage.value = maxPossiblePage;
-      }
-      
-      // Actualizar los usuarios mostrados.
-      updateDisplayedUsers();
-    } else {
-      // Verificar si se debe cambiar de página después de eliminar.
-      if (users.value.length === 1 && currentPage.value > 1) {
-        currentPage.value--; // Retroceder si era el último elemento de la página.
-      }
-      
-      // Refrescar la lista completa para ver el cambio en la paginación.
-      await fetchUsers();
+    // Verificar si se debe cambiar de página después de eliminar.
+    if (users.value.length === 1 && currentPage.value > 1) {
+      currentPage.value--; // Retroceder si era el último elemento de la página.
     }
     
+    // Refrescar la lista.
+    await fetchUsers();
+    
     notifySuccess("Usuario eliminado", 
-    `Se ha eliminado el usuario ${userToDelete.value.username} con éxito.`);
+      `Se ha eliminado el usuario ${userToDelete.value.username} con éxito.`);
   } catch (error) {
     console.error('Error deleting user:', error);
     handleApiError(error);
@@ -580,12 +533,17 @@ const handleApiError = (error) => {
     console.error("Error response: ", data);
     
     switch (status) {
+      case 400:
+        if (data.detail && (data.detail.includes("sort_order") || data.detail.includes("sort_by"))) {
+          notifyError("Error de ordenación", 
+          "Los parámetros de ordenación no son válidos.");
+        } else {
+          notifyError("Error en la solicitud", 
+          "La solicitud contiene errores.");
+        }
+        break;
       case 401:
         router.push('/');
-        break;
-      case 400:
-        notifyError("Error de validación", 
-        "Los datos proporcionados no son válidos.");
         break;
       case 403:
         if (data.detail && data.detail.includes("Admins")) {
@@ -621,15 +579,11 @@ const handleApiError = (error) => {
   }
 };
 
-// Observar cambios en el tamaño de página para reiniciar búsquedas.
-watch(pageSize, async () => {
-  if (searchQuery.value.trim()) {
-    // Si hay búsqueda activa, actualizar la visualización.
-    updateDisplayedUsers();
-  } else {
-    await fetchUsers();
-  }
-});
+// Truncar campos de texto largos.
+const truncateText = (text, maxLength) => {
+  if (!text) return null;
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
 
 const handleScroll = () => {
   if (activeActionsMenu.value !== null) {
@@ -637,27 +591,71 @@ const handleScroll = () => {
   }
 };
 
-onMounted(async () => {
-  // Restaurar preferencia de tamaño de página.
-  const savedPageSize = preferencesStore.adminPageSize;
-  if (savedPageSize && pageSizeOptions.includes(parseInt(savedPageSize))) {
-    pageSize.value = parseInt(savedPageSize);
+// Actualizar la URL cuando cambian los parámetros relevantes.
+watch([currentPage, sortBy, sortOrder, searchQuery], () => {
+  const urlParams = new URLSearchParams();
+  urlParams.set('page', currentPage.value);
+  urlParams.set('sort', sortBy.value);
+  urlParams.set('order', sortOrder.value);
+  
+  if (searchQuery.value.trim()) {
+    urlParams.set('search', searchQuery.value);
   }
   
-  window.addEventListener('scroll', handleScroll, true);
-  
-  await fetchUsers();
+  // Actualizar la URL sin recargar la página.
+  const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+  history.pushState({}, '', newUrl);
+});
+
+onMounted(async () => {
+  try {
+    isSearchTransitioning.value = true;
+    isLoading.value = true;
+    
+    // Restaurar preferencias del usuario.
+    const savedPageSize = preferencesStore.adminPageSize;
+    if (savedPageSize && pageSizeOptions.includes(parseInt(savedPageSize))) {
+      pageSize.value = parseInt(savedPageSize);
+    }
+    
+    window.addEventListener('scroll', handleScroll, true);
+    
+    // Obtener parámetros de la URL si existen.
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlPage = urlParams.get('page');
+    const urlSort = urlParams.get('sort');
+    const urlOrder = urlParams.get('order');
+    const urlSearch = urlParams.get('search');
+    
+    // Aplicar parámetros de URL si existen.
+    if (urlPage && !isNaN(parseInt(urlPage))) {
+      currentPage.value = parseInt(urlPage);
+    }
+    
+    if (urlSort && ['email', 'username', 'full_name', 'is_admin', 'is_active', 'is_verified', 'created_at'].includes(urlSort)) {
+      sortBy.value = urlSort;
+    }
+    
+    if (urlOrder && ['asc', 'desc'].includes(urlOrder)) {
+      sortOrder.value = urlOrder;
+    }
+    
+    if (urlSearch) {
+      searchQuery.value = urlSearch;
+    }
+    
+    await fetchUsers();
+  } catch (error) {
+    console.error("Error while initializing: ", error);
+  } finally {
+    isLoading.value = false;
+    isSearchTransitioning.value = false;
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll, true);
 });
-
-// Truncar campos de texto largos.
-const truncateText = (text, maxLength) => {
-  if (!text) return null;
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-};
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
@@ -724,6 +722,7 @@ const truncateText = (text, maxLength) => {
 .users-table td:nth-child(3) {
   max-width: 150px; /* Usuario */
 }
+
 
 .admin-badge {
   color: gold;
