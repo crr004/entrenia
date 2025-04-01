@@ -207,7 +207,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
 import { notifySuccess, notifyError, notifyInfo } from '@/utils/notifications';
@@ -220,6 +220,7 @@ import AddDatasetModal from '@/components/datasets/AddDatasetModal.vue';
 import EditDatasetModal from '@/components/datasets/EditDatasetModal.vue';
 
 const router = useRouter();
+const route = useRoute();
 const datasets = ref([]);
 const isLoading = ref(true);
 const activeActionsMenu = ref(null);
@@ -613,7 +614,7 @@ const processShareAction = async () => {
     }
     
     notifySuccess(isPublic ? "Conjunto compartido" : "Conjunto no compartido", 
-    `El conjunto ${datasetToShare.value.name} ha sido ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
+    `El conjunto ${datasetToShare.value.name} se ha ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
   } catch (error) {
     console.error('Error while updating dataset sharing status: ', error);
     handleApiError(error);
@@ -790,18 +791,21 @@ onUnmounted(() => {
 
 // Actualizar la URL cuando cambian los parámetros de búsqueda/ordenación.
 watch([currentPage, sortBy, sortOrder, searchQuery], () => {
-  const urlParams = new URLSearchParams();
-  urlParams.set('page', currentPage.value);
-  urlParams.set('sort', sortBy.value);
-  urlParams.set('order', sortOrder.value);
+  const query = {
+    page: currentPage.value,
+    sort: sortBy.value,
+    order: sortOrder.value
+  };
   
   if (searchQuery.value.trim()) {
-    urlParams.set('search', searchQuery.value);
+    query.search = searchQuery.value.trim();
   }
   
-  // Actualizar la URL sin recargar la página.
-  const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-  history.pushState({}, '', newUrl);
+  // Actualizar la URL usando Vue Router sin recargar la página.
+  router.replace({ 
+    path: route.path, 
+    query 
+  });
 });
 </script>
 

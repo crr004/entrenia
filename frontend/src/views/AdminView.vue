@@ -218,7 +218,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
 import { notifySuccess, notifyError, notifyInfo } from '@/utils/notifications';
@@ -231,6 +231,7 @@ import AddUserModal from '@/components/users/AddUserModal.vue';
 import EditUserModal from '@/components/users/EditUserModal.vue';
 
 const router = useRouter();
+const route = useRoute();
 const users = ref([]);
 const isLoading = ref(true);
 const activeActionsMenu = ref(null);
@@ -593,18 +594,22 @@ const handleScroll = () => {
 
 // Actualizar la URL cuando cambian los parámetros relevantes.
 watch([currentPage, sortBy, sortOrder, searchQuery], () => {
-  const urlParams = new URLSearchParams();
-  urlParams.set('page', currentPage.value);
-  urlParams.set('sort', sortBy.value);
-  urlParams.set('order', sortOrder.value);
+  const query = {
+    page: currentPage.value,
+    sort: sortBy.value,
+    order: sortOrder.value
+  };
   
+  // Solo incluir el parámetro de búsqueda si tiene contenido.
   if (searchQuery.value.trim()) {
-    urlParams.set('search', searchQuery.value);
+    query.search = searchQuery.value.trim();
   }
   
-  // Actualizar la URL sin recargar la página.
-  const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-  history.pushState({}, '', newUrl);
+  // Actualizar la URL usando Vue Router sin recargar la página.
+  router.replace({ 
+    path: route.path, 
+    query 
+  });
 });
 
 onMounted(async () => {

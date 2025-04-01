@@ -137,7 +137,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
@@ -145,6 +145,7 @@ import { useAuthStore } from '@/stores/authStore';
 import ConfirmationModal from '@/components/utils/ConfirmationModal.vue';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 
@@ -388,12 +389,59 @@ const handleApiError = (error) => {
 };
 
 onMounted(() => {
+  // Leer parámetros de la URL.
+  const urlParams = route.query;
+  
+  if (urlParams.page && !isNaN(parseInt(urlParams.page))) {
+    currentPage.value = parseInt(urlParams.page);
+  }
+  
+  if (urlParams.size && pageSizeOptions.includes(parseInt(urlParams.size))) {
+    pageSize.value = parseInt(urlParams.size);
+  }
+  
+  if (urlParams.search) {
+    searchQuery.value = urlParams.search;
+  }
+  
+  // Cargar datos.
   fetchSharedDatasets();
 });
 
-watch(pageSize, () => {
-  resetPagination();
-});
+watch([currentPage, pageSize, searchQuery], () => {
+  // Construir objeto query para la URL.
+  const query = {};
+  
+  if (currentPage.value > 1) {
+    query.page = currentPage.value;
+  }
+  
+  if (pageSize.value !== 5) {
+    query.size = pageSize.value;
+  }
+  
+  if (searchQuery.value.trim()) {
+    query.search = searchQuery.value.trim();
+  }
+  
+  // Resetear la paginación si cambia el tamaño de página.
+  if (pageSize.value !== 5) {
+    currentPage.value = 1;
+  }
+  
+  // Actualizar la URL usando Vue Router.
+  router.replace({ 
+    path: route.path, 
+    query 
+  }).then(() => {
+    // Cargar datos después de actualizar la URL.
+    fetchSharedDatasets();
+  }).catch(err => {
+    console.error('Error updating URL: ', err);
+    // Se intenta cargar datos si falla la actualización de URL.
+    fetchSharedDatasets();
+  });
+}, { flush: 'post' });
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
@@ -672,3 +720,4 @@ watch(pageSize, () => {
   }
 }
 </style>
+```vue
