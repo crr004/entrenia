@@ -47,6 +47,18 @@ class Dataset(DatasetBase, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         description="Fecha de creación del dataset (UTC)",
     )
+    # Campos para la denormalización.
+    cached_image_count: int | None = Field(
+        default=None, description="Número de imágenes en caché"
+    )
+    cached_category_count: int | None = Field(
+        default=None, description="Número de categorías en caché"
+    )
+    cache_updated_at: datetime | None = Field(
+        sa_column=Column(DateTime(timezone=True)),
+        default=None,
+        description="Fecha de última actualización de la caché",
+    )
 
     if TYPE_CHECKING:
         user: "User" = None

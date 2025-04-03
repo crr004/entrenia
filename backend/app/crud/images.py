@@ -15,6 +15,7 @@ from PIL import Image as PILImage
 from PIL import UnidentifiedImageError
 
 from app.models.images import Image, ImageCreate, ImageUpdate
+from app.crud.cache import invalidate_dataset_cache
 
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
 IMAGES_DIR = os.path.join(MEDIA_ROOT, "images")
@@ -40,21 +41,33 @@ def is_valid_image_extension(filename: str) -> bool:
     return ext in ALLOWED_EXTENSIONS
 
 
-async def create_image(*, session: AsyncSession, image_data: ImageCreate) -> Image:
+async def create_image(
+    *,
+    session: AsyncSession,
+    image_in: ImageCreate,
+    dataset_id: uuid.UUID,
+    update_cache: bool = True,
+) -> Image:
     """Crea una nueva imagen en la base de datos.
 
     Args:
         session (AsyncSession): Sesión asíncrona de la base de datos.
-        image_data (ImageCreate): Datos de la imagen a crear.
+        image_in (ImageCreate): Datos de la imagen a crear.
+        dataset_id (uuid.UUID): ID del dataset al que pertenece la imagen.
 
     Returns:
         Image: Imagen creada.
     """
 
-    image = Image.model_validate(image_data)
+    image = Image.model_validate(image_in)
     session.add(image)
     await session.commit()
     await session.refresh(image)
+
+    # Invalidar la caché del dataset después de añadir una imagen.
+    if update_cache:
+        await invalidate_dataset_cache(session=session, dataset_id=dataset_id)
+
     return image
 
 
@@ -77,8 +90,15 @@ async def delete_image(*, session: AsyncSession, image: Image) -> None:
         # Loguear el error pero continuar con la eliminación del registro.
         logger.error(f"Error deleting file {file_path}: {str(e)}", exc_info=True)
 
+    # Guardar el dataset_id antes de eliminar.
+    dataset_id = image.dataset_id
+
+    # Eliminar la imagen.
     await session.delete(image)
     await session.commit()
+
+    # Invalidar la caché del dataset después de eliminar una imagen.
+    await invalidate_dataset_cache(session=session, dataset_id=dataset_id)
 
 
 def create_thumbnail(image: PILImage.Image) -> str:
@@ -312,7 +332,10 @@ async def process_zip_with_images(
                                     thumbnail=thumbnail_data,
                                 )
                                 await create_image(
-                                    session=session, image_data=image_create
+                                    session=session,
+                                    image_in=image_create,
+                                    dataset_id=dataset_id,
+                                    update_cache=False,
                                 )
                                 stats["processed_images"] += 1
                         except UnidentifiedImageError:
@@ -334,6 +357,10 @@ async def process_zip_with_images(
             # Si la etiqueta no se aplicó a ninguna imagen, añadirla a los detalles.
             if csv_key not in applied_labels:
                 stats["skipped_label_details"].append(f"{csv_key}={csv_value}")
+
+    # Invalidar la caché una sola vez al final si se procesó al menos una imagen.
+    if stats["processed_images"] > 0:
+        await invalidate_dataset_cache(session=session, dataset_id=dataset_id)
 
     return stats
 
@@ -469,7 +496,7 @@ async def get_images_sorted(
 
 async def update_image(
     *, session: AsyncSession, image: Image, image_data: ImageUpdate
-) -> Image:
+) -> dict:
     """Actualiza los datos de una imagen.
 
     Args:
@@ -481,8 +508,31 @@ async def update_image(
         Image: Imagen actualizada.
     """
 
+    # Verificar si ha cambiado la etiqueta según el tipo de datos.
+    if isinstance(image_data, dict):
+        label_changed = "label" in image_data
+    else:
+        # Si es un objeto Pydantic.
+        label_changed = "label" in image_data.model_dump(exclude_unset=True)
+
+    # Actualizar la imagen.
     image.sqlmodel_update(image_data)
     session.add(image)
     await session.commit()
     await session.refresh(image)
-    return image
+
+    image_dict = {
+        "id": image.id,
+        "name": image.name,
+        "file_path": image.file_path,
+        "label": image.label,
+        "dataset_id": image.dataset_id,
+        "thumbnail": image.thumbnail,
+        "created_at": image.created_at,
+    }
+
+    # Solo invalidar la caché si cambió la etiqueta.
+    if label_changed:
+        await invalidate_dataset_cache(session=session, dataset_id=image.dataset_id)
+
+    return image_dict

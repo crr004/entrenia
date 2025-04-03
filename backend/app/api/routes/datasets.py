@@ -61,18 +61,30 @@ async def get_public_datasets(
         search=search,
     )
 
-    dataset_returns = []
-
+    # Extraer datos tempranamente.
+    # Esto soluciona el problema del contexto greenlet en caso de tener que actualizar el dataset en la misma consulta.
+    dataset_info = []
     for dataset in datasets:
-        dataset_dict = dataset.model_dump()
+        dataset_info.append(
+            {
+                "dataset_id": dataset.id,
+                "dataset_dict": dataset.model_dump(),
+                "user_id": dataset.user_id,
+            }
+        )
 
-        # Obtener conteos de imágenes y categorías.
-        counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
+    dataset_returns = []
+    for data in dataset_info:
+        counts = await get_dataset_counts(
+            session=session, dataset_id=data["dataset_id"]
+        )
+
+        dataset_dict = data["dataset_dict"]
         dataset_dict["image_count"] = counts.get("image_count", 0)
         dataset_dict["category_count"] = counts.get("category_count", 0)
 
         # Obtener el nombre de usuario del propietario del dataset.
-        user = await get_user_by_id(session=session, id=dataset.user_id)
+        user = await get_user_by_id(session=session, id=data["user_id"])
         if user:
             dataset_dict["username"] = user.username
 
@@ -118,14 +130,14 @@ async def read_public_dataset(
         )
 
     dataset_dict = dataset.model_dump()
+    dataset_id_counts = dataset.id
+    user_id = dataset.user_id
 
-    # Obtener conteos de imágenes y categorías.
-    counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
+    counts = await get_dataset_counts(session=session, dataset_id=dataset_id_counts)
     dataset_dict["image_count"] = counts.get("image_count", 0)
     dataset_dict["category_count"] = counts.get("category_count", 0)
 
-    # Obtener el nombre de usuario del propietario del dataset.
-    user = await get_user_by_id(session=session, id=dataset.user_id)
+    user = await get_user_by_id(session=session, id=user_id)
     if user:
         dataset_dict["username"] = user.username
 
@@ -251,31 +263,55 @@ async def read_datasets(
     # Por optimización de consultas, no se hace un join a la tabla de usuarios si no es necesario.
     # Por eso se diferencian estos dos casos.
     if includes_username:
-        # La variable result contiene tuplas (dataset, username).
+        # Extraer todos los datos necesarios de los resultados primero.
+        # Esto soluciona el problema del contexto greenlet en caso de tener que actualizar el dataset en la misma consulta.
+        dataset_info = []
         for dataset, username in result:
+            dataset_info.append(
+                {
+                    "dataset_id": dataset.id,
+                    "dataset_dict": dataset.model_dump(),
+                    "username": username,
+                    "user_id": dataset.user_id,
+                }
+            )
 
-            dataset_dict = dataset.model_dump()
+        # Usar los datos extraídos.
+        for data in dataset_info:
+            counts = await get_dataset_counts(
+                session=session, dataset_id=data["dataset_id"]
+            )
 
-            counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
-
+            dataset_dict = data["dataset_dict"]
             dataset_dict["image_count"] = counts.get("image_count", 0)
             dataset_dict["category_count"] = counts.get("category_count", 0)
-            dataset_dict["username"] = username
+            dataset_dict["username"] = data["username"]
 
             dataset_returns.append(DatasetReturn(**dataset_dict))
     else:
-        # La variable result contiene solo datasets.
+        # Extraer todos los datos necesarios de los resultados primero.
+        dataset_info = []
         for dataset in result:
+            dataset_info.append(
+                {
+                    "dataset_id": dataset.id,
+                    "dataset_dict": dataset.model_dump(),
+                    "user_id": dataset.user_id,
+                }
+            )
 
-            dataset_dict = dataset.model_dump()
+        # Usar los datos extraídos.
+        for data in dataset_info:
+            counts = await get_dataset_counts(
+                session=session, dataset_id=data["dataset_id"]
+            )
 
-            counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
-
+            dataset_dict = data["dataset_dict"]
             dataset_dict["image_count"] = counts.get("image_count", 0)
             dataset_dict["category_count"] = counts.get("category_count", 0)
 
             if admin_view:
-                user = await get_user_by_id(session=session, id=dataset.user_id)
+                user = await get_user_by_id(session=session, id=data["user_id"])
                 if user:
                     dataset_dict["username"] = user.username
 
@@ -318,14 +354,15 @@ async def read_dataset(
         )
 
     dataset_dict = dataset.model_dump()
+    dataset_id_counts = dataset.id
+    user_id = dataset.user_id
 
-    counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
-
+    counts = await get_dataset_counts(session=session, dataset_id=dataset_id_counts)
     dataset_dict["image_count"] = counts.get("image_count", 0)
     dataset_dict["category_count"] = counts.get("category_count", 0)
 
     if is_admin:
-        user = await get_user_by_id(session=session, id=dataset.user_id)
+        user = await get_user_by_id(session=session, id=user_id)
         if user:
             dataset_dict["username"] = user.username
 
@@ -461,14 +498,15 @@ async def update_dataset(
     )
 
     dataset_dict = dataset.model_dump()
+    dataset_id_counts = dataset.id
+    user_id = dataset.user_id
 
-    counts = await get_dataset_counts(session=session, dataset_id=dataset.id)
-
+    counts = await get_dataset_counts(session=session, dataset_id=dataset_id_counts)
     dataset_dict["image_count"] = counts.get("image_count", 0)
     dataset_dict["category_count"] = counts.get("category_count", 0)
 
     if is_admin:
-        user = await get_user_by_id(session=session, id=dataset.user_id)
+        user = await get_user_by_id(session=session, id=user_id)
         if user:
             dataset_dict["username"] = user.username
 
@@ -717,7 +755,6 @@ async def clone_public_dataset(
             detail="The dataset is not public and cannot be cloned",
         )
 
-    # Verificar si el usuario ya es propietario del dataset.
     if dataset.user_id == current_user.id:
         # Si el usuario ya es propietario, redireccionar a la vista de detalle.
         raise HTTPException(
@@ -742,9 +779,10 @@ async def clone_public_dataset(
         )
 
         dataset_dict = cloned_dataset.model_dump()
+        cloned_dataset_id = cloned_dataset.id
 
         # Obtener conteos.
-        counts = await get_dataset_counts(session=session, dataset_id=cloned_dataset.id)
+        counts = await get_dataset_counts(session=session, dataset_id=cloned_dataset_id)
         dataset_dict["image_count"] = counts.get("image_count", 0)
         dataset_dict["category_count"] = counts.get("category_count", 0)
 

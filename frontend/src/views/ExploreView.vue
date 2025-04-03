@@ -8,13 +8,17 @@
     </div>
     <div class="search-container">
       <div class="search-box">
-        <font-awesome-icon :icon="['fas', 'search']" class="search-icon" />
+        <font-awesome-icon 
+          :icon="['fas', 'search']" 
+          class="search-icon" 
+          @click="executeSearch"
+        />
         <input 
           type="text" 
           v-model="searchQuery" 
           placeholder="Buscar por usuario, nombre o descripción..." 
           class="search-input"
-          @input="handleSearch"
+          @keyup.enter="executeSearch"
         />
         <button 
           v-if="searchQuery" 
@@ -156,7 +160,6 @@ const currentPage = ref(1);
 const pageSize = ref(5);
 const pageSizeOptions = [5, 10, 25, 50, 100];
 const searchQuery = ref('');
-const searchTimeout = ref(null);
 
 const showCloneModal = ref(false);
 const selectedDataset = ref(null);
@@ -164,6 +167,13 @@ const isCloning = ref(false);
 
 const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value));
 const skip = computed(() => (currentPage.value - 1) * pageSize.value);
+
+watch(searchQuery, (newValue, oldValue) => {
+  // Si el campo tenía contenido y ahora está vacío, ejecutar clearSearch.
+  if (oldValue && !newValue) {
+    clearSearch();
+  }
+});
 
 // Obtener conjuntos de imágenes compartidos.
 const fetchSharedDatasets = async () => {
@@ -231,15 +241,9 @@ const formatDate = (dateString) => {
   }
 };
 
-const handleSearch = () => {
-  if (searchTimeout.value) {
-    clearTimeout(searchTimeout.value);
-  }
-  
-  searchTimeout.value = setTimeout(() => {
-    currentPage.value = 1;
-    fetchSharedDatasets();
-  }, 300);
+const executeSearch = () => {
+  currentPage.value = 1;
+  fetchSharedDatasets();
 };
 
 const clearSearch = () => {
@@ -408,7 +412,7 @@ onMounted(() => {
   fetchSharedDatasets();
 });
 
-watch([currentPage, pageSize, searchQuery], () => {
+watch([currentPage, pageSize], () => {
   // Construir objeto query para la URL.
   const query = {};
   
@@ -694,6 +698,11 @@ watch([currentPage, pageSize, searchQuery], () => {
   padding: 0 12px;
 }
 
+/* Búsqueda */
+.search-icon {
+  cursor: pointer;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .explore-view {
@@ -720,4 +729,3 @@ watch([currentPage, pageSize, searchQuery], () => {
   }
 }
 </style>
-```vue

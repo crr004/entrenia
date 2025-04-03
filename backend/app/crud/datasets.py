@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 import shutil
+from datetime import datetime, timezone
 
 from sqlmodel import select, func
 from sqlalchemy import distinct
@@ -17,6 +18,7 @@ from app.crud.images import (
     get_image_by_datasetid_and_name,
     update_image,
 )
+from app.crud.cache import update_dataset_cache
 
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,12 @@ async def create_dataset(
     """
 
     dataset = Dataset.model_validate(dataset_in, update={"user_id": user_id})
+
+    # Inicializar campos de caché para un dataset vacío.
+    dataset.cached_image_count = 0
+    dataset.cached_category_count = 0
+    dataset.cache_updated_at = datetime.now(timezone.utc)
+
     session.add(dataset)
     await session.commit()
     await session.refresh(dataset)
@@ -171,25 +179,84 @@ async def get_category_count(*, session: AsyncSession, dataset_id: uuid.UUID) ->
     return count or 0
 
 
-async def get_dataset_counts(
-    *, session: AsyncSession, dataset_id: uuid.UUID
-) -> dict[str, int]:
-    """Obtiene el número de imágenes y categorías en un dataset.
+async def update_dataset_cache_with_calculation(
+    *, session: AsyncSession, dataset_id: uuid.UUID, force_update: bool = False
+) -> None:
+    """Actualiza la caché de conteos de un dataset calculando los valores.
 
     Args:
         session (AsyncSession): Sesión asíncrona de la base de datos.
         dataset_id (uuid.UUID): ID del dataset.
-
-    Returns:
-        dict[str, int]: Diccionario con el número de imágenes y categorías en el dataset.
+        force_update (bool): Si es True, fuerza la actualización independientemente del estado actual.
     """
 
-    image_count = await get_image_count(session=session, dataset_id=dataset_id)
-    category_count = await get_category_count(session=session, dataset_id=dataset_id)
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        return
+
+    # Actualizar la caché si está invalidada (None) o si se fuerza la actualización.
+    if (
+        force_update
+        or dataset.cached_image_count is None
+        or dataset.cached_category_count is None
+    ):
+        # Calcular los conteos reales.
+        image_count = await get_image_count(session=session, dataset_id=dataset_id)
+        category_count = await get_category_count(
+            session=session, dataset_id=dataset_id
+        )
+
+        # Actualizar la caché usando la función del módulo cache.
+        await update_dataset_cache(
+            session=session,
+            dataset_id=dataset_id,
+            image_count=image_count,
+            category_count=category_count,
+        )
+
+
+async def get_dataset_counts(
+    *,
+    session: AsyncSession,
+    dataset_id: uuid.UUID,
+    use_cache: bool = True,
+) -> dict[str, int]:
+    """Obtiene el número de imágenes y categorías en un dataset, usando la caché si está disponible.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+        use_cache (bool): Si es True, usa la caché si está disponible.
+
+    Returns:
+        dict[str, int]: Diccionario con el conteo de imágenes y categorías.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+
+    # Si se debe usar la caché y ambos valores están disponibles, devolverlos.
+    if (
+        use_cache
+        and dataset
+        and dataset.cached_image_count is not None
+        and dataset.cached_category_count is not None
+    ):
+        return {
+            "image_count": dataset.cached_image_count,
+            "category_count": dataset.cached_category_count,
+        }
+
+    # Si no hay caché o no se debe usar, calcular los valores y actualizar la caché.
+    await update_dataset_cache_with_calculation(
+        session=session, dataset_id=dataset_id, force_update=True
+    )
+
+    # Obtener el dataset actualizado.
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
 
     return {
-        "image_count": image_count,
-        "category_count": category_count,
+        "image_count": dataset.cached_image_count or 0,
+        "category_count": dataset.cached_category_count or 0,
     }
 
 
@@ -333,9 +400,35 @@ async def get_user_datasets_sorted(
         datasets_with_counts = []
         for dataset, username in datasets_with_username:
             if sort_by == "image_count":
-                count = await get_image_count(session=session, dataset_id=dataset.id)
-            else:  # category_count
-                count = await get_category_count(session=session, dataset_id=dataset.id)
+                # Usar caché si está disponible.
+                if dataset.cached_image_count is not None:
+                    count = dataset.cached_image_count
+                else:
+                    count = await get_image_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=count,
+                        category_count=None,  # No se actualiza la cuenta de categorías aquí.
+                    )
+            else:  # category_count.
+                # Usar caché si está disponible.
+                if dataset.cached_category_count is not None:
+                    count = dataset.cached_category_count
+                else:
+                    count = await get_category_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=None,  # No se actualiza la cuenta de imágenes aquí.
+                        category_count=count,
+                    )
             datasets_with_counts.append((dataset, username, count))
 
         # Ordenar por el conteo (tercer elemento de cada tupla).
@@ -413,10 +506,38 @@ async def get_user_datasets_sorted(
         dataset_with_counts = []
         for dataset in all_datasets:
             if sort_by == "image_count":
-                count = await get_image_count(session=session, dataset_id=dataset.id)
+                # Usar caché si está disponible.
+                if dataset.cached_image_count is not None:
+                    count = dataset.cached_image_count
+                else:
+                    # Si no hay caché, calcular y actualizar.
+                    count = await get_image_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=count,
+                        category_count=None,  # No se actualiza la cuenta de categorías aquí.
+                    )
                 dataset_with_counts.append((dataset, count))
-            else:  # Si se quiere ordenar por category_count
-                count = await get_category_count(session=session, dataset_id=dataset.id)
+            else:  # Si se quiere ordenar por category_count.
+                # Usar caché si está disponible.
+                if dataset.cached_category_count is not None:
+                    count = dataset.cached_category_count
+                else:
+                    # Si no hay caché, calcular y actualizar.
+                    count = await get_category_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=None,  # No se actualiza la cuenta de imágenes aquí.
+                        category_count=count,
+                    )
                 dataset_with_counts.append((dataset, count))
 
         # Ordenar la lista por el conteo.
@@ -758,10 +879,19 @@ async def clone_dataset(
         # Añadir a la lista de imágenes a insertar.
         images_to_add.append(new_image)
 
+    unique_labels = set(img.label for img in images_to_add if img.label is not None)
+
     # Añadir todas las imágenes a la sesión.
     session.add_all(images_to_add)
-
     await session.commit()
     await session.refresh(cloned_dataset)
+
+    # Actualizar la caché del dataset clonado.
+    await update_dataset_cache(
+        session=session,
+        dataset_id=cloned_dataset.id,
+        image_count=len(images_to_add),
+        category_count=len(unique_labels),
+    )
 
     return cloned_dataset
