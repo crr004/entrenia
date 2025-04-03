@@ -17,7 +17,7 @@
           @click="$emit('confirm')"
           :disabled="isLoading"
         >
-          <font-awesome-icon v-if="isLoading" :icon="['fas', 'spinner']"/>
+          <font-awesome-icon v-if="isLoading" :icon="['fas', 'spinner']" spin/>
           <span v-if="!isLoading">{{ confirmText }}</span>
         </button>
       </div>
@@ -163,7 +163,7 @@ defineEmits(['confirm', 'cancel']);
 }
 
 .confirm-button:disabled {
-  opacity: 0.5;
+  background-color: #cccccc;
   cursor: not-allowed;
 }
 
