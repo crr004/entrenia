@@ -85,6 +85,11 @@
   background-color: #f0f0f0;
 }
 
+.action-button[data-active="true"] {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
 /* Status badges */
 .status-badge {
   display: inline-block;
@@ -217,6 +222,31 @@
   text-overflow: ellipsis;
 }
 
+/* Encabezados de tabla y ordenación */
+.sortable-header {
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  padding-right: 28px;
+}
+
+.data-table thead tr th.sortable-header {
+  padding-right: 28px;
+}
+
+.header-text {
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sortable-header:hover {
+  background-color: #f8f9fa;
+}
+
+
 /* Responsive */
 @media (max-width: 992px) {
   .center-column {
@@ -263,5 +293,9 @@
   .pagination-button {
     padding: 4px 8px;
     margin: 0 3px;
+  }
+
+  .data-table thead tr th.sortable-header {
+    padding-right: 24px;
   }
 }

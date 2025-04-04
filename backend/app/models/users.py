@@ -1,8 +1,13 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, DateTime
 from pydantic import EmailStr
+
+if TYPE_CHECKING:
+    from app.models.datasets import Dataset
 
 
 class UserBase(SQLModel):
@@ -39,9 +44,13 @@ class User(UserBase, table=True):
         max_length=255, description="Contraseña del usuario (haseada)"
     )
     created_at: datetime = Field(
-        default=datetime.now().replace(tzinfo=None),
-        description="Fecha de creación del usuario",
+        sa_column=Column(DateTime(timezone=True)),
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Fecha de creación del usuario (UTC)",
     )
+
+    if TYPE_CHECKING:
+        datasets: list["Dataset"] = []
 
 
 class UserCreate(UserBase):

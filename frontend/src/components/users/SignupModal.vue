@@ -195,7 +195,7 @@ const handleSignup = async () => {
     isLoading.value = true;
     
     const userData = {
-      full_name: fullName.value,
+      full_name: fullName.value || null,
       username: username.value,
       email: email.value,
       password: password.value

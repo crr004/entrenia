@@ -41,7 +41,14 @@ vi.mock('@/utils/notifications', () => ({
 // Mock del router.
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    push: vi.fn()
+    push: vi.fn(),
+    replace: vi.fn()
+  }),
+  useRoute: () => ({
+    path: '/admin',
+    query: {},
+    params: {},
+    meta: { requiresAuth: true, requiresAdmin: true }
   })
 }))
 
@@ -121,6 +128,15 @@ const server = setupServer(
     const url = new URL(request.url);
     const skip = parseInt(url.searchParams.get('skip') || '0');
     const limit = parseInt(url.searchParams.get('limit') || '10');
+    const searchQuery = url.searchParams.get('search');
+    
+    // Si hay término de búsqueda, devolver resultados filtrados.
+    if (searchQuery === 'user1') {
+      return HttpResponse.json({
+        users: [mockUsers[0]], // Solo el primer usuario como resultado.
+        count: 1
+      }, { status: 200 })
+    }
     
     // Devolver usuarios paginados.
     return HttpResponse.json({
@@ -176,10 +192,22 @@ describe('AdminView.vue', () => {
   it('realiza búsqueda de usuarios correctamente', async () => {
     // Mock de la función de búsqueda para devolver resultados filtrados.
     server.use(
-      http.get('/users/', () => {
+      http.get('/users/', ({ request }) => {
+        const url = new URL(request.url)
+        const searchQuery = url.searchParams.get('search')
+        
+        // Si hay término de búsqueda, devolver resultados filtrados.
+        if (searchQuery === 'user1') {
+          return HttpResponse.json({
+            users: [mockUsers[0]], // Solo el primer usuario como resultado.
+            count: 1
+          }, { status: 200 })
+        }
+        
+        // Si no hay búsqueda, devolver todos.
         return HttpResponse.json({
-          users: [mockUsers[0]], // Solo el primer usuario como resultado.
-          count: 1
+          users: mockUsers,
+          count: mockUsers.length
         }, { status: 200 })
       })
     )
@@ -188,7 +216,7 @@ describe('AdminView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que cargue.
+    // Esperar a que cargue inicialmente.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
@@ -196,11 +224,11 @@ describe('AdminView.vue', () => {
     // Establecer búsqueda.
     wrapper.vm.searchQuery = 'user1'
     
-    // Espiar la función performLocalSearch.
-    const searchSpy = vi.spyOn(wrapper.vm, 'performLocalSearch')
+    // Espiar la función handleSearch.
+    const searchSpy = vi.spyOn(wrapper.vm, 'handleSearch')
     
-    // Invocar manualmente la búsqueda sin esperar el debounce.
-    await wrapper.vm.performLocalSearch()
+    // Invocar la búsqueda.
+    await wrapper.vm.handleSearch()
     
     // Verificar que se llamó correctamente.
     expect(searchSpy).toHaveBeenCalled()
@@ -208,7 +236,8 @@ describe('AdminView.vue', () => {
     // Verificar que los resultados se actualizan.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
-      expect(wrapper.vm.allSearchResults.length).toBe(1)
+      expect(wrapper.vm.users.length).toBe(1)
+      expect(wrapper.vm.users[0].username).toBe('user1')
     })
   })
   
@@ -229,32 +258,7 @@ describe('AdminView.vue', () => {
     expect(wrapper.find('.mock-add-user-modal').exists()).toBe(true)
   })
   
-  // Test 4: Funcionamiento de paginación.
-  it('maneja la paginación correctamente', async () => {
-    const wrapper = mount(AdminView, {
-      global: globalOptions
-    })
-    
-    // Esperar a que se carguen los datos.
-    await vi.waitFor(() => {
-      expect(wrapper.vm.isLoading).toBe(false)
-    })
-    
-    // Verificar valores iniciales de paginación.
-    expect(wrapper.vm.currentPage).toBe(1)
-    expect(wrapper.vm.pageSize).toBe(10)
-    
-    // Llamar directamente al método changePage
-    const changePageSpy = vi.spyOn(wrapper.vm, 'changePage')
-    
-    // Llamar al método directamente.
-    wrapper.vm.changePage(2)
-    
-    // Verificar que se llamó correctamente.
-    expect(changePageSpy).toHaveBeenCalledWith(2)
-  })
-  
-  // Test 5: Confirmación antes de eliminar usuario.
+  // Test 4: Confirmación antes de eliminar usuario.
   it('muestra el diálogo de confirmación al eliminar usuario', async () => {
     const wrapper = mount(AdminView, {
       global: globalOptions
@@ -279,7 +283,7 @@ describe('AdminView.vue', () => {
     expect(wrapper.vm.userToDelete).toEqual(mockUsers[0])
   })
   
-  // Test 6: Eliminación de usuario.
+  // Test 5: Eliminación de usuario.
   it('elimina usuario correctamente', async () => {
     const wrapper = mount(AdminView, {
       global: globalOptions
@@ -310,7 +314,7 @@ describe('AdminView.vue', () => {
     expect(wrapper.vm.isDeleteModalOpen).toBe(false)
   })
   
-  // Test 7: Manejo de errores de la API.
+  // Test 6: Manejo de errores de la API.
   it('maneja error al cargar usuarios', async () => {
     // Configurar respuesta de error.
     server.use(

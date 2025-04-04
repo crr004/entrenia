@@ -20,6 +20,12 @@ const HomeView = { template: '<div>Home View</div>' }
 const AdminView = { template: '<div>Admin View</div>' }
 const AccountView = { template: '<div>Account View</div>' }
 const AboutView = { template: '<div>About View</div>' }
+const ResetPasswordView = { template: '<div>Reset Password View</div>' }
+const DatasetsView = { template: '<div>Datasets View</div>' }
+const DatasetDetailView = { template: '<div>Dataset Detail View</div>' }
+const ExploreView = { template: '<div>Explore View</div>' }
+const PublicDatasetDetailView = { template: '<div>Public Dataset Detail View</div>' }
+const NotFoundView = { template: '<div>Not Found View</div>' }
 
 describe('Guardias de rutas', () => {
   let router
@@ -34,28 +40,59 @@ describe('Guardias de rutas', () => {
     authStoreMock.isAuthenticated = false
     authStoreMock.user = null
     authStoreMock.checkAuthStatus.mockClear()
+    authStoreMock.checkAuthStatus.mockResolvedValue(true) // Asegurar que por defecto devuelve true
     
-    // Crear rutas para probar los guardias.
+    // Crear rutas para probar los guardias, reflejando todas las rutas reales.
     const routes = [
       {
         path: '/',
         component: HomeView,
-        meta: { requiresAuth: false }
+        meta: { requiresAuth: false, showNav: true, showFooter: true }
       },
       {
         path: '/about',
         component: AboutView,
-        meta: { requiresAuth: false }
+        meta: { requiresAuth: false, showNav: true, showFooter: true }
       },
       {
-        path: '/admin',
-        component: AdminView,
-        meta: { requiresAuth: true, requiresAdmin: true }
+        path: '/reset-password',
+        component: ResetPasswordView,
+        meta: { requiresAuth: false, showNav: false, showFooter: false }
       },
       {
         path: '/account',
         component: AccountView,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, showNav: true, showFooter: true }
+      },
+      {
+        path: '/admin',
+        component: AdminView,
+        meta: { requiresAuth: true, requiresAdmin: true, showNav: true, showFooter: true }
+      },
+      {
+        path: '/my-datasets',
+        component: DatasetsView,
+        meta: { requiresAuth: true, showNav: true, showFooter: true }
+      },
+      {
+        path: '/dataset/:id',
+        component: DatasetDetailView,
+        meta: { requiresAuth: true, showNav: true, showFooter: true }
+      },
+      {
+        path: '/explore',
+        component: ExploreView,
+        meta: { requiresAuth: false, showNav: true, showFooter: true }
+      },
+      {
+        path: '/explore/:id',
+        component: PublicDatasetDetailView,
+        meta: { requiresAuth: false, showNav: true, showFooter: true }
+      },
+      {
+        path: '/:pathMatch(.*)*',
+        component: NotFoundView,
+        meta: { requiresAuth: false, showNav: false, showFooter: false }
       }
     ]
     
@@ -100,12 +137,10 @@ describe('Guardias de rutas', () => {
       }
       
       // Verificar token expirado (para test #4).
-      if (to.meta.requiresAuth) {
-        const isValid = await authStoreMock.checkAuthStatus()
-        if (!isValid) {
-          next('/')
-          return
-        }
+      const isValid = await authStoreMock.checkAuthStatus()
+      if (!isValid) {
+        next('/')
+        return
       }
     }
     
@@ -172,16 +207,71 @@ describe('Guardias de rutas', () => {
     // Configurar como no autenticado.
     authStoreMock.isAuthenticated = false
     
-    // Ejecutar guardia para ruta pública.
+    // Ejecutar guardia para rutas públicas.
     await testRouteGuard('/')
-    
-    // Verificar que se permite continuar.
     expect(nextSpy).toHaveBeenCalledWith()
     
-    // Ejecutar guardia para otra ruta pública.
+    nextSpy.mockClear()
     await testRouteGuard('/about')
+    expect(nextSpy).toHaveBeenCalledWith()
     
-    // Verificar que se permite continuar.
+    nextSpy.mockClear()
+    await testRouteGuard('/reset-password')
+    expect(nextSpy).toHaveBeenCalledWith()
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/explore')
+    expect(nextSpy).toHaveBeenCalledWith()
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/explore/123')
+    expect(nextSpy).toHaveBeenCalledWith()
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/ruta-inexistente')
+    expect(nextSpy).toHaveBeenCalledWith()
+  })
+  
+  // Test 6: Protección de todas las rutas autenticadas para usuarios no autenticados
+  it('redirige a / cuando un usuario no autenticado intenta acceder a rutas protegidas', async () => {
+    // Configurar como no autenticado
+    authStoreMock.isAuthenticated = false
+    
+    // Verificar rutas protegidas
+    await testRouteGuard('/account')
+    expect(nextSpy).toHaveBeenCalledWith('/')
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/admin')
+    expect(nextSpy).toHaveBeenCalledWith('/')
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/my-datasets')
+    expect(nextSpy).toHaveBeenCalledWith('/')
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/dataset/123')
+    expect(nextSpy).toHaveBeenCalledWith('/')
+  })
+  
+  // Test 7: Acceso permitido a rutas autenticadas para usuarios correctos
+  it('permite acceso a rutas autenticadas para usuarios autenticados', async () => {
+    // Configurar como autenticado
+    authStoreMock.isAuthenticated = true
+    authStoreMock.user = { username: 'user', is_admin: false }
+    // Asegurar que checkAuthStatus devuelve true
+    authStoreMock.checkAuthStatus.mockResolvedValue(true)
+    
+    // Probar rutas que requieren solo autenticación
+    await testRouteGuard('/account')
+    expect(nextSpy).toHaveBeenCalledWith()
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/my-datasets')
+    expect(nextSpy).toHaveBeenCalledWith()
+    
+    nextSpy.mockClear()
+    await testRouteGuard('/dataset/123')
     expect(nextSpy).toHaveBeenCalledWith()
   })
 })

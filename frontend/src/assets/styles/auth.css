@@ -6,11 +6,12 @@
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
   overflow-y: auto; 
-  padding: 20px; 
+  padding: 20px;
+  padding-top: 5vh;
 }
 
 .auth-modal {
@@ -28,7 +29,7 @@
   border: 1px solid #666;
   z-index: 1000;
   overflow-y: auto;
-  transform: translateY(-150px);
+  transform: none;
 }
 
 .authmodal h1 {
@@ -76,6 +77,9 @@
   user-select: none;
 }
 
+.edit-image-modal,
+.edit-dataset-modal,
+.add-dataset-modal,
 .edit-user-modal,
 .add-user-modal {
   max-width: 500px;
@@ -89,4 +93,15 @@
   padding: 40px 0;
   color: #666;
   gap: 15px;
+}
+
+/* Responsive */
+@media (max-height: 700px) {
+  .modal-overlay {
+    padding-top: 2vh;
+  }
+  
+  .auth-modal {
+    max-height: 85vh;
+  }
 }

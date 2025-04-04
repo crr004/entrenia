@@ -33,6 +33,30 @@ const routes = [
     meta: { showNav: true, showFooter: true }
   },
   {
+    path: '/my-datasets',
+    name: 'my-datasets',
+    component: () => import('../views/DatasetsView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
+    path: '/dataset/:id',
+    name: 'dataset-detail',
+    component: () => import('../views/DatasetDetailView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
+    path: '/explore',
+    name: 'explore',
+    component: () => import('../views/ExploreView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
+    path: '/explore/:id',
+    name: 'public-dataset-detail',
+    component: () => import('../views/PublicDatasetDetailView.vue'),
+    meta: { showNav: true, showFooter: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),

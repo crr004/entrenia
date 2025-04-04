@@ -36,8 +36,9 @@ services:
       - 8000:8000
     env_file:
       - .env
-    #volumes:
-    #  - ./backend/app:/app/app
+    volumes:
+      - ./backend/app:/app/app
+      - media-data:/app/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,6 +70,7 @@ services:
       - SMTP_PORT=${SMTP_PORT?Variable not set}
       - LANDING_FRONTEND_URL=${LANDING_FRONTEND_URL?Variable not set}
       - PASSWORD_RESET_FRONTEND_URL=${PASSWORD_RESET_FRONTEND_URL?Variable not set}
+      - MEDIA_ROOT=${MEDIA_ROOT?Variable not set}
   frontend:
     image: entrenia-frontend
     pull_policy: never
@@ -90,3 +92,4 @@ services:
       
 volumes:
   postgres-db:
+  media-data:

@@ -1,8 +1,12 @@
 <template>
     <div class="user-dropdown-container">
         <div class="dropdown-links" @click="emit('close')">
-            <router-link to="/">Home</router-link>
-            <router-link to="/about">About</router-link>
+            <router-link to="/my-datasets">
+                <span class="icon-container">
+                    <font-awesome-icon :icon="['fas', 'database']"/>
+                </span>
+                Mis conjuntos de imágenes
+            </router-link>
             <hr>
             <router-link v-if="isAdmin" to="/admin">
                 <span class="icon-container">

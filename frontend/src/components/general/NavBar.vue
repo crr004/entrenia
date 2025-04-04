@@ -12,6 +12,8 @@
       <div class="navbar-links">
         <router-link to="/" @click="closeBurgerMenu">Inicio</router-link>
         <span id="nav-separator" class="desktop-only"> | </span>
+        <router-link to="/explore" @click="closeBurgerMenu">Explorar</router-link>
+        <span id="nav-separator" class="desktop-only"> | </span>
         <router-link to="/about" @click="closeBurgerMenu">Sobre EntrenIA</router-link>
       </div>
       <div class="navbar-personal" v-if="!authStore.isAuthenticated">
@@ -41,6 +43,10 @@
             </span>
           </div>
           <div class="user-links-burger">
+            <router-link to="/my-datasets" @click="closeBurgerMenu" class="user-link-burger">
+              <font-awesome-icon :icon="['fas', 'database']" class="link-icon" fixed-width />
+              Mis conjuntos de imágenes
+            </router-link>
             <router-link 
               v-if="isAdmin" 
               to="/admin" 

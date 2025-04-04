@@ -12,9 +12,13 @@
       </div>
       <div class="modal-footer">
         <button class="cancel-button" @click="$emit('cancel')">{{ cancelText }}</button>
-        <button class="delete-button" @click="$emit('confirm')">
-          <font-awesome-icon v-if="isLoading" :icon="['fas', 'circle-notch']" spin class="button-icon" />
-          {{ confirmText }}
+        <button 
+          :class="['confirm-button', buttonType === 'success' ? 'confirm-success' : 'confirm-danger', isLoading ? 'loading' : '']"
+          @click="$emit('confirm')"
+          :disabled="isLoading"
+        >
+          <font-awesome-icon v-if="isLoading" :icon="['fas', 'spinner']" spin/>
+          <span v-if="!isLoading">{{ confirmText }}</span>
         </button>
       </div>
     </div>
@@ -46,6 +50,11 @@ defineProps({
   isLoading: {
     type: Boolean,
     default: false,
+  },
+  buttonType: {
+    type: String,
+    default: 'danger',  // 'danger' (rojo) o 'success' (verde).
+    validator: (value) => ['danger', 'success'].includes(value)
   },
 });
 
@@ -121,5 +130,59 @@ defineEmits(['confirm', 'cancel']);
 .close-confirmation-button:hover {
     color: red;
     transform: scale(1.2);
+}
+
+.confirm-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: white;
+}
+
+.confirm-danger {
+  background-color: #d32f2f;
+}
+
+.confirm-danger:hover {
+  background-color: #b71c1c;
+}
+
+.confirm-success {
+  background-color: rgb(34, 134, 141);
+}
+
+.confirm-success:hover {
+  background-color: #3da59b;
+}
+
+.confirm-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.cancel-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e0e0e0;
+  color: #555;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+  background-color: #c9c9c9;
 }
 </style>

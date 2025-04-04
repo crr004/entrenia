@@ -166,7 +166,7 @@ class TestUsersCRUD:
         """Prueba de obtención de todos los usuarios con paginación."""
 
         # Preparación
-        # Crear instancias reales de User en lugar de MagicMocks
+        # Crear instancias reales de User
         user1 = User(
             email="user1@example.com",
             username="user1",
@@ -190,20 +190,26 @@ class TestUsersCRUD:
         )
         mock_users = [user1, user2, user3]
 
-        # Configurar el resultado de la consulta de conteo
+        # Configurar el mock para la consulta de usuarios
+        users_execute_result = MagicMock()
+        users_execute_result.scalars().all.return_value = mock_users
+
+        # Configurar el mock para la consulta de conteo
         count_execute_result = MagicMock()
         count_execute_result.scalar.return_value = 10
 
-        # Configurar el resultado de la consulta de usuarios
-        users_execute_result = MagicMock()
-        users_result = [(user,) for user in mock_users]
-        users_execute_result.all.return_value = users_result
-
-        # Configurar los efectos secundarios para devolver diferentes mocks para cada llamada a execute
-        mock_session.execute.side_effect = [count_execute_result, users_execute_result]
+        # Configurar los efectos secundarios para las dos llamadas a execute
+        mock_session.execute.side_effect = [users_execute_result, count_execute_result]
 
         # Ejecución
-        result = await get_all_users(session=mock_session, skip=0, limit=3)
+        result = await get_all_users(
+            session=mock_session,
+            skip=0,
+            limit=3,
+            search=None,
+            sort_by="created_at",
+            sort_order="desc",
+        )
 
         # Verificación
         assert isinstance(result, UsersReturn)

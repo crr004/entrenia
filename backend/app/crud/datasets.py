@@ -1,0 +1,897 @@
+import os
+import uuid
+import logging
+import shutil
+from datetime import datetime, timezone
+
+from sqlmodel import select, func
+from sqlalchemy import distinct
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.datasets import Dataset, DatasetCreate, DatasetUpdate
+from app.models.images import (
+    Image,
+    ImageUpdate,
+)
+from app.models.users import User
+from app.crud.images import (
+    get_image_by_datasetid_and_name,
+    update_image,
+)
+from app.crud.cache import update_dataset_cache
+
+
+logger = logging.getLogger(__name__)
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
+IMAGES_DIR = os.path.join(MEDIA_ROOT, "images")
+
+
+async def get_dataset_by_id(*, session: AsyncSession, id: uuid.UUID) -> Dataset | None:
+    """Obtiene un dataset dado su ID.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        id (uuid.UUID): ID del dataset.
+
+    Returns:
+        Dataset | None: Dataset encontrado.
+    """
+
+    dataset = await session.get(Dataset, id)
+    if not dataset:
+        return None
+    return dataset
+
+
+async def get_dataset_by_userid_and_name(
+    *, session: AsyncSession, user_id: uuid.UUID, name: str
+) -> Dataset | None:
+    """Obtiene un dataset dado su ID de usuario y nombre.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        user_id (uuid.UUID): ID del usuario.
+        name (str): Nombre del dataset.
+
+    Returns:
+        Dataset | None: Dataset encontrado.
+    """
+
+    statement = select(Dataset).where(Dataset.user_id == user_id, Dataset.name == name)
+    res = await session.execute(statement)
+    dataset = res.scalars().first()
+    if not dataset:
+        return None
+    return dataset
+
+
+async def create_dataset(
+    *, session: AsyncSession, user_id: uuid.UUID, dataset_in: DatasetCreate
+) -> Dataset:
+    """Crea un nuevo dataset en la base de datos.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        user_id (uuid.UUID): ID del usuario propietario.
+        dataset_in (Dataset): Datos del dataset a crear.
+
+    Returns:
+        Dataset: Dataset creado.
+    """
+
+    dataset = Dataset.model_validate(dataset_in, update={"user_id": user_id})
+
+    # Inicializar campos de caché para un dataset vacío.
+    dataset.cached_image_count = 0
+    dataset.cached_category_count = 0
+    dataset.cache_updated_at = datetime.now(timezone.utc)
+
+    session.add(dataset)
+    await session.commit()
+    await session.refresh(dataset)
+    return dataset
+
+
+async def update_dataset(
+    *, session: AsyncSession, dataset: Dataset, dataset_data: DatasetUpdate
+) -> Dataset:
+    """Actualiza los datos de un dataset.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset (Dataset): Dataset a actualizar.
+        dataset_in (DatasetUpdate): Datos del dataset a actualizar.
+
+    Returns:
+        Dataset: Dataset actualizado.
+    """
+
+    dataset.sqlmodel_update(dataset_data)
+    session.add(dataset)
+    await session.commit()
+    await session.refresh(dataset)
+    return dataset
+
+
+async def delete_dataset(*, session: AsyncSession, dataset: Dataset) -> None:
+    """Elimina un dataset de la base de datos y todas las imágenes asociadas.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset (Dataset): Dataset a eliminar.
+    """
+
+    # Obtener todas las imágenes del dataset.
+    images_query = select(Image).where(Image.dataset_id == dataset.id)
+    images_result = await session.execute(images_query)
+    images = images_result.scalars().all()
+
+    # Eliminar los archivos físicos de cada imagen.
+    for image in images:
+        try:
+            file_path = os.path.join(MEDIA_ROOT, image.file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as e:
+            logger.error(
+                f"Error deleting image file {file_path}: {str(e)}", exc_info=True
+            )
+
+    # Eliminar el dataset.
+    await session.delete(dataset)
+    await session.commit()
+
+
+async def get_image_count(*, session: AsyncSession, dataset_id: uuid.UUID) -> int:
+    """Obtiene el número de imágenes en un dataset.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+
+    Returns:
+        int: Número de imágenes en el dataset.
+    """
+
+    statement = select(func.count()).where(Image.dataset_id == dataset_id)
+    result = await session.execute(statement)
+    count = result.scalar_one_or_none()
+    return count or 0
+
+
+async def get_category_count(*, session: AsyncSession, dataset_id: uuid.UUID) -> int:
+    """Obtiene el número de categorías distintas en las imágenes de un dataset.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+
+    Returns:
+        int: Número de categorías distintas en las imágenes del dataset.
+    """
+
+    statement = select(func.count(distinct(Image.label))).where(
+        Image.dataset_id == dataset_id,
+        Image.label.is_not(None),
+    )
+    result = await session.execute(statement)
+    count = result.scalar_one_or_none()
+    return count or 0
+
+
+async def update_dataset_cache_with_calculation(
+    *, session: AsyncSession, dataset_id: uuid.UUID, force_update: bool = False
+) -> None:
+    """Actualiza la caché de conteos de un dataset calculando los valores.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+        force_update (bool): Si es True, fuerza la actualización independientemente del estado actual.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        return
+
+    # Actualizar la caché si está invalidada (None) o si se fuerza la actualización.
+    if (
+        force_update
+        or dataset.cached_image_count is None
+        or dataset.cached_category_count is None
+    ):
+        # Calcular los conteos reales.
+        image_count = await get_image_count(session=session, dataset_id=dataset_id)
+        category_count = await get_category_count(
+            session=session, dataset_id=dataset_id
+        )
+
+        # Actualizar la caché usando la función del módulo cache.
+        await update_dataset_cache(
+            session=session,
+            dataset_id=dataset_id,
+            image_count=image_count,
+            category_count=category_count,
+        )
+
+
+async def get_dataset_counts(
+    *,
+    session: AsyncSession,
+    dataset_id: uuid.UUID,
+    use_cache: bool = True,
+) -> dict[str, int]:
+    """Obtiene el número de imágenes y categorías en un dataset, usando la caché si está disponible.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+        use_cache (bool): Si es True, usa la caché si está disponible.
+
+    Returns:
+        dict[str, int]: Diccionario con el conteo de imágenes y categorías.
+    """
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+
+    # Si se debe usar la caché y ambos valores están disponibles, devolverlos.
+    if (
+        use_cache
+        and dataset
+        and dataset.cached_image_count is not None
+        and dataset.cached_category_count is not None
+    ):
+        return {
+            "image_count": dataset.cached_image_count,
+            "category_count": dataset.cached_category_count,
+        }
+
+    # Si no hay caché o no se debe usar, calcular los valores y actualizar la caché.
+    await update_dataset_cache_with_calculation(
+        session=session, dataset_id=dataset_id, force_update=True
+    )
+
+    # Obtener el dataset actualizado.
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+
+    return {
+        "image_count": dataset.cached_image_count or 0,
+        "category_count": dataset.cached_category_count or 0,
+    }
+
+
+async def get_user_datasets_sorted(
+    *,
+    session: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    search: str | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    user_id: uuid.UUID | None = None,
+    admin_view: bool = False,
+) -> tuple[list[Dataset] | list[tuple[Dataset, str]], int, bool]:
+    """Obtiene datasets con ordenación avanzada, paginación y búsqueda.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        skip (int): Cantidad de datasets a omitir.
+        limit (int): Cantidad de datasets a devolver.
+        search (str | None): Término de búsqueda.
+        sort_by (str): Campo por el que ordenar. Puede ser 'name', 'created_at', 'is_public', 'image_count' o 'category_count'.
+        sort_order (str): Orden de la ordenación. Puede ser 'asc' o 'desc'.
+        user_id (uuid.UUID | None): ID del usuario propietario del dataset (None si es administrador).
+        admin_view (bool): Indica si la vista es para administradores.
+
+    Returns:
+        tuple[list[Dataset] | list[tuple[Dataset, str]], int, bool]: Datasets encontrados, conteo total y si incluye usernames.
+
+    """
+
+    # Crear término de búsqueda si existe.
+    search_term = f"%{search.strip()}%" if search and search.strip() else None
+
+    includes_username = False
+
+    # CASO 1: Para ordenación por username o cuando el usuario es administrador y hay búsqueda.
+    # (pero NO se está ordenando por conteos).
+    # Este caso es solo para admnistradores.
+    if (
+        (admin_view and sort_by == "username") or (admin_view and search_term)
+    ) and sort_by not in ["image_count", "category_count"]:
+        includes_username = True
+        # Realizar un join con la tabla de usuarios para ordenar/buscar por username.
+        query = select(Dataset, User.username).join(User, Dataset.user_id == User.id)
+
+        # Aplicar filtro de usuario si es necesario.
+        if user_id is not None:
+            query = query.where(Dataset.user_id == user_id)
+
+        # Aplicar búsqueda si se proporciona.
+        if search_term:
+            # Incluir username en la búsqueda.
+            query = query.where(
+                Dataset.name.ilike(search_term)
+                | Dataset.description.ilike(search_term)
+                | User.username.ilike(search_term)
+            )
+
+        # Aplicar ordenación.
+        if sort_by == "username":
+            query = query.order_by(
+                User.username.asc() if sort_order == "asc" else User.username.desc()
+            )
+        elif sort_by == "name":
+            query = query.order_by(
+                Dataset.name.asc() if sort_order == "asc" else Dataset.name.desc()
+            )
+        elif sort_by == "is_public":
+            # Para is_public: True primero en DESC, False primero en ASC.
+            if sort_order == "desc":
+                query = query.order_by(
+                    Dataset.is_public.desc(), Dataset.created_at.desc()
+                )
+            else:
+                query = query.order_by(
+                    Dataset.is_public.asc(), Dataset.created_at.asc()
+                )
+        else:  # created_at (por defecto).
+            query = query.order_by(
+                Dataset.created_at.asc()
+                if sort_order == "asc"
+                else Dataset.created_at.desc()
+            )
+
+        # Consulta para contar resultados.
+        count_query = select(func.count()).select_from(
+            select(Dataset.id)
+            .join(User, Dataset.user_id == User.id)
+            .where(
+                (Dataset.name.ilike(search_term) if search_term else True)
+                | (Dataset.description.ilike(search_term) if search_term else True)
+                | (User.username.ilike(search_term) if search_term else True)
+            )
+            .subquery()
+        )
+
+        # Obtener conteo.
+        count_result = await session.execute(count_query)
+        total_count = count_result.scalar_one() or 0
+
+        # Aplicar paginación.
+        query = query.offset(skip).limit(limit)
+
+        # Ejecutar consulta.
+        result = await session.execute(query)
+
+        # Extraer datasets y usernames.
+        datasets_with_usernames = []
+        for dataset, username in result:
+            datasets_with_usernames.append((dataset, username))
+
+        return datasets_with_usernames, total_count, includes_username
+
+    # CASO 2: Ordenación por conteos (image_count, category_count) + búsqueda username.
+    # Este caso es solo para administradores.
+    elif sort_by in ["image_count", "category_count"] and admin_view and search_term:
+        includes_username = True
+
+        # Primero realizar la búsqueda por username (join con users).
+        search_query = (
+            select(Dataset, User.username)
+            .join(User, Dataset.user_id == User.id)
+            .where(
+                Dataset.name.ilike(search_term)
+                | Dataset.description.ilike(search_term)
+                | User.username.ilike(search_term)
+            )
+        )
+
+        if user_id is not None:
+            search_query = search_query.where(Dataset.user_id == user_id)
+
+        # Ejecutar la consulta para obtener datasets + usernames.
+        search_result = await session.execute(search_query)
+        datasets_with_username = [
+            (dataset, username) for dataset, username in search_result
+        ]
+
+        # Calcular los conteos para ordenar.
+        datasets_with_counts = []
+        for dataset, username in datasets_with_username:
+            if sort_by == "image_count":
+                # Usar caché si está disponible.
+                if dataset.cached_image_count is not None:
+                    count = dataset.cached_image_count
+                else:
+                    count = await get_image_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=count,
+                        category_count=None,  # No se actualiza la cuenta de categorías aquí.
+                    )
+            else:  # category_count.
+                # Usar caché si está disponible.
+                if dataset.cached_category_count is not None:
+                    count = dataset.cached_category_count
+                else:
+                    count = await get_category_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=None,  # No se actualiza la cuenta de imágenes aquí.
+                        category_count=count,
+                    )
+            datasets_with_counts.append((dataset, username, count))
+
+        # Ordenar por el conteo (tercer elemento de cada tupla).
+        if sort_order == "asc":
+            # Orden ascendente.
+            datasets_with_counts.sort(key=lambda x: (x[2], x[0].created_at))
+        else:
+            # Orden descendente.
+            datasets_with_counts.sort(
+                key=lambda x: (x[2], x[0].created_at), reverse=True
+            )
+
+        # Aplicar paginación.
+        paginated_results = datasets_with_counts[skip : skip + limit]
+
+        # Eliminar el conteo de las tuplas para mantener el formato esperado (dataset, username).
+        final_results = [
+            (dataset, username) for dataset, username, _ in paginated_results
+        ]
+
+        return final_results, len(datasets_with_username), includes_username
+
+    # CASO 3: Para ordenación por conteos (image_count o category_count) sin username.
+    # Este caso es para administradores y usuarios normales.
+    elif sort_by in ["image_count", "category_count"]:
+
+        query = select(Dataset)
+
+        # Aplicar filtro de usuario (para que un usuario normal vea solo sus datasets).
+        if not admin_view and user_id is not None:
+            query = query.where(Dataset.user_id == user_id)
+
+        # Aplicar búsqueda si se proporciona.
+        if search_term:
+            # Para búsqueda de admin por username, se necesita JOIN con la tabla de usuarios.
+            if admin_view:
+                query = query.join(User, Dataset.user_id == User.id).where(
+                    Dataset.name.ilike(search_term)
+                    | Dataset.description.ilike(search_term)
+                    | User.username.ilike(search_term)
+                )
+            else:
+                # Búsqueda normal para usuarios no admin.
+                query = query.where(
+                    Dataset.name.ilike(search_term)
+                    | Dataset.description.ilike(search_term)
+                )
+
+        # Ejecutar consulta.
+        result = await session.execute(query)
+        all_datasets = result.scalars().all()
+
+        # Obtener conteo total.
+        count_query = select(func.count()).select_from(Dataset)
+        if not admin_view and user_id is not None:
+            count_query = count_query.where(Dataset.user_id == user_id)
+        if search_term:
+            # Para búsqueda de admin por username, se necesita JOIN con la tabla de usuarios.
+            if admin_view:
+                count_query = count_query.join(User, Dataset.user_id == User.id).where(
+                    Dataset.name.ilike(search_term)
+                    | Dataset.description.ilike(search_term)
+                    | User.username.ilike(search_term)
+                )
+            else:
+                # Búsqueda normal para usuarios no admin.
+                count_query = count_query.where(
+                    Dataset.name.ilike(search_term)
+                    | Dataset.description.ilike(search_term)
+                )
+        count_result = await session.execute(count_query)
+        total_count = count_result.scalar_one() or 0
+
+        # Obtener conteos para cada dataset.
+        dataset_with_counts = []
+        for dataset in all_datasets:
+            if sort_by == "image_count":
+                # Usar caché si está disponible.
+                if dataset.cached_image_count is not None:
+                    count = dataset.cached_image_count
+                else:
+                    # Si no hay caché, calcular y actualizar.
+                    count = await get_image_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=count,
+                        category_count=None,  # No se actualiza la cuenta de categorías aquí.
+                    )
+                dataset_with_counts.append((dataset, count))
+            else:  # Si se quiere ordenar por category_count.
+                # Usar caché si está disponible.
+                if dataset.cached_category_count is not None:
+                    count = dataset.cached_category_count
+                else:
+                    # Si no hay caché, calcular y actualizar.
+                    count = await get_category_count(
+                        session=session, dataset_id=dataset.id
+                    )
+                    # Actualizar la caché.
+                    await update_dataset_cache(
+                        session=session,
+                        dataset_id=dataset.id,
+                        image_count=None,  # No se actualiza la cuenta de imágenes aquí.
+                        category_count=count,
+                    )
+                dataset_with_counts.append((dataset, count))
+
+        # Ordenar la lista por el conteo.
+        if sort_order == "asc":
+            dataset_with_counts.sort(key=lambda x: (x[1], x[0].created_at))
+        else:
+            dataset_with_counts.sort(
+                key=lambda x: (x[1], x[0].created_at), reverse=True
+            )
+
+        # Aplicar paginación.
+        # Hay que hacerla manualmente porque el image_count/category_count no es un campo de la tabla Dataset.
+        paginated_datasets = [d[0] for d in dataset_with_counts[skip : skip + limit]]
+
+        return paginated_datasets, total_count, includes_username
+
+    # CASO 4: Para ordenación normal (name, created_at o is_public).
+    # Este caso es para administradores y usuarios normales.
+    else:
+
+        query = select(Dataset)
+
+        # Aplicar filtro de usuario.
+        if not admin_view and user_id is not None:
+            query = query.where(Dataset.user_id == user_id)
+
+        # Aplicar búsqueda si se proporciona.
+        if search_term:
+            query = query.where(
+                Dataset.name.ilike(search_term) | Dataset.description.ilike(search_term)
+            )
+
+        # Aplicar ordenación estándar.
+        if sort_by == "name":
+            if sort_order == "asc":
+                query = query.order_by(Dataset.name.asc())
+            else:
+                query = query.order_by(Dataset.name.desc())
+        elif sort_by == "is_public":
+            # Para is_public: True primero en DESC, False primero en ASC.
+            if sort_order == "desc":
+                query = query.order_by(
+                    Dataset.is_public.desc(), Dataset.created_at.desc()
+                )
+            else:
+                query = query.order_by(
+                    Dataset.is_public.asc(), Dataset.created_at.asc()
+                )
+        else:  # created_at (por defecto).
+            if sort_order == "asc":
+                query = query.order_by(Dataset.created_at.asc())
+            else:
+                query = query.order_by(Dataset.created_at.desc())
+
+        # Consulta para contar total.
+        count_query = select(func.count()).select_from(Dataset)
+        if not admin_view and user_id is not None:
+            count_query = count_query.where(Dataset.user_id == user_id)
+        if search_term:
+            count_query = count_query.where(
+                Dataset.name.ilike(search_term) | Dataset.description.ilike(search_term)
+            )
+
+        # Obtener conteo.
+        count_result = await session.execute(count_query)
+        total_count = count_result.scalar_one() or 0
+
+        # Aplicar paginación.
+        query = query.offset(skip).limit(limit)
+
+        # Ejecutar consulta.
+        result = await session.execute(query)
+        datasets = result.scalars().all()
+
+        return datasets, total_count, includes_username
+
+
+async def get_dataset_label_details(
+    *, session: AsyncSession, dataset_id: uuid.UUID
+) -> dict:
+    """Obtiene detalles de las etiquetas y categorías de un dataset.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+
+    Returns:
+        dict: Diccionario con detalles de las etiquetas y categorías.
+    """
+
+    # Obtener el conteo de imágenes por categoría.
+    statement = (
+        select(Image.label, func.count(Image.id).label("count"))
+        .where(Image.dataset_id == dataset_id, Image.label.is_not(None))
+        .group_by(Image.label)
+    )
+    result = await session.execute(statement)
+    categories = [{"name": name, "image_count": count} for name, count in result]
+
+    # Obtener el número de imágenes etiquetadas.
+    labeled_images_stmt = select(func.count(Image.id)).where(
+        Image.dataset_id == dataset_id, Image.label.is_not(None)
+    )
+    labeled_images_result = await session.execute(labeled_images_stmt)
+    labeled_images = labeled_images_result.scalar_one() or 0
+
+    # Obtener el número de imágenes no etiquetadas.
+    unlabeled_images_stmt = select(func.count(Image.id)).where(
+        Image.dataset_id == dataset_id, Image.label.is_(None)
+    )
+    unlabeled_images_result = await session.execute(unlabeled_images_stmt)
+    unlabeled_images = unlabeled_images_result.scalar_one() or 0
+
+    return {
+        "dataset_id": dataset_id,
+        "categories": categories,
+        "count": len(categories),
+        "labeled_images": labeled_images,
+        "unlabeled_images": unlabeled_images,
+    }
+
+
+async def get_unlabeled_images(
+    *, session: AsyncSession, dataset_id: uuid.UUID
+) -> list[Image]:
+    """Obtiene todas las imágenes sin etiquetar de un dataset.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+
+    Returns:
+        list[Image]: Lista de imágenes sin etiquetar.
+    """
+
+    statement = select(Image).where(
+        Image.dataset_id == dataset_id, Image.label.is_(None)
+    )
+
+    result = await session.execute(statement)
+    images = result.scalars().all()
+
+    return images
+
+
+async def label_images_with_csv(
+    *, session: AsyncSession, dataset_id: uuid.UUID, labels_data: list[dict]
+) -> dict:
+    """Etiqueta múltiples imágenes basadas en datos CSV.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset.
+        labels_data (list[dict]): Lista de diccionarios con image_name y label.
+
+    Returns:
+        dict: Estadísticas del proceso de etiquetado.
+    """
+
+    labeled_count = 0
+    not_found_count = 0
+    not_found_details = []
+
+    for item in labels_data:
+        image_name = item.get("image_name")
+        label = item.get("label")
+
+        if not image_name or not label:
+            continue
+
+        image = await get_image_by_datasetid_and_name(
+            session=session, dataset_id=dataset_id, name=image_name
+        )
+
+        if image:
+            image_update = ImageUpdate(name=image.name, label=label)
+
+            await update_image(session=session, image=image, image_data=image_update)
+            labeled_count += 1
+        else:
+            not_found_count += 1
+            not_found_details.append(f"{image_name},{label}")
+
+    return {
+        "labeled_count": labeled_count,
+        "not_found_count": not_found_count,
+        "not_found_details": not_found_details,
+    }
+
+
+async def get_public_datasets(
+    *,
+    session: AsyncSession,
+    skip: int = 0,
+    limit: int = 10,
+    search: str | None = None,
+) -> tuple[list[Dataset], int]:
+    """Obtiene todos los datasets públicos ordenados por fecha de creación descendente.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        skip (int): Cantidad de datasets a omitir (paginación).
+        limit (int): Cantidad de datasets a devolver (paginación).
+        search (str | None): Texto a buscar en el nombre, descripción o nombre de usuario.
+
+    Returns:
+        tuple[list[Dataset], int]: Datasets públicos encontrados y conteo total.
+    """
+
+    # Consulta base.
+    query = select(Dataset).where(Dataset.is_public == True)
+
+    # Aplicar búsqueda si se proporciona.
+    if search and search.strip():
+        search_term = f"%{search.strip()}%"
+        # Join con la tabla de usuarios para buscar también por username.
+        query = query.join(User, Dataset.user_id == User.id).where(
+            Dataset.name.ilike(search_term)
+            | Dataset.description.ilike(search_term)
+            | User.username.ilike(search_term)
+        )
+
+    # Ordenar por fecha de creación descendente.
+    query = query.order_by(Dataset.created_at.desc())
+
+    # Consulta para contar el total de resultados.
+    count_query = select(func.count()).select_from(
+        query.with_only_columns(Dataset.id).subquery()
+    )
+    count_result = await session.execute(count_query)
+    total_count = count_result.scalar_one() or 0
+
+    # Aplicar paginación.
+    query = query.offset(skip).limit(limit)
+
+    # Ejecutar consulta.
+    result = await session.execute(query)
+    datasets = result.scalars().all()
+
+    return datasets, total_count
+
+
+async def clone_dataset(
+    *,
+    session: AsyncSession,
+    source_dataset_id: uuid.UUID,
+    target_user_id: uuid.UUID,
+    source_username: str,
+) -> Dataset:
+    """Clona un dataset de un usuario a otro, incluyendo las imágenes asociadas.
+
+    Args:
+        session (AsyncSession): Sesión asíncrona de la base de datos.
+        source_dataset_id (uuid.UUID): ID del dataset original.
+        target_user_id (uuid.UUID): ID del usuario destino.
+        source_username (str): Nombre de usuario del propietario original.
+
+    Returns:
+        Dataset: Dataset clonado.
+    """
+
+    # Obtener el dataset original.
+    source_dataset = await get_dataset_by_id(session=session, id=source_dataset_id)
+
+    # Crear un nuevo nombre para el dataset clonado, usando el nombre del usuario original.
+    new_name = f"{source_username} - {source_dataset.name}"
+
+    # Verificar si ya existe un dataset con ese nombre para el usuario destino.
+    existing_dataset = await get_dataset_by_userid_and_name(
+        session=session, user_id=target_user_id, name=new_name
+    )
+
+    # Si ya existe un dataset con ese nombre, añadir un sufijo numérico.
+    if existing_dataset:
+        counter = 1
+        while True:
+            new_name = f"{source_username} - {source_dataset.name} ({counter})"
+            existing_dataset = await get_dataset_by_userid_and_name(
+                session=session, user_id=target_user_id, name=new_name
+            )
+            if not existing_dataset:
+                break
+            counter += 1
+
+    # Crear el nuevo dataset.
+    dataset_create = DatasetCreate(
+        name=new_name,
+        description=source_dataset.description,
+        is_public=False,
+    )
+
+    # Guardar el nuevo dataset en la base de datos.
+    cloned_dataset = await create_dataset(
+        session=session, user_id=target_user_id, dataset_in=dataset_create
+    )
+
+    # Obtener todas las imágenes del dataset original.
+    images_query = select(Image).where(Image.dataset_id == source_dataset_id)
+    result = await session.execute(images_query)
+    source_images = result.scalars().all()
+
+    images_to_add = []
+
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+
+    # Copiar cada imagen al nuevo dataset.
+    for source_image in source_images:
+        # Generar ID para la nueva imagen.
+        new_image_id = uuid.uuid4()
+
+        # Obtener la ruta de la imagen original.
+        source_file_path = os.path.join(MEDIA_ROOT, source_image.file_path)
+
+        # Crear la nueva ruta para la imagen clonada.
+        # Ya que las imágenes están estandarizadas, todas tendrán extensión .jpg.
+        new_file_name = f"{new_image_id}.jpg"
+        new_file_path = os.path.join("images", new_file_name)
+        target_file_path = os.path.join(IMAGES_DIR, new_file_name)
+
+        # Copiar el archivo de imagen si existe.
+        try:
+            if os.path.exists(source_file_path):
+                shutil.copy2(source_file_path, target_file_path)
+            else:
+                logger.warning(f"Source image not found: {source_file_path}")
+        except Exception as e:
+            logger.error(f"Error copying image file: {str(e)}", exc_info=True)
+
+        # Crear imagen.
+        new_image = Image(
+            id=new_image_id,
+            name=source_image.name,
+            file_path=new_file_path,
+            dataset_id=cloned_dataset.id,
+            label=source_image.label,
+            thumbnail=source_image.thumbnail,
+        )
+
+        # Añadir a la lista de imágenes a insertar.
+        images_to_add.append(new_image)
+
+    unique_labels = set(img.label for img in images_to_add if img.label is not None)
+
+    # Añadir todas las imágenes a la sesión.
+    session.add_all(images_to_add)
+    await session.commit()
+    await session.refresh(cloned_dataset)
+
+    # Actualizar la caché del dataset clonado.
+    await update_dataset_cache(
+        session=session,
+        dataset_id=cloned_dataset.id,
+        image_count=len(images_to_add),
+        category_count=len(unique_labels),
+    )
+
+    return cloned_dataset

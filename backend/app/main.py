@@ -6,6 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.main import api_router
 from app.start import start
 
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "images"), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "models"), exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

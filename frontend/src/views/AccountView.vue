@@ -107,8 +107,8 @@
             </p>
             <ul class="danger-list">
               <li>Tu perfil y preferencias personales</li>
-              <li>Todo tu historial y registros</li>
-              <li>Cualquier contenido que hayas creado</li>
+              <li>Tus imágenes y conjuntos de imágenes</li>
+              <li>Tus modelos entrenados</li>
             </ul>
             <p class="warning-text">Esta acción no se puede deshacer.</p>
             <div v-if="!showDeleteConfirmation" class="danger-action">
@@ -339,7 +339,7 @@ const updateProfile = async () => {
   }
   
   const userData = {};
-  if (fullName.value !== originalFullName.value) userData.full_name = fullName.value;
+  if (fullName.value !== originalFullName.value) userData.full_name = fullName.value || null;
   if (username.value !== originalUsername.value) userData.username = username.value;
   
   isLoading.value = true;
@@ -354,7 +354,7 @@ const updateProfile = async () => {
     const currentUser = authStore.user ? { ...authStore.user } : {};
     const updatedUser = {
       ...currentUser,
-      full_name: fullName.value,
+      full_name: fullName.value || null,
       username: username.value
     };
     authStore.setUser(updatedUser);
@@ -499,12 +499,13 @@ const handleApiError = (error) => {
 };
 
 // Cargar datos del usuario al montar el componente.
-onMounted(fetchUserData);
+onMounted(async () => {
+  await fetchUserData();
+});
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
 <style scoped src="@/assets/styles/form_fields.css"></style>
-
 <style scoped>
 .account-view {
   padding: 20px 40px;
