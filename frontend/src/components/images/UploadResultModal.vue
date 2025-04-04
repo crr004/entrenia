@@ -164,7 +164,6 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
   show: {

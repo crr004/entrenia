@@ -84,7 +84,6 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { defineProps, defineEmits } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 

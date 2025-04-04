@@ -41,7 +41,14 @@ vi.mock('@/utils/notifications', () => ({
 // Mock del router.
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    push: vi.fn()
+    push: vi.fn(),
+    replace: vi.fn()
+  }),
+  useRoute: () => ({
+    path: '/admin',
+    query: {},
+    params: {},
+    meta: { requiresAuth: true, requiresAdmin: true }
   })
 }))
 

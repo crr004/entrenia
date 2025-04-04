@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 

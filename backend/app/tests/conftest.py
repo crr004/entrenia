@@ -4,6 +4,7 @@ import warnings
 import uuid
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.testclient import TestClient
@@ -541,3 +542,211 @@ def utils_mock_verify_password():
 
     with patch("app.utils.users.verify_password") as mock:
         yield mock
+
+
+@pytest.fixture
+def mock_dataset():
+    """Fixture para mockear un modelo Dataset."""
+
+    mock = MagicMock()
+    mock.id = uuid.uuid4()
+    mock.name = "Test Dataset"
+    mock.description = "This is a test dataset"
+    mock.is_public = False
+    mock.user_id = uuid.uuid4()
+    mock.created_at = datetime.now(timezone.utc)
+
+    dict_result = {
+        "id": mock.id,
+        "name": mock.name,
+        "description": mock.description,
+        "is_public": mock.is_public,
+        "user_id": mock.user_id,
+        "created_at": mock.created_at,
+        "username": "testuser",
+    }
+    mock.model_dump.return_value = dict_result
+
+    return mock
+
+
+@pytest.fixture
+def mock_public_dataset():
+    """Fixture para mockear un modelo Dataset público."""
+
+    mock = MagicMock()
+    mock.id = uuid.uuid4()
+    mock.name = "Public Dataset"
+    mock.description = "This is a public dataset"
+    mock.is_public = True
+    mock.user_id = uuid.uuid4()
+    mock.created_at = datetime.now(timezone.utc)
+
+    dict_result = {
+        "id": mock.id,
+        "name": mock.name,
+        "description": mock.description,
+        "is_public": mock.is_public,
+        "user_id": mock.user_id,
+        "created_at": mock.created_at,
+        "username": "testuser",
+    }
+    mock.model_dump.return_value = dict_result
+
+    return mock
+
+
+@pytest.fixture
+def mock_datasets_return():
+    """Fixture para mockear un retorno de múltiples datasets."""
+
+    from app.models.datasets import DatasetsReturn, DatasetReturn
+
+    dataset1 = {
+        "id": uuid.uuid4(),
+        "name": "Test Dataset 1",
+        "description": "Description 1",
+        "is_public": False,
+        "user_id": uuid.uuid4(),
+        "created_at": datetime.now(timezone.utc),
+        "image_count": 10,
+        "category_count": 5,
+        "username": "testuser",
+    }
+
+    dataset2 = {
+        "id": uuid.uuid4(),
+        "name": "Test Dataset 2",
+        "description": "Description 2",
+        "is_public": True,
+        "user_id": uuid.uuid4(),
+        "created_at": datetime.now(timezone.utc),
+        "image_count": 20,
+        "category_count": 8,
+        "username": "testuser2",
+    }
+
+    datasets = [DatasetReturn(**dataset1), DatasetReturn(**dataset2)]
+    return DatasetsReturn(datasets=datasets, count=2)
+
+
+@pytest.fixture
+def mock_dataset_label_details():
+    """Fixture para mockear detalles de etiquetas de dataset."""
+
+    dataset_id = uuid.uuid4()
+    categories = [
+        {"name": "cat", "image_count": 5},
+        {"name": "dog", "image_count": 7},
+        {"name": "bird", "image_count": 3},
+    ]
+
+    return {
+        "dataset_id": dataset_id,
+        "categories": categories,
+        "count": len(categories),
+        "labeled_images": 15,
+        "unlabeled_images": 5,
+    }
+
+
+@pytest.fixture
+def mock_get_dataset_by_id():
+    """Mock para get_dataset_by_id en rutas de datasets."""
+
+    with patch("app.api.routes.datasets.get_dataset_by_id") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_dataset_counts():
+    """Mock para get_dataset_counts en rutas de datasets."""
+
+    with patch("app.api.routes.datasets.get_dataset_counts") as mock:
+        mock.return_value = {"image_count": 10, "category_count": 5}
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_dataset_label_details():
+    """Mock para get_dataset_label_details en rutas de datasets."""
+
+    with patch("app.api.routes.datasets.get_dataset_label_details") as mock:
+        dataset_id = uuid.uuid4()
+        categories = [
+            {"name": "cat", "image_count": 5},
+            {"name": "dog", "image_count": 7},
+            {"name": "bird", "image_count": 3},
+        ]
+
+        label_details = {
+            "dataset_id": dataset_id,
+            "categories": categories,
+            "count": len(categories),
+            "labeled_images": 15,
+            "unlabeled_images": 5,
+        }
+        mock.return_value = label_details
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_public_datasets():
+    """Mock para crud_datasets.get_public_datasets en rutas de datasets."""
+
+    with patch("app.crud.datasets.get_public_datasets") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_user_datasets_sorted():
+    """Mock para crud_datasets.get_user_datasets_sorted en rutas de datasets."""
+
+    with patch("app.crud.datasets.get_user_datasets_sorted") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_create_dataset():
+    """Mock para crud_datasets.create_dataset en rutas de datasets."""
+
+    with patch("app.crud.datasets.create_dataset") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_clone_dataset():
+    """Mock para crud_datasets.clone_dataset en rutas de datasets."""
+
+    with patch("app.crud.datasets.clone_dataset") as mock:
+        cloned_dataset = MagicMock()
+        cloned_dataset.id = uuid.uuid4()
+        cloned_dataset.name = "Cloned Dataset"
+        cloned_dataset.description = "Cloned from original dataset"
+        cloned_dataset.is_public = False
+        cloned_dataset.user_id = uuid.uuid4()
+        cloned_dataset.created_at = datetime.now(timezone.utc)
+
+        dict_result = {
+            "id": cloned_dataset.id,
+            "name": cloned_dataset.name,
+            "description": cloned_dataset.description,
+            "is_public": cloned_dataset.is_public,
+            "user_id": cloned_dataset.user_id,
+            "created_at": cloned_dataset.created_at,
+            "username": "sourceuser",
+            "image_count": 10,
+            "category_count": 3,
+        }
+        cloned_dataset.model_dump.return_value = dict_result
+
+        mock.return_value = cloned_dataset
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_dataset_by_userid_and_name():
+    """Mock para get_dataset_by_userid_and_name en rutas de datasets."""
+
+    with patch("app.api.routes.datasets.get_dataset_by_userid_and_name") as mock:
+        yield make_async_mock(mock)
