@@ -56,10 +56,6 @@ class Classifier(ClassifierBase, table=True):
         ondelete="SET NULL",
         description="ID del dataset utilizado para entrenar (puede ser NULL si el dataset fue eliminado)",
     )
-    dataset_name: str | None = Field(
-        default=None,
-        description="Nombre del dataset utilizado (para referencia si se elimina el dataset)",
-    )
     status: ClassifierTrainingStatus = Field(
         default=ClassifierTrainingStatus.NOT_TRAINED,
         description="Estado actual del entrenamiento",
