@@ -21,6 +21,22 @@ import app.crud.datasets as crud_datasets
 
 router = APIRouter(prefix="/classifiers", tags=["classifiers"])
 
+VALID_ARCHITECTURES = ["resnet18", "resnet34", "resnet50", "mobilenet", "efficientnet"]
+
+
+@router.get("/architectures", response_model=list[str])
+async def get_available_architectures(current_user: CurrentUser) -> list[str]:
+    """Devuelve la lista de arquitecturas de modelos disponibles.
+
+    Args:
+        current_user (CurrentUser): Usuario actual.
+
+    Returns:
+        List[str]: Lista de nombres de arquitecturas disponibles.
+    """
+
+    return VALID_ARCHITECTURES
+
 
 @router.post("/", response_model=ClassifierReturn)
 async def create_classifier(
@@ -40,24 +56,28 @@ async def create_classifier(
         HTTPException[403]: Si el usuario no tiene privilegios suficientes.
         HTTPException[409]: Si ya existe un clasificador con el mismo nombre para este usuario.
         HTTPException[404]: Si el dataset no existe.
+        HTTPException[400]: Si la arquitectura seleccionada no es válida.
 
     Returns:
         ClassifierReturn: Datos del clasificador creado.
     """
 
-    # Verificar que el dataset existe y pertenece al usuario.
-    dataset = await crud_datasets.get_dataset_by_id(
-        session=session, id=classifier_in.dataset_id
-    )
-    if not dataset:
+    if classifier_in.architecture not in VALID_ARCHITECTURES:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid architecture. Must be one of: {', '.join(VALID_ARCHITECTURES)}",
         )
 
-    if dataset.user_id != current_user.id and not current_user.is_admin:
+    dataset = await crud_datasets.get_dataset_by_userid_and_name(
+        session=session,
+        user_id=current_user.id,
+        name=classifier_in.dataset_name,
+    )
+
+    if not dataset:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset with name '{classifier_in.dataset_name}' not found in your datasets",
         )
 
     # Verificar si ya existe un clasificador con el mismo nombre para este usuario.
@@ -70,9 +90,13 @@ async def create_classifier(
             detail="The user already has a classifier with that name",
         )
 
-    # Crear el clasificador.
+    modified_classifier_data = classifier_in.model_dump()
+    modified_classifier_data["dataset_id"] = dataset.id
+
     classifier = await crud_classifiers.create_classifier(
-        session=session, user_id=current_user.id, classifier_in=classifier_in
+        session=session,
+        user_id=current_user.id,
+        classifier_in=ClassifierCreate(**modified_classifier_data),
     )
 
     classifier_dict = classifier.model_dump()

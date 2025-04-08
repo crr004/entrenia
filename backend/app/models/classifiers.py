@@ -70,6 +70,10 @@ class Classifier(ClassifierBase, table=True):
         default=None,
         description="Fecha en que se completó el entrenamiento (UTC)",
     )
+    architecture: str = Field(
+        default=None,
+        description="Tipo de arquitectura del modelo",
+    )
     metrics: Dict[str, float] | None = Field(
         sa_column=Column(JSON),
         default=None,
@@ -92,7 +96,11 @@ class Classifier(ClassifierBase, table=True):
 class ClassifierCreate(ClassifierBase):
     """Modelo de clasificador para la creación de un nuevo clasificador."""
 
-    dataset_id: uuid.UUID = Field(description="ID del dataset utilizado para entrenar")
+    dataset_name: str = Field(description="Nombre del dataset utilizado para entrenar")
+    dataset_id: uuid.UUID | None = Field(
+        default=None, description="ID del dataset utilizado para entrenar"
+    )
+    architecture: str = Field(description="Tipo de arquitectura del modelo a entrenar")
     model_parameters: Dict[str, Any] | None = Field(
         default=None, description="Parámetros para el entrenamiento del modelo"
     )

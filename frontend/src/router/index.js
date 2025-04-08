@@ -64,6 +64,12 @@ const routes = [
     meta: { showNav: true, showFooter: true, title: 'EntrenIA - Mis modelos de clasificación de imágenes' }
   },
   {
+    path: '/train-model',
+    name: 'train-model',
+    component: () => import('../views/TrainModelView.vue'),
+    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Entrenar nuevo modelo' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),

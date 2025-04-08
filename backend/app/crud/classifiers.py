@@ -49,7 +49,23 @@ async def create_classifier(
     """Crea un nuevo clasificador en la base de datos."""
 
     classifier_data = classifier_in.model_dump()
-    classifier = Classifier(user_id=user_id, **classifier_data)
+
+    if (
+        "model_parameters" not in classifier_data
+        or classifier_data["model_parameters"] is None
+    ):
+        classifier_data["model_parameters"] = {}
+
+    classifier_data["model_parameters"]["learning_rate"] = 0.001
+    classifier_data["model_parameters"]["batch_size"] = 32
+    classifier_data["model_parameters"]["epochs"] = 10
+
+    classifier = Classifier(
+        user_id=user_id,
+        status=ClassifierTrainingStatus.TRAINING,
+        metrics=None,
+        **classifier_data,
+    )
 
     session.add(classifier)
     await session.commit()

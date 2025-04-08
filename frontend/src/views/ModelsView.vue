@@ -167,11 +167,6 @@
       @confirm="deleteModel"
       @cancel="cancelDelete"
     />
-    <AddModelModal
-      v-if="isAddModelModalOpen"
-      @close="closeAddModelModal"
-      @model-added="onModelAdded"
-    />
     <EditModelModal
       :isOpen="isEditModelModalOpen"
       :model="modelToEdit"
@@ -202,7 +197,6 @@ const activeActionsMenu = ref(null);
 const isDeleteModalOpen = ref(false);
 const modelToDelete = ref(null);
 const deleteModalMessage = ref('');
-const isAddModelModalOpen = ref(false);
 const isEditModelModalOpen = ref(false);
 const modelToEdit = ref(null);
 
@@ -407,16 +401,8 @@ const getMenuPosition = (modelId) => {
 };
 
 const showAddModel = () => {
-  isAddModelModalOpen.value = true;
   closeActionsMenu();
-};
-
-const closeAddModelModal = () => {
-  isAddModelModalOpen.value = false;
-};
-
-const onModelAdded = async (newModel) => {
-  await fetchModels();
+  router.push('/train-model');
 };
 
 const viewModel = (model) => {
