@@ -43,12 +43,16 @@
             </span>
           </div>
           <div class="user-links-burger">
+            <router-link to="/my-models" @click="closeBurgerMenu" class="user-link-burger">
+              <font-awesome-icon :icon="['fas', 'robot']" class="link-icon" fixed-width />
+              Mis modelos
+            </router-link>
             <router-link to="/my-datasets" @click="closeBurgerMenu" class="user-link-burger">
               <font-awesome-icon :icon="['fas', 'database']" class="link-icon" fixed-width />
-              Mis conjuntos de imágenes
+              Mis conjuntos
             </router-link>
             <router-link 
-              v-if="isAdmin" 
+              v-if="isAdmin"
               to="/admin" 
               @click="closeBurgerMenu" 
               class="user-link-burger admin-link-mobile"

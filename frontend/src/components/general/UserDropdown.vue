@@ -1,11 +1,17 @@
 <template>
     <div class="user-dropdown-container">
         <div class="dropdown-links" @click="emit('close')">
+            <router-link to="/my-models">
+                <span class="icon-container">
+                    <font-awesome-icon :icon="['fas', 'robot']" fixed-width />
+                </span>
+                Mis modelos
+            </router-link>
             <router-link to="/my-datasets">
                 <span class="icon-container">
-                    <font-awesome-icon :icon="['fas', 'database']"/>
+                    <font-awesome-icon :icon="['fas', 'database']" fixed-width />
                 </span>
-                Mis conjuntos de imágenes
+                Mis conjuntos
             </router-link>
             <hr>
             <router-link v-if="isAdmin" to="/admin">

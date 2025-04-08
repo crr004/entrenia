@@ -1,10 +1,10 @@
 <template>
-  <div class="datasets-view">
-    <div class="datasets-header">
-      <h1>Mis conjuntos de imágenes</h1>
-      <button class="app-button add-dataset-button" @click="showAddDatasetModal">
+  <div class="models-view">
+    <div class="models-header">
+      <h1>Mis modelos de clasificación de imágenes</h1>
+      <button class="app-button add-model-button" @click="showAddModel">
         <font-awesome-icon :icon="['fas', 'plus']" class="button-icon" />
-        Crear conjunto de imágenes
+        Entrenar un modelo
       </button>
     </div>
     <div class="search-container">
@@ -26,25 +26,25 @@
         </button>
       </div>
     </div>
-    <div class="datasets-content">
+    <div class="models-content">
       <div class="table-wrapper">
-        <div class="table-container datasets-table-container">
+        <div class="table-container models-table-container">
           <div v-if="isLoading || isSearchTransitioning" class="loading-container">
             <font-awesome-icon :icon="['fas', 'circle-notch']" spin size="2x" />
-            <p>Cargando conjuntos de imágenes...</p>
+            <p>Cargando modelos...</p>
           </div>
-          <div v-else-if="datasets.length === 0" class="empty-state">
+          <div v-else-if="models.length === 0" class="empty-state">
             <template v-if="searchQuery.trim()">
               <font-awesome-icon :icon="['fas', 'search']" size="2x" />
-              <p>No se encontraron conjuntos de imágenes para "<span class="search-term">{{ searchQuery }}</span>"</p>
+              <p>No se encontraron modelos para "<span class="search-term">{{ searchQuery }}</span>"</p>
             </template>
             <template v-else>
-              <font-awesome-icon :icon="['fas', 'database']" size="2x" />
-              <p>Aún no tienes ningún conjunto de imágenes.</p>
+              <font-awesome-icon :icon="['fas', 'robot']" size="2x" />
+              <p>Aún no tienes ningún modelo entrenado.</p>
             </template>
           </div>
           <div v-else>
-            <table class="data-table datasets-table">
+            <table class="data-table models-table">
               <thead>
                 <tr>
                   <th v-if="isAdmin" @click="setSortField('username')" class="sortable-header">
@@ -56,75 +56,61 @@
                     <SortIcon :fieldName="'name'" :currentSort="sortBy" :currentOrder="sortOrder" />
                   </th>
                   <th>Descripción</th>
-                  <th @click="setSortField('image_count')" class="center-column sortable-header">
-                    <span class="header-text">Imágenes</span>
-                    <SortIcon :fieldName="'image_count'" :currentSort="sortBy" :currentOrder="sortOrder" />
-                  </th>
-                  <th @click="setSortField('category_count')" class="center-column sortable-header">
-                    <span class="header-text">Categorías</span>
-                    <SortIcon :fieldName="'category_count'" :currentSort="sortBy" :currentOrder="sortOrder" />
+                  <th @click="setSortField('status')" class="center-column sortable-header">
+                    <span class="header-text">Estado</span>
+                    <SortIcon :fieldName="'status'" :currentSort="sortBy" :currentOrder="sortOrder" />
                   </th>
                   <th @click="setSortField('created_at')" class="sortable-header">
                     <span class="header-text">Fecha de creación</span>
                     <SortIcon :fieldName="'created_at'" :currentSort="sortBy" :currentOrder="sortOrder" />
                   </th>
-                  <th @click="setSortField('is_public')" class="center-column sortable-header">
-                    <span class="header-text">Compartido</span>
-                    <SortIcon :fieldName="'is_public'" :currentSort="sortBy" :currentOrder="sortOrder" />
-                  </th>
                   <th class="actions-column">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="dataset in datasets" :key="dataset.id" 
-                    @click="viewDataset(dataset)" 
-                    class="dataset-row">
+                <tr v-for="model in models" :key="model.id" 
+                    @click="viewModel(model)" 
+                    class="model-row">
                   <td v-if="isAdmin">
-                    <span class="truncate" :title="dataset.username || '-'">
-                      {{ truncateText(dataset.username, 20) || '-' }}
+                    <span class="truncate" :title="model.username || '-'">
+                      {{ truncateText(model.username, 20) || '-' }}
                     </span>
                   </td>
                   <td>
-                    <span class="truncate" :title="dataset.name">
-                      {{ truncateText(dataset.name, 40) }}
+                    <span class="truncate" :title="model.name">
+                      {{ truncateText(model.name, 40) }}
                     </span>
                   </td>
                   <td>
-                    <span class="truncate" :title="dataset.description || '-'">
-                      {{ dataset.description ? truncateText(dataset.description, isAdmin ? 20 : 30) : '-' }}
+                    <span class="truncate" :title="model.description || '-'">
+                      {{ model.description ? truncateText(model.description, isAdmin ? 20 : 30) : '-' }}
                     </span>
                   </td>
-                  <td class="center-column">{{ dataset.image_count }}</td>
-                  <td class="center-column">{{ dataset.category_count }}</td>
-                  <td>{{ formatDate(dataset.created_at) }}</td>
                   <td class="center-column">
-                    <font-awesome-icon 
-                      :icon="['fas', dataset.is_public ? 'globe' : 'lock']" 
-                      :class="dataset.is_public ? 'text-public' : 'text-private'"
-                      :title="dataset.is_public ? 'Compartido' : 'Privado'"
-                    />
+                    <span :class="getStatusClass(model.status)">
+                      {{ getStatusLabel(model.status) }}
+                    </span>
                   </td>
+                  <td>{{ formatDate(model.created_at) }}</td>
                   <td class="actions-column">
                     <div class="actions-menu">
                       <button 
                         class="action-button" 
-                        @click="(event) => toggleActionsMenu(dataset.id, event)"
-                        :data-item-id="dataset.id"
-                        :data-active="activeActionsMenu === dataset.id"
+                        @click="(event) => toggleActionsMenu(model.id, event)"
+                        :data-item-id="model.id"
+                        :data-active="activeActionsMenu === model.id"
                       >
                         <font-awesome-icon :icon="['fas', 'ellipsis-vertical']" />
                       </button>
                       <ActionMenu
-                        v-if="activeActionsMenu === dataset.id" 
-                        :item="dataset" 
-                        :itemId="dataset.id"
-                        :position="getMenuPosition(dataset.id)"
-                        :actions="getDatasetMenuActions(dataset)"
-                        @view="viewDataset"
-                        @edit="editDataset"
-                        @delete="confirmDeleteDataset"
-                        @publish="confirmPublishDataset"
-                        @unpublish="confirmUnpublishDataset"
+                        v-if="activeActionsMenu === model.id" 
+                        :item="model" 
+                        :itemId="model.id"
+                        :position="getMenuPosition(model.id)"
+                        :actions="getModelMenuActions(model)"
+                        @view="viewModel"
+                        @edit="editModel"
+                        @delete="confirmDeleteModel"
                         @close="closeActionsMenu"
                       />
                     </div>
@@ -143,7 +129,7 @@
                 </button>
                 <div class="pagination-info">
                   Página {{ currentPage }} de {{ totalPages }}
-                  <span class="total-info">({{ totalDatasets }} conjuntos)</span>
+                  <span class="total-info">({{ totalModels }} modelos)</span>
                 </div>
                 <button 
                   class="pagination-button" 
@@ -162,7 +148,7 @@
                   @change="handlePageSizeChange"
                 >
                   <option v-for="size in pageSizeOptions" :key="size" :value="size">
-                    {{ size }} conjuntos
+                    {{ size }} modelos
                   </option>
                 </select>
               </div>
@@ -173,34 +159,24 @@
     </div>
     <ConfirmationModal
       :isOpen="isDeleteModalOpen"
-      :title="`Eliminar conjunto de imágenes`"
+      :title="`Eliminar modelo`"
       :message="deleteModalMessage"
       confirmText="Eliminar"
       cancelText="Cancelar"
       buttonType="danger"
-      @confirm="deleteDataset"
+      @confirm="deleteModel"
       @cancel="cancelDelete"
     />
-    <ConfirmationModal
-      :isOpen="isShareModalOpen"
-      :title="shareModalTitle"
-      :message="shareModalMessage"
-      :confirmText="shareModalAction === 'publish' ? 'Compartir' : 'Privatizar'"
-      cancelText="Cancelar"
-      buttonType="success"
-      @confirm="processShareAction"
-      @cancel="cancelShareAction"
+    <AddModelModal
+      v-if="isAddModelModalOpen"
+      @close="closeAddModelModal"
+      @model-added="onModelAdded"
     />
-    <AddDatasetModal
-      :isOpen="isAddDatasetModalOpen"
-      @close="closeAddDatasetModal"
-      @dataset-added="onDatasetAdded"
-    />
-    <EditDatasetModal
-      :isOpen="isEditDatasetModalOpen"
-      :dataset="datasetToEdit"
-      @close="closeEditDatasetModal"
-      @dataset-updated="onDatasetUpdated"
+    <EditModelModal
+      :isOpen="isEditModelModalOpen"
+      :model="modelToEdit"
+      @close="closeEditModelModal"
+      @model-updated="onModelUpdated"
     />
   </div>
 </template>
@@ -216,28 +192,21 @@ import { userPreferencesStore } from '@/stores/userPreferencesStore.js';
 import ActionMenu from '@/components/utils/ActionMenu.vue';
 import ConfirmationModal from '@/components/utils/ConfirmationModal.vue';
 import SortIcon from '@/components/utils/SortIcon.vue';
-import AddDatasetModal from '@/components/datasets/AddDatasetModal.vue';
-import EditDatasetModal from '@/components/datasets/EditDatasetModal.vue';
+import EditModelModal from '@/components/models/EditModelModal.vue';
 
 const router = useRouter();
 const route = useRoute();
-const datasets = ref([]);
+const models = ref([]);
 const isLoading = ref(true);
 const activeActionsMenu = ref(null);
 const isDeleteModalOpen = ref(false);
-const datasetToDelete = ref(null);
+const modelToDelete = ref(null);
 const deleteModalMessage = ref('');
-const isAddDatasetModalOpen = ref(false);
-const isEditDatasetModalOpen = ref(false);
-const datasetToEdit = ref(null);
+const isAddModelModalOpen = ref(false);
+const isEditModelModalOpen = ref(false);
+const modelToEdit = ref(null);
 
 const isSearchTransitioning = ref(false);
-
-const isShareModalOpen = ref(false);
-const datasetToShare = ref(null);
-const shareModalAction = ref(''); // 'publish' o 'unpublish'.
-const shareModalMessage = ref('');
-const shareModalTitle = ref('');
 
 const preferencesStore = userPreferencesStore();
 const authStore = useAuthStore();
@@ -245,8 +214,8 @@ const isAdmin = computed(() => authStore.user?.is_admin || false);
 
 const currentPage = ref(1);
 const pageSize = ref(5);
-const totalDatasets = ref(0);
-const totalPages = computed(() => Math.ceil(totalDatasets.value / pageSize.value) || 1);
+const totalModels = ref(0);
+const totalPages = computed(() => Math.ceil(totalModels.value / pageSize.value) || 1);
 const sortBy = ref('created_at');
 const sortOrder = ref('desc');
 
@@ -261,7 +230,7 @@ const handlePageSizeChange = async () => {
     isSearchTransitioning.value = true;
     
     // Guardar el nuevo tamaño de página en las preferencias del usuario.
-    preferencesStore.setDatasetPageSize(pageSize.value);
+    preferencesStore.setModelPageSize(pageSize.value);
     
     // Calcular la primera entrada de la página actual con el tamaño antiguo.
     const currentSize = pageSize.value; // Guardar el tamaño actual.
@@ -272,13 +241,13 @@ const handlePageSizeChange = async () => {
     currentPage.value = newPage;
     
     // Asegurar que no exceda el número total de páginas.
-    const newTotalPages = Math.ceil(totalDatasets.value / currentSize) || 1;
+    const newTotalPages = Math.ceil(totalModels.value / currentSize) || 1;
     if (currentPage.value > newTotalPages) {
       currentPage.value = newTotalPages;
     }
     
     // Recargar datos con el nuevo tamaño de página.
-    await fetchDatasets();
+    await fetchModels();
   } catch (error) {
     console.error("Error while changing page size: ", error);
   } finally {
@@ -289,9 +258,7 @@ const handlePageSizeChange = async () => {
   }
 };
 
-
 const setSortField = async (field) => {
-
   isSearchTransitioning.value = true;
   
   if (sortBy.value === field) {
@@ -300,17 +267,16 @@ const setSortField = async (field) => {
   } else {
     // Si no es el mismo campo, establecer el nuevo campo y la dirección por defecto.
     sortBy.value = field;
-    // Por defecto ordenar descendentemente (excepto para nombre).
+    // Por defecto ordenar descendentemente (excepto para nombres).
     sortOrder.value = (field === 'name' || field === 'username') ? 'asc' : 'desc';
   }
   
   // Recargar datos con la nueva ordenación.
-  await fetchDatasets();
+  await fetchModels();
 };
 
 // Manejar la búsqueda con debounce.
 const handleSearch = () => {
-
   isSearchTransitioning.value = true;
   
   // Limpiar el timeout anterior si existe.
@@ -319,12 +285,12 @@ const handleSearch = () => {
   }
   
   // Esperar a que el usuario termine de escribir.
-  searchTimeout.value = setTimeout( async () => {
+  searchTimeout.value = setTimeout(async () => {
     // Resetear a la página 1 al buscar.
     currentPage.value = 1;
     
     // Recargar datos con la nueva búsqueda.
-    await fetchDatasets();
+    await fetchModels();
   }, 300);
 };
 
@@ -334,10 +300,10 @@ const clearSearch = async () => {
   
   searchQuery.value = '';
 
-  await fetchDatasets();
+  await fetchModels();
 };
 
-const fetchDatasets = async () => {
+const fetchModels = async () => {
   isLoading.value = true;
   closeActionsMenu();
   
@@ -350,7 +316,7 @@ const fetchDatasets = async () => {
 
     const skip = (currentPage.value - 1) * pageSize.value;
     // Construir URL con todos los parámetros.
-    let url = `/datasets/?skip=${skip}&limit=${pageSize.value}&sort_by=${sortBy.value}&sort_order=${sortOrder.value}`;
+    let url = `/classifiers/?skip=${skip}&limit=${pageSize.value}&sort_by=${sortBy.value}&sort_order=${sortOrder.value}`;
     
     // Añadir parámetro de búsqueda si se está buscando.
     if (searchQuery.value.trim()) {
@@ -359,20 +325,20 @@ const fetchDatasets = async () => {
     
     const response = await axios.get(url);
     
-    // Procesar la respuesta
-    if (response.data && Array.isArray(response.data.datasets)) {
-      datasets.value = response.data.datasets;
-      totalDatasets.value = response.data.count || datasets.value.length;
+    // Procesar la respuesta.
+    if (response.data && Array.isArray(response.data.classifiers)) {
+      models.value = response.data.classifiers;
+      totalModels.value = response.data.count || models.value.length;
     } else {
-      datasets.value = [];
-      totalDatasets.value = 0;
+      models.value = [];
+      totalModels.value = 0;
       notifyInfo("Sin datos",
-      "No se encontraron conjuntos de imágenes para mostrar.");
+      "No se encontraron modelos para mostrar.");
     }
     
     return response;
   } catch (error) {
-    console.error('Error while fetching datasets: ', error);
+    console.error('Error while fetching models: ', error);
     handleApiError(error);
   } finally {
     isLoading.value = false;
@@ -380,9 +346,7 @@ const fetchDatasets = async () => {
   }
 };
 
-
 const changePage = async (page) => {
-
   isSearchTransitioning.value = true;
   
   if (page < 1 || page > totalPages.value) {
@@ -393,7 +357,7 @@ const changePage = async (page) => {
   currentPage.value = page;
   
   try {
-    await fetchDatasets();
+    await fetchModels();
   } catch (error) {
     console.error('Error while changing pages: ', error);
   } finally {
@@ -401,9 +365,7 @@ const changePage = async (page) => {
   }
 };
 
-// Controlar menú de accione.
-const toggleActionsMenu = (datasetId, event) => {
-  // Detener la propagación del evento para evitar que se active viewDataset.
+const toggleActionsMenu = (modelId, event) => {
   if (event) {
     event.stopPropagation();
   }
@@ -417,12 +379,12 @@ const toggleActionsMenu = (datasetId, event) => {
   }
 
   // Si se hace clic en el mismo botón, cerrar el menú.
-  if (activeActionsMenu.value === datasetId) {
+  if (activeActionsMenu.value === modelId) {
     activeActionsMenu.value = null;
   } else {
     // Activar el menú.
-    activeActionsMenu.value = datasetId;
-    const newButton = document.querySelector(`.action-button[data-item-id="${datasetId}"]`);
+    activeActionsMenu.value = modelId;
+    const newButton = document.querySelector(`.action-button[data-item-id="${modelId}"]`);
     if (newButton) {
       newButton.setAttribute('data-active', 'true');
     }
@@ -437,87 +399,85 @@ const closeActionsMenu = () => {
   });
 };
 
-const getMenuPosition = (datasetId) => {
+const getMenuPosition = (modelId) => {
   return { 
     top: true,
     right: false
   };
 };
 
-const showAddDatasetModal = () => {
-  isAddDatasetModalOpen.value = true;
+const showAddModel = () => {
+  isAddModelModalOpen.value = true;
   closeActionsMenu();
 };
 
-const closeAddDatasetModal = () => {
-  isAddDatasetModalOpen.value = false;
+const closeAddModelModal = () => {
+  isAddModelModalOpen.value = false;
 };
 
-const onDatasetAdded = async (newDataset) => {
-  await fetchDatasets();
+const onModelAdded = async (newModel) => {
+  await fetchModels();
 };
 
-const viewDataset = (dataset) => {
+const viewModel = (model) => {
   closeActionsMenu();
-  router.push(`/dataset/${dataset.id}`);
+  router.push(`/model/${model.id}`);
 };
 
-const editDataset = (dataset) => {
+const editModel = (model) => {
   closeActionsMenu();
-  datasetToEdit.value = dataset;
-  isEditDatasetModalOpen.value = true;
+  modelToEdit.value = model;
+  isEditModelModalOpen.value = true;
 };
 
-const closeEditDatasetModal = () => {
-  isEditDatasetModalOpen.value = false;
-  datasetToEdit.value = null;
+const closeEditModelModal = () => {
+  isEditModelModalOpen.value = false;
+  modelToEdit.value = null;
 };
 
-const onDatasetUpdated = async (updatedDataset) => {
+const onModelUpdated = async (updatedModel) => {
   // Se recarga en estos casos:
   // 1. Si hay una búsqueda activa.
   // 2. Si se modificó un campo que afecta a la ordenación actual.
   if (
     searchQuery.value.trim() || 
-    // Verificar si el campo por el que se ordena se ha modificado.
-    (updatedDataset.hasOwnProperty(sortBy.value) && 
-     sortBy.value !== 'image_count' &&
-     sortBy.value !== 'category_count')
+    (updatedModel.hasOwnProperty(sortBy.value) && 
+     sortBy.value !== 'status')
   ) {
     const paginaActual = currentPage.value;
     
     // Recargar la tabla en ese caso.
-    await fetchDatasets();
+    await fetchModels();
     
-    // Si después de recargar no hay datasets en la página actual pero hay datasets en total,
+    // Si después de recargar no hay modelos en la página actual pero hay modelos en total,
     // retroceder a la página anterior.
-    if (datasets.value.length === 0 && totalDatasets.value > 0 && paginaActual > 1) {
+    if (models.value.length === 0 && totalModels.value > 0 && paginaActual > 1) {
       currentPage.value = paginaActual - 1;
-      await fetchDatasets();
+      await fetchModels();
     }
   } else {
     // Sin búsqueda activa y sin cambios en el campo de ordenación,
-    // se puede actualizar sólo el dataset en la lista local.
-    const index = datasets.value.findIndex(d => d.id === updatedDataset.id);
+    // se puede actualizar sólo el modelo en la lista local.
+    const index = models.value.findIndex(m => m.id === updatedModel.id);
     if (index !== -1) {
-      datasets.value[index] = updatedDataset;
+      models.value[index] = updatedModel;
     } else {
-      // Si no se encuentra el dataset, recargamos todo.
-      await fetchDatasets();
+      // Si no se encuentra el modelo, recargamos todo.
+      await fetchModels();
     }
   }
 };
 
-const confirmDeleteDataset = (dataset) => {
+const confirmDeleteModel = (model) => {
   closeActionsMenu();
-  datasetToDelete.value = dataset;
-  deleteModalMessage.value = `Estás a punto de eliminar el conjunto de imágenes. Esta acción eliminará todas las imágenes y etiquetas asociadas y no se puede deshacer.`;
+  modelToDelete.value = model;
+  deleteModalMessage.value = `Estás a punto de eliminar el modelo. Esta acción no se puede deshacer.`;
   isDeleteModalOpen.value = true;
 };
 
 const cancelDelete = () => {
   isDeleteModalOpen.value = false;
-  datasetToDelete.value = null;
+  modelToDelete.value = null;
   activeActionsMenu.value = null;
   
   setTimeout(() => {
@@ -528,109 +488,40 @@ const cancelDelete = () => {
   }, 100);
 };
 
-const deleteDataset = async () => {
-  if (!datasetToDelete.value) return;
+const deleteModel = async () => {
+  if (!modelToDelete.value) return;
   
   try {
-    await axios.delete(`/datasets/${datasetToDelete.value.id}`);
+    await axios.delete(`/classifiers/${modelToDelete.value.id}`);
     
     // Si se está en una página con un solo elemento (el cuál se está eliminando)
     // y no es la primera página, se debe volver a la página anterior.
-    if (datasets.value.length === 1 && currentPage.value > 1) {
+    if (models.value.length === 1 && currentPage.value > 1) {
       currentPage.value--;
     }
     
     // Actualizar la lista después de eliminar.
-    await fetchDatasets();
+    await fetchModels();
     
-    // Si después de actualizar no hay datasets en la página actual pero hay datasets en total,
+    // Si después de actualizar no hay modelos en la página actual pero hay modelos en total,
     // puede que se necesite ajustar la página actual de nuevo.
-    if (datasets.value.length === 0 && totalDatasets.value > 0) {
+    if (models.value.length === 0 && totalModels.value > 0) {
       // Calcular el número máximo de páginas después de la eliminación.
-      const maxPage = Math.ceil(totalDatasets.value / pageSize.value);
+      const maxPage = Math.ceil(totalModels.value / pageSize.value);
       if (currentPage.value > maxPage) {
         currentPage.value = maxPage;
-        await fetchDatasets();
+        await fetchModels();
       }
     }
     
-    notifySuccess("Conjunto de imágenes eliminado", 
-    `Se ha eliminado el conjunto ${datasetToDelete.value.name} con éxito.`);
+    notifySuccess("Modelo eliminado", 
+    `Se ha eliminado el modelo ${modelToDelete.value.name} con éxito.`);
   } catch (error) {
-    console.error('Error while deleting dataset: ', error);
+    console.error('Error while deleting model: ', error);
     handleApiError(error);
   } finally {
     isDeleteModalOpen.value = false;
-    datasetToDelete.value = null;
-  }
-};
-
-const confirmPublishDataset = (dataset) => {
-  closeActionsMenu();
-  datasetToShare.value = dataset;
-  shareModalAction.value = 'publish';
-  shareModalTitle.value = `Compartir conjunto de imágenes`;
-  shareModalMessage.value = 'Al compartir este conjunto de imágenes, será visible para todos los usuarios de la plataforma. ¿Deseas continuar?';
-  isShareModalOpen.value = true;
-};
-
-const confirmUnpublishDataset = (dataset) => {
-  closeActionsMenu();
-  datasetToShare.value = dataset;
-  shareModalAction.value = 'unpublish';
-  shareModalTitle.value = `Privatizar conjunto de imágenes`;
-  shareModalMessage.value = 'Al dejar de compartir este conjunto de imágenes, ya no será visible para otros usuarios. ¿Deseas continuar?';
-  isShareModalOpen.value = true;
-};
-
-const cancelShareAction = () => {
-  isShareModalOpen.value = false;
-  datasetToShare.value = null;
-  shareModalAction.value = '';
-};
-
-const processShareAction = async () => {
-  if (!datasetToShare.value) return;
-  
-  try {
-    // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
-    const hasToken = !!localStorage.getItem('token') || !!authStore.token;
-    if(hasToken){
-      authStore.setAuthHeader();
-    }
-
-    // Preparar los datos según la acción (publicar o despublicar).
-    const isPublic = shareModalAction.value === 'publish';
-    
-    // Actualizar el dataset.
-    const response = await axios.patch(`/datasets/${datasetToShare.value.id}`, {
-      is_public: isPublic
-    });
-    
-    // Determinar si es necesario recargar toda la tabla.
-    // Se recarga en estos casos:
-    // 1. Si hay una búsqueda activa.
-    // 2. Si se está ordenando por is_public (ya que el cambio afecta la ordenación).
-    if (searchQuery.value.trim() || sortBy.value === 'is_public') {
-      // Recargar todos los datos.
-      await fetchDatasets();
-    } else {
-      // Solo actualizar el dataset en la lista local.
-      const index = datasets.value.findIndex(d => d.id === datasetToShare.value.id);
-      if (index !== -1) {
-        datasets.value[index].is_public = isPublic;
-      }
-    }
-    
-    notifySuccess(isPublic ? "Conjunto compartido" : "Conjunto no compartido", 
-    `El conjunto ${datasetToShare.value.name} se ha ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
-  } catch (error) {
-    console.error('Error while updating dataset sharing status: ', error);
-    handleApiError(error);
-  } finally {
-    isShareModalOpen.value = false;
-    datasetToShare.value = null;
-    shareModalAction.value = '';
+    modelToDelete.value = null;
   }
 };
 
@@ -661,15 +552,15 @@ const handleApiError = (error) => {
           router.push('/');
         } else if (data.detail && data.detail.includes("privileges")) {
           notifyError("Acceso denegado", 
-          "No tienes permisos para realizar esta acción.");
+          "No tienes permisos suficientes para realizar esta acción.");
         } else {
           notifyError("Acceso denegado", 
-            "No tienes permiso para realizar esta acción.");
+          "No tienes permisos suficientes para realizar esta acción.");
         }
         break;
       case 404:
-        notifyError("Conjunto de imágenes no encontrado",
-        "El conjunto solicitado no existe o ha sido eliminado.");
+        notifyError("Modelo no encontrado",
+        "El modelo solicitado no existe o ha sido eliminado.");
         break;
       default:
         notifyError("Error en el servidor",
@@ -681,15 +572,14 @@ const handleApiError = (error) => {
     "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
   } else {
     notifyError("Error inesperado",
-    "Ha ocurrido un problema al cargar los datos de los conjuntos de imágenes.");
+    "Ha ocurrido un problema al cargar los datos de los modelos.");
   }
 };
-
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
   
-  // Convertir UTC (como la almacena de base de datos) a hora local.
+  // Convertir UTC a fecha local.
   const date = new Date(dateString);
   
   // Formatear fecha: DD/MM/YYYY HH:MM.
@@ -700,6 +590,34 @@ const formatDate = (dateString) => {
     hour: '2-digit',
     minute: '2-digit'
   }).format(date);
+};
+
+const getStatusClass = (status) => {
+  switch(status) {
+    case 'trained':
+      return 'status-badge verified';
+    case 'training':
+      return 'status-badge training';
+    case 'failed':
+      return 'status-badge failed';
+    case 'not_trained':
+    default:
+      return 'status-badge not-trained';
+  }
+};
+
+const getStatusLabel = (status) => {
+  switch(status) {
+    case 'trained':
+      return 'Entrenado';
+    case 'training':
+      return 'Entrenando';
+    case 'failed':
+      return 'Fallido';
+    case 'not_trained':
+    default:
+      return 'No entrenado';
+  }
 };
 
 const truncateText = (text, maxLength) => {
@@ -713,37 +631,12 @@ const handleScroll = () => {
   }
 };
 
-const getDatasetMenuActions = (dataset) => {
-  // Acciones básicas que siempre estarán presentes.
+const getModelMenuActions = (model) => {
   const baseActions = [
     { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
-    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' }
+    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' },
+    { label: 'Eliminar', event: 'delete', icon: ['fas', 'trash-alt'], class: 'delete' }
   ];
-  
-  // Acción de compartir/no compartir según el estado actual.
-  if (dataset.is_public) {
-    baseActions.push({ 
-      label: 'Privatizar', 
-      event: 'unpublish', 
-      icon: ['fas', 'lock'], 
-      class: 'unpublish' 
-    });
-  } else {
-    baseActions.push({ 
-      label: 'Compartir', 
-      event: 'publish', 
-      icon: ['fas', 'globe'], 
-      class: 'publish' 
-    });
-  }
-  
-  // Acción de eliminar (siempre al final).
-  baseActions.push({ 
-    label: 'Eliminar', 
-    event: 'delete', 
-    icon: ['fas', 'trash-alt'], 
-    class: 'delete' 
-  });
   
   return baseActions;
 };
@@ -754,7 +647,7 @@ onMounted(async () => {
     isLoading.value = true;
     
     // Restaurar preferencia de tamaño de página si existe.
-    const savedPageSize = preferencesStore.datasetPageSize;
+    const savedPageSize = preferencesStore.modelPageSize;
     if (savedPageSize && pageSizeOptions.includes(parseInt(savedPageSize))) {
       pageSize.value = parseInt(savedPageSize);
     }
@@ -773,7 +666,7 @@ onMounted(async () => {
       currentPage.value = parseInt(urlPage);
     }
     
-    if (urlSort && ['name', 'created_at', 'image_count', 'category_count', 'is_public', 'username'].includes(urlSort)) {
+    if (urlSort && ['name', 'created_at', 'status', 'username'].includes(urlSort)) {
       sortBy.value = urlSort;
     }
     
@@ -785,7 +678,7 @@ onMounted(async () => {
       searchQuery.value = urlSearch;
     }
     
-    await fetchDatasets();
+    await fetchModels();
   } catch (error) {
     console.error("Error while initializing: ", error);
   } finally {
@@ -822,7 +715,7 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
 <style scoped src="@/assets/styles/search.css"></style>
 <style scoped src="@/assets/styles/table.css"></style>
 <style scoped>
-.datasets-view {
+.models-view {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -830,7 +723,7 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   padding-bottom: 40px;
 }
 
-.datasets-header {
+.models-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -839,13 +732,13 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   gap: 15px;
 }
 
-.datasets-header h1 {
+.models-header h1 {
   color: #333;
   margin: 0;
   font-size: 1.8rem;
 }
 
-.add-dataset-button {
+.add-model-button {
   width: auto;
   margin-top: 0;
   padding: 10px 20px;
@@ -855,7 +748,7 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   margin-right: 8px;
 }
 
-.datasets-content {
+.models-content {
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -867,31 +760,31 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   overflow-x: auto;
 }
 
-.dataset-row {
+.model-row {
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.dataset-row:hover {
+.model-row:hover {
   background-color: #f8f9fa;
 }
 
 /* Anchura de columnas y truncamiento de texto */
 /* Columna de usuario */
-.datasets-table th:nth-child(1), 
-.datasets-table td:nth-child(1) {
+.models-table th:nth-child(1), 
+.models-table td:nth-child(1) {
   max-width: 140px;
 }
 
 /* Columna de nombre */
-.datasets-table th:nth-child(2), 
-.datasets-table td:nth-child(2) {
+.models-table th:nth-child(2), 
+.models-table td:nth-child(2) {
   max-width: 180px;
 }
 
 /* Columna de descripción */
-.datasets-table th:nth-child(3), 
-.datasets-table td:nth-child(3) {
+.models-table th:nth-child(3), 
+.models-table td:nth-child(3) {
   max-width: 150px;
 }
 
@@ -902,43 +795,34 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
   display: block;
 }
 
-/* Columna de compartido */
-.text-public {
-  color: #0066cc;
-}
-
-.text-private {
-  color: #495057;
-}
-
-/* Diseño responsive */
+/* Responsive */
 @media (max-width: 768px) {
-  .datasets-view {
+  .models-view {
     padding: 10px;
   }
   
-  .datasets-header {
+  .models-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
   
-  .add-dataset-button {
+  .add-model-button {
     width: 100%;
   }
   
-  .datasets-table th,
-  .datasets-table td {
+  .models-table th,
+  .models-table td {
     padding: 8px 6px;
   }
   
-  .datasets-table th:nth-child(2),
-  .datasets-table td:nth-child(2) {
+  .models-table th:nth-child(2),
+  .models-table td:nth-child(2) {
     max-width: 110px;
   }
   
-  .datasets-table th:nth-child(3),
-  .datasets-table td:nth-child(3) {
+  .models-table th:nth-child(3),
+  .models-table td:nth-child(3) {
     max-width: 80px;
   }
 }

@@ -492,23 +492,31 @@ const onImageUpdated = async (updatedImage) => {
   saveScrollPosition();
   
   try {
-    // Si no hay búsqueda o filtros que afecten a la visibilidad, solo actualizar la imagen en la lista.
-    if (!searchQuery.value.trim() && (sortBy.value === 'created_at' || !updatedImage.hasOwnProperty(sortBy.value))) {
-      // Encontrar la imagen en el array y actualizarla.
+    // Si hay búsqueda o la ordenación está basada en un campo actualizado.
+    if (searchQuery.value.trim() || (sortBy.value !== 'created_at' && updatedImage.hasOwnProperty(sortBy.value))) {
+      const paginaActual = currentPage.value;
+      
+      // Recargar datos con la nueva búsqueda.
+      await fetchImages(true);
+      
+      // Si después de recargar no hay imágenes en la página actual pero hay imágenes en total,
+      // retroceder a la página anterior.
+      if (images.value.length === 0 && totalImages.value > 0 && paginaActual > 1) {
+        currentPage.value = paginaActual - 1;
+        await fetchImages(true);
+      }
+    } else {
+      // Sin búsqueda activa y sin cambios en el campo de ordenación,
+      // se puede actualizar sólo la imagen en la lista local.
       const index = images.value.findIndex(img => img.id === updatedImage.id);
       if (index !== -1) {
-        // Actualizar solo esa imagen específica.
         images.value[index] = updatedImage;
-        // No recargar la tabla completa, solo emitir el evento para actualizar estadísticas.
-        emit('refresh-dataset-stats');
-        // Restaurar la posición del scroll.
         restoreScrollPosition();
-        return;
+      } else {
+        // Si no se encuentra la imagen, recargamos todo.
+        await fetchImages(true);
       }
     }
-    
-    // Si hay búsqueda o la ordenación está basada en un campo actualizado, recargar con la posición guardada.
-    await fetchImages(true);
     
     // Informar al componente padre que se han actualizado los datos.
     emit('refresh-dataset-stats');
