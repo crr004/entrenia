@@ -65,6 +65,15 @@ vi.mock('@/components/utils/ConfirmationModal.vue', () => ({
   }
 }))
 
+// Añadir el mock del componente ReadOnlyImagesTable
+vi.mock('@/components/images/ReadOnlyImagesTable.vue', () => ({
+  default: {
+    name: 'ReadOnlyImagesTable',
+    props: ['datasetId'],
+    template: '<div class="mock-readonly-images-table"></div>'
+  }
+}))
+
 // Datos mock para las pruebas
 const mockDataset = {
   id: '1',
@@ -109,6 +118,29 @@ const server = setupServer(
       image_count: 10,
       category_count: 3,
       is_public: false
+    }, { status: 200 })
+  }),
+
+  // Añadir handler para imágenes de datasets públicos
+  http.get('/images/public-dataset/:id', () => {
+    return HttpResponse.json({
+      images: [
+        {
+          id: '101',
+          name: 'imagen1.jpg',
+          thumbnail: 'base64string',
+          label: 'Categoría 1',
+          created_at: '2023-03-16T10:00:00Z'
+        },
+        {
+          id: '102',
+          name: 'imagen2.jpg',
+          thumbnail: 'base64string',
+          label: 'Categoría 2',
+          created_at: '2023-03-16T11:00:00Z'
+        }
+      ],
+      count: 2
     }, { status: 200 })
   })
 )
@@ -409,5 +441,21 @@ describe('PublicDatasetDetailView.vue', () => {
     // pero podemos comprobar que devuelve un string no vacío
     expect(typeof formattedDate).toBe('string')
     expect(formattedDate.length).toBeGreaterThan(0)
+  })
+
+  // Test 11: Mostrar tabla de imágenes del dataset público
+  it('muestra la tabla de imágenes del dataset público', async () => {
+    const wrapper = mount(PublicDatasetDetailView, {
+      global: globalOptions
+    })
+    
+    // Esperar a que se carguen los datos
+    await vi.waitFor(() => {
+      expect(wrapper.vm.isLoading).toBe(false)
+    })
+    
+    // Verificar que la tabla de imágenes existe
+    expect(wrapper.find('.images-section').exists()).toBe(true)
+    expect(wrapper.find('.mock-readonly-images-table').exists()).toBe(true)
   })
 })

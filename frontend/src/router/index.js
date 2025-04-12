@@ -43,7 +43,7 @@ const routes = [
     path: '/dataset/:id',
     name: 'dataset-detail',
     component: () => import('../views/DatasetDetailView.vue'),
-    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Detalle del conjunto de imágenes' }
+    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Detalles del conjunto de imágenes' }
   },
   {
     path: '/explore',
@@ -55,7 +55,7 @@ const routes = [
     path: '/explore/:id',
     name: 'public-dataset-detail',
     component: () => import('../views/PublicDatasetDetailView.vue'),
-    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Detalle del conjunto de imágenes' }
+    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Detalles del conjunto de imágenes' }
   },
   {
     path: '/my-models',
