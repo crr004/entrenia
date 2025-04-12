@@ -2,7 +2,12 @@ import uuid
 from datetime import datetime, timezone
 import logging
 import os
-from typing import Tuple, List, Optional, Dict
+from typing import Tuple, List, Optional, Dict, Any
+import base64
+import io
+import numpy as np
+from PIL import Image as PILImage
+import tensorflow as tf
 
 from sqlalchemy import or_, desc, asc, func
 from sqlmodel import select
@@ -15,6 +20,8 @@ from app.models.classifiers import (
     ClassifierTrainingStatus,
 )
 from app.models.users import User
+from app.tasks.celery_app import train_model
+from app.ml.model_utils import load_model, load_model_metadata
 
 logger = logging.getLogger(__name__)
 MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
@@ -24,7 +31,15 @@ MODELS_DIR = os.path.join(MEDIA_ROOT, "models")
 async def get_classifier_by_id(
     *, session: AsyncSession, id: uuid.UUID
 ) -> Optional[Classifier]:
-    """Obtiene un clasificador por su ID."""
+    """Obtiene un clasificador por su ID.
+
+    Args:
+        session: Sesión de base de datos.
+        id: ID del clasificador.
+
+    Returns:
+        Classifier: Clasificador encontrado o None si no existe.
+    """
 
     stmt = select(Classifier).where(Classifier.id == id)
     result = await session.execute(stmt)
@@ -34,7 +49,16 @@ async def get_classifier_by_id(
 async def get_classifier_by_userid_and_name(
     *, session: AsyncSession, user_id: uuid.UUID, name: str
 ) -> Optional[Classifier]:
-    """Obtiene un clasificador por el ID del usuario y su nombre."""
+    """Obtiene un clasificador por el ID del usuario y su nombre.
+
+    Args:
+        session: Sesión de base de datos.
+        user_id: ID del usuario propietario.
+        name: Nombre del clasificador.
+
+    Returns:
+        Classifier: Clasificador encontrado o None si no existe.
+    """
 
     stmt = select(Classifier).where(
         Classifier.user_id == user_id, Classifier.name == name
@@ -46,7 +70,16 @@ async def get_classifier_by_userid_and_name(
 async def create_classifier(
     *, session: AsyncSession, user_id: uuid.UUID, classifier_in: ClassifierCreate
 ) -> Classifier:
-    """Crea un nuevo clasificador en la base de datos."""
+    """Crea un nuevo clasificador en la base de datos.
+
+    Args:
+        session: Sesión de base de datos.
+        user_id: ID del usuario propietario.
+        classifier_in: Datos del clasificador a crear.
+
+    Returns:
+        Classifier: Clasificador creado.
+    """
 
     classifier_data = classifier_in.model_dump()
 
@@ -56,9 +89,16 @@ async def create_classifier(
     ):
         classifier_data["model_parameters"] = {}
 
-    classifier_data["model_parameters"]["learning_rate"] = 0.001
-    classifier_data["model_parameters"]["batch_size"] = 32
-    classifier_data["model_parameters"]["epochs"] = 10
+    default_params = {
+        "learning_rate": 0.001,
+        "epochs": 20,
+        "batch_size": 32,
+        "validation_split": 0.2,
+    }
+
+    for param, default_value in default_params.items():
+        if param not in classifier_data["model_parameters"]:
+            classifier_data["model_parameters"][param] = default_value
 
     classifier = Classifier(
         user_id=user_id,
@@ -67,9 +107,27 @@ async def create_classifier(
         **classifier_data,
     )
 
+    classifier_id = classifier.id
+    dataset_id = classifier.dataset_id
+    classifier_architecture = classifier.architecture
+    model_parameters = classifier.model_parameters
+
+    architecture = classifier_data["architecture"]
+    if architecture == "xception_mini":
+        image_size = [180, 180]
+
+    model_parameters["image_size"] = image_size
+
     session.add(classifier)
     await session.commit()
     await session.refresh(classifier)
+
+    await start_training_task(
+        classifier_id=classifier_id,
+        dataset_id=dataset_id,
+        classifier_architecture=classifier_architecture,
+        model_parameters=model_parameters,
+    )
 
     return classifier
 
@@ -77,7 +135,16 @@ async def create_classifier(
 async def update_classifier(
     *, session: AsyncSession, classifier: Classifier, classifier_data: ClassifierUpdate
 ) -> Classifier:
-    """Actualiza los datos de un clasificador."""
+    """Actualiza los datos de un clasificador.
+
+    Args:
+        session: Sesión de base de datos.
+        classifier: Clasificador a actualizar.
+        classifier_data: Datos actualizados del clasificador.
+
+    Returns:
+        Classifier: Clasificador actualizado.
+    """
 
     classifier_update = classifier_data.model_dump(exclude_unset=True)
     classifier.sqlmodel_update(classifier_update)
@@ -97,7 +164,18 @@ async def update_classifier_training_status(
     metrics: Optional[Dict[str, float]] = None,
     error_message: Optional[str] = None,
 ) -> Optional[Classifier]:
-    """Actualiza el estado de entrenamiento y las métricas de un clasificador."""
+    """Actualiza el estado de entrenamiento y las métricas de un clasificador.
+
+    Args:
+        session: Sesión de base de datos.
+        classifier_id: ID del clasificador.
+        status: Nuevo estado de entrenamiento.
+        metrics: Métricas opcionales.
+        error_message: Mensaje de error opcional.
+
+    Returns:
+        Classifier: Clasificador actualizado o None si no se encontró.
+    """
 
     classifier = await get_classifier_by_id(session=session, id=classifier_id)
     if not classifier:
@@ -119,15 +197,40 @@ async def update_classifier_training_status(
 
 
 async def delete_classifier(*, session: AsyncSession, classifier: Classifier) -> None:
-    """Elimina un clasificador de la base de datos y sus archivos asociados."""
+    """Elimina un clasificador de la base de datos y sus archivos asociados.
 
-    # Eliminar archivo del modelo si existe.
-    if classifier.file_path and os.path.exists(classifier.file_path):
+    Args:
+        session: Sesión de base de datos.
+        classifier: Clasificador a eliminar.
+
+    Returns:
+        None
+    """
+
+    # Eliminar archivos del modelo si existen.
+    if classifier.file_path:
         try:
-            os.remove(classifier.file_path)
+            # Directorio que contiene el modelo y sus metadatos.
+            model_dir = os.path.join(MEDIA_ROOT, classifier.file_path)
+            if os.path.exists(model_dir):
+                # Eliminar el archivo del modelo.
+                model_file = os.path.join(model_dir, "model.keras")
+                if os.path.exists(model_file):
+                    os.remove(model_file)
+
+                # Eliminar el archivo de metadatos.
+                metadata_file = os.path.join(model_dir, "metadata.json")
+                if os.path.exists(metadata_file):
+                    os.remove(metadata_file)
+
+                # Eliminar el directorio.
+                try:
+                    os.rmdir(model_dir)
+                except OSError as e:
+                    logger.warning(f"Error deleting directory at {model_dir}: {str(e)}")
         except Exception as e:
             logger.error(
-                f"Error deleting model file: {classifier.file_path} - {str(e)}"
+                f"Error deleting model files at {model_dir}: {str(e)}", exc_info=True
             )
 
     # Eliminar el clasificador de la base de datos.
@@ -253,3 +356,160 @@ async def get_classifiers_sorted(
     ]
 
     return classifiers_with_usernames, total_count
+
+
+async def start_training_task(
+    classifier_id: uuid.UUID,
+    dataset_id: uuid.UUID,
+    classifier_architecture: str,
+    model_parameters: Dict[str, Any],
+) -> bool:
+    """Inicia una tarea para entrenar un clasificador.
+
+    Args:
+        classifier_id: ID del clasificador.
+        dataset_id: ID del dataset.
+        classifier_architecture: Arquitectura del modelo.
+        model_parameters: Parámetros de entrenamiento.
+
+    Returns:
+        bool: True si la tarea se inició correctamente, False en caso contrario.
+    """
+
+    try:
+        train_model.delay(
+            classifier_id=str(classifier_id),
+            dataset_id=str(dataset_id),
+            classifier_architecture=classifier_architecture,
+            model_parameters=model_parameters,
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Error while initializing training for {classifier_id}: {str(e)}")
+        return False
+
+
+async def perform_inference(
+    *, classifier: Classifier, image_files: List[bytes], filenames: List[str]
+) -> Dict[str, Any]:
+    """Realiza inferencia usando un modelo entrenado en un lote de imágenes.
+
+    Args:
+        classifier: Clasificador con modelo entrenado.
+        image_files: Lista con los datos binarios de las imágenes.
+        filenames: Lista con los nombres de los archivos de imagen.
+
+    Returns:
+        Dict: Resultados de la inferencia para cada imagen.
+    """
+
+    if (
+        not classifier.file_path
+        or classifier.status != ClassifierTrainingStatus.TRAINED
+    ):
+        raise ValueError("Model is not trained or file path is missing")
+
+    # Preparar rutas de archivos.
+    model_dir = os.path.join(MEDIA_ROOT, classifier.file_path)
+    model_path = os.path.join(model_dir, "model.keras")
+
+    # Cargar metadatos del modelo.
+    try:
+        metadata = load_model_metadata(model_dir)
+    except Exception as e:
+        logger.error(f"Error loading model metadata: {str(e)}", exc_info=True)
+        raise ValueError(f"Error loading model metadata: {str(e)}")
+
+    # Obtener mapping de clases y parámetros de entrenamiento.
+    class_mapping = metadata.get("class_mapping", {})
+    image_size = metadata.get("train_params", {}).get("image_size", [180, 180])
+    num_classes = len(class_mapping)
+
+    # Cargar el modelo.
+    try:
+        tf.keras.backend.clear_session()  # Limpiar sesión para evitar problemas.
+        model = load_model(model_path)
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}", exc_info=True)
+        raise ValueError(f"Error loading model: {str(e)}")
+
+    # Función para preprocesar imágenes.
+    def preprocess_image(img_data: bytes) -> np.ndarray:
+        try:
+            img = PILImage.open(io.BytesIO(img_data))
+            img = img.convert("RGB")  # Asegurar que sea RGB.
+            img = img.resize(tuple(image_size))
+            img_array = np.array(img)
+            img_array = img_array / 255.0  # Normalizar a [0,1].
+            return img_array
+        except Exception as e:
+            logger.error(f"Error preprocessing image: {str(e)}", exc_info=True)
+            raise ValueError(f"Error preprocessing image: {str(e)}")
+
+    # Procesar cada imagen.
+    results = []
+    for i, img_data in enumerate(image_files):
+        filename = filenames[i] if i < len(filenames) else f"image_{i}.jpg"
+
+        try:
+            # Preprocesar imagen.
+            img_array = preprocess_image(img_data)
+
+            # Añadir batch dimension.
+            img_batch = np.expand_dims(img_array, 0)
+
+            # Realizar predicción.
+            predictions = model.predict(img_batch, verbose=0)
+
+            # Formatear resultados según tipo de modelo (binario o multiclase).
+            if num_classes == 2:
+                # Modelo binario.
+                score = float(tf.keras.activations.sigmoid(predictions[0][0]))
+                class_predictions = {
+                    class_mapping["0"]: float(1 - score),
+                    class_mapping["1"]: float(score),
+                }
+                predicted_class = (
+                    class_mapping["1"] if score > 0.5 else class_mapping["0"]
+                )
+                confidence = max(score, 1 - score)
+            else:
+                # Modelo multiclase.
+                probabilities = tf.keras.activations.softmax(predictions[0]).numpy()
+                class_predictions = {
+                    class_mapping[str(i)]: float(prob)
+                    for i, prob in enumerate(probabilities)
+                }
+                predicted_idx = np.argmax(probabilities)
+                predicted_class = class_mapping[str(predicted_idx)]
+                confidence = float(probabilities[predicted_idx])
+
+            # Generar miniatura para incluir en resultados.
+            img = PILImage.open(io.BytesIO(img_data))
+            img.thumbnail((100, 100))
+            img = img.convert("RGB")
+            buffered = io.BytesIO()
+            img.save(buffered, format="JPEG")
+            thumbnail = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+            # Añadir resultado.
+            results.append(
+                {
+                    "filename": filename,
+                    "predicted_class": predicted_class,
+                    "confidence": confidence,
+                    "all_predictions": class_predictions,
+                    "thumbnail": thumbnail,
+                    "status": "success",
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error processing image {filename}: {str(e)}", exc_info=True)
+            results.append({"filename": filename, "error": str(e), "status": "failed"})
+
+    return {
+        "results": results,
+        "model_name": classifier.name,
+        "processed_images": len(results),
+        "classifier_id": str(classifier.id),
+    }

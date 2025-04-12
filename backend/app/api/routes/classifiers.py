@@ -1,7 +1,10 @@
+import os
 import uuid
+import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, status, File, UploadFile
 
 from app.models.classifiers import (
     ClassifierCreate,
@@ -9,6 +12,8 @@ from app.models.classifiers import (
     ClassifierDetailReturn,
     ClassifiersReturn,
     ClassifierUpdate,
+    ClassifierTrainingStatus,
+    ClassifierPredictionBatchResult,
 )
 from app.models.messages import Message
 from app.crud.users import (
@@ -18,10 +23,13 @@ from app.crud.users import (
 )
 import app.crud.classifiers as crud_classifiers
 import app.crud.datasets as crud_datasets
+from app.ml.models import AVAILABLE_MODELS
 
 router = APIRouter(prefix="/classifiers", tags=["classifiers"])
+logger = logging.getLogger(__name__)
 
-VALID_ARCHITECTURES = ["resnet18", "resnet34", "resnet50", "mobilenet", "efficientnet"]
+
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", "/app/media")
 
 
 @router.get("/architectures", response_model=list[str])
@@ -35,7 +43,7 @@ async def get_available_architectures(current_user: CurrentUser) -> list[str]:
         List[str]: Lista de nombres de arquitecturas disponibles.
     """
 
-    return VALID_ARCHITECTURES
+    return list(AVAILABLE_MODELS.keys())
 
 
 @router.post("/", response_model=ClassifierReturn)
@@ -62,10 +70,10 @@ async def create_classifier(
         ClassifierReturn: Datos del clasificador creado.
     """
 
-    if classifier_in.architecture not in VALID_ARCHITECTURES:
+    if classifier_in.architecture not in AVAILABLE_MODELS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid architecture. Must be one of: {', '.join(VALID_ARCHITECTURES)}",
+            detail=f"Invalid architecture. Must be one of: {', '.join(AVAILABLE_MODELS.keys())}",
         )
 
     dataset = await crud_datasets.get_dataset_by_userid_and_name(
@@ -380,3 +388,145 @@ async def delete_classifier(
     await crud_classifiers.delete_classifier(session=session, classifier=classifier)
 
     return Message(message="Classifier deleted successfully")
+
+
+@router.get("/{classifier_id}/download", response_class=FileResponse)
+async def download_model(
+    session: SessionDep, current_user: CurrentUser, classifier_id: uuid.UUID
+):
+    """Descarga el archivo del modelo entrenado.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        current_user (CurrentUser): Usuario actual.
+        classifier_id (uuid.UUID): ID del clasificador a descargar.
+
+    Raises:
+        HTTPException[404]: Si el clasificador no existe o no tiene un modelo entrenado.
+        HTTPException[403]: Si el usuario no tiene privilegios suficientes.
+
+    Returns:
+        FileResponse: Archivo del modelo para descargar.
+    """
+
+    classifier = await crud_classifiers.get_classifier_by_id(
+        session=session, id=classifier_id
+    )
+
+    if not classifier:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Classifier not found"
+        )
+
+    # Verificar permisos (solo el propietario o un admin pueden descargar).
+    is_admin = current_user.is_admin
+    if not is_admin and (classifier.user_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+
+    # Verificar que el modelo existe y está entrenado.
+    if (
+        not classifier.file_path
+        or classifier.status != ClassifierTrainingStatus.TRAINED
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model is not available for download (not trained or missing file)",
+        )
+
+    # Construir la ruta del archivo.
+    model_dir = os.path.join(MEDIA_ROOT, classifier.file_path)
+    model_file = os.path.join(model_dir, "model.keras")
+
+    if not os.path.exists(model_file):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model file not found on server",
+        )
+
+    # Retornar el archivo para descargar.
+    return FileResponse(
+        path=model_file,
+        filename=f"model.keras",
+        media_type="application/octet-stream",
+    )
+
+
+@router.post("/{classifier_id}/predict", response_model=ClassifierPredictionBatchResult)
+async def predict_images(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    classifier_id: uuid.UUID,
+    files: list[UploadFile] = File(...),
+):
+    """Realiza predicciones en imágenes utilizando un modelo entrenado.
+
+    Args:
+        session: Sesión de la base de datos.
+        current_user: Usuario actual.
+        classifier_id: ID del clasificador a utilizar.
+        files: Archivos de imágenes para predecir.
+
+    Raises:
+        HTTPException[404]: Si el clasificador no existe.
+        HTTPException[403]: Si el usuario no tiene privilegios suficientes.
+        HTTPException[400]: Si el modelo no está entrenado o no es válido.
+
+    Returns:
+        ClassifierPredictionBatchResult: Resultados de la predicción.
+    """
+
+    classifier = await crud_classifiers.get_classifier_by_id(
+        session=session, id=classifier_id
+    )
+
+    if not classifier:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Classifier not found"
+        )
+
+    is_admin = current_user.is_admin
+    if not is_admin and (classifier.user_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+
+    # Verificar que el modelo está entrenado.
+    if (
+        classifier.status != ClassifierTrainingStatus.TRAINED
+        or not classifier.file_path
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The model is not trained or not available for inference",
+        )
+
+    try:
+        # Leer los datos de las imágenes.
+        image_files = []
+        filenames = []
+
+        for file in files:
+            content = await file.read()
+            image_files.append(content)
+            filenames.append(file.filename)
+
+        # Realizar inferencia.
+        results = await crud_classifiers.perform_inference(
+            classifier=classifier, image_files=image_files, filenames=filenames
+        )
+
+        return results
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error during inference: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error during inference: {str(e)}",
+        )

@@ -111,6 +111,8 @@
                         @view="viewModel"
                         @edit="editModel"
                         @delete="confirmDeleteModel"
+                        @download="downloadModel"
+                        @predict="predictWithModel"
                         @close="closeActionsMenu"
                       />
                     </div>
@@ -173,6 +175,12 @@
       @close="closeEditModelModal"
       @model-updated="onModelUpdated"
     />
+    <PredictionModal
+      :isOpen="isPredictionModalOpen"
+      :modelName="modelToPredict?.name || ''"
+      :modelId="modelToPredict?.id"
+      @close="closePredictionModal"
+    />
   </div>
 </template>
 
@@ -188,6 +196,7 @@ import ActionMenu from '@/components/utils/ActionMenu.vue';
 import ConfirmationModal from '@/components/utils/ConfirmationModal.vue';
 import SortIcon from '@/components/utils/SortIcon.vue';
 import EditModelModal from '@/components/models/EditModelModal.vue';
+import PredictionModal from '@/components/models/PredictionModal.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -217,6 +226,9 @@ const pageSizeOptions = [5, 10, 25, 50, 100];
 
 const searchQuery = ref('');
 const searchTimeout = ref(null);
+
+const isPredictionModalOpen = ref(false);
+const modelToPredict = ref(null);
 
 const handlePageSizeChange = async () => {
   try {
@@ -511,6 +523,88 @@ const deleteModel = async () => {
   }
 };
 
+const downloadModel = async (model) => {
+  closeActionsMenu();
+  
+  // Este caso no debería ocurrir, ya que el botón de descarga está oculto si el modelo no está entrenado.
+  if (model.status !== 'trained') {
+    notifyInfo("Modelo no disponible",
+    "El modelo debe estar completamente entrenado para descargarlo");
+    return;
+  }
+  
+  try {    
+    // Configurar la petición para descargar el archivo.
+    const response = await axios({
+      url: `/classifiers/${model.id}/download`,
+      method: 'GET',
+      responseType: 'blob',
+    });
+    
+    // Crear un objeto URL para el blob descargado.
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Configurar el nombre del archivo.
+    link.setAttribute('download', 'model.keras');
+    
+    // Añadir temporalmente el enlace al DOM y simular clic.
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('Error downloading model: ', error);
+    
+    if (error.response) {
+      const { status } = error.response;
+      
+      if (status === 403) {
+        if (data.detail && data.detail.includes("credentials")) {
+          notifyInfo("Sesión expirada", 
+          "Por favor, inicia sesión de nuevo.");
+          authStore.logout();
+          router.push('/');
+        } else if (data.detail && data.detail.includes("privileges")) {
+          notifyError("Acceso denegado", 
+          "No tienes permisos suficientes para realizar esta acción.");
+        } else {
+          notifyError("Acceso denegado", 
+          "No tienes permisos suficientes para realizar esta acción.");
+        }
+      } else if (status === 404) {
+        notifyError("Modelo no disponible",
+        "El modelo no está disponible para descargar o no se ha encontrado");
+      } else {
+        notifyError("Error en la descarga",
+        "No se pudo descargar el modelo. Por favor, inténtalo de nuevo más tarde.");
+      }
+    } else {
+      notifyError("Error de conexión",
+      "No se pudo conectar con el servidor. Verifica tu conexión a internet.");
+    }
+  }
+};
+
+const predictWithModel = (model) => {
+  closeActionsMenu();
+  
+  // Este caso no debería ocurrir, ya que el botón de inferencia está oculto si el modelo no está entrenado.
+  if (model.status !== 'trained') {
+    notifyInfo("Modelo no disponible",
+    "El modelo debe estar completamente entrenado para realizar inferencia");
+    return;
+  }
+  
+  modelToPredict.value = model;
+  isPredictionModalOpen.value = true;
+};
+
+const closePredictionModal = () => {
+  isPredictionModalOpen.value = false;
+  modelToPredict.value = null;
+};
+
 const handleApiError = (error) => {
   if (error.response) {
     const { status, data } = error.response;
@@ -621,8 +715,30 @@ const getModelMenuActions = (model) => {
   const baseActions = [
     { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
     { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' },
-    { label: 'Eliminar', event: 'delete', icon: ['fas', 'trash-alt'], class: 'delete' }
   ];
+  
+  if (model.status === 'trained') {
+    baseActions.push({ 
+      label: 'Inferencia', 
+      event: 'predict', 
+      icon: ['fas', 'brain'], 
+      class: 'predict' 
+    });
+    
+    baseActions.push({ 
+      label: 'Descargar', 
+      event: 'download', 
+      icon: ['fas', 'download'], 
+      class: 'download' 
+    });
+  }
+  
+  baseActions.push({ 
+    label: 'Eliminar', 
+    event: 'delete', 
+    icon: ['fas', 'trash-alt'], 
+    class: 'delete' 
+  });
   
   return baseActions;
 };

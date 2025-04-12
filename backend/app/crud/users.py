@@ -19,6 +19,7 @@ from app.utils.hashing import hash_password
 from app.core import db
 from app.models.datasets import Dataset
 from app.models.images import Image
+from app.models.classifiers import Classifier
 
 
 API_PREFIX = os.environ["API_PREFIX"]
@@ -368,6 +369,41 @@ async def delete_user(*, session: AsyncSession, user: User) -> None:
             except Exception as e:
                 logger.error(
                     f"Error deleting image file {file_path}: {str(e)}", exc_info=True
+                )
+
+    # Obtener todos los clasificadores (modelos) del usuario.
+    classifiers_query = select(Classifier).where(Classifier.user_id == user.id)
+    classifiers_result = await session.execute(classifiers_query)
+    classifiers = classifiers_result.scalars().all()
+
+    # Eliminar los archivos físicos de cada modelo.
+    for classifier in classifiers:
+        if classifier.file_path:
+            try:
+                # Directorio que contiene el modelo y sus metadatos.
+                model_dir = os.path.join(MEDIA_ROOT, classifier.file_path)
+                if os.path.exists(model_dir):
+                    # Eliminar el archivo del modelo.
+                    model_file = os.path.join(model_dir, "model.keras")
+                    if os.path.exists(model_file):
+                        os.remove(model_file)
+
+                    # Eliminar el archivo de metadatos.
+                    metadata_file = os.path.join(model_dir, "metadata.json")
+                    if os.path.exists(metadata_file):
+                        os.remove(metadata_file)
+
+                    # Eliminar el directorio.
+                    try:
+                        os.rmdir(model_dir)
+                    except OSError as e:
+                        logger.warning(
+                            f"Error deleting directory at {model_dir}: {str(e)}"
+                        )
+            except Exception as e:
+                logger.error(
+                    f"Error deleting model files at {model_dir}: {str(e)}",
+                    exc_info=True,
                 )
 
     # Eliminar el usuario.

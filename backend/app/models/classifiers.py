@@ -174,17 +174,14 @@ class ClassifierTrainingResult(SQLModel):
     )
 
 
-class ClassifierPredictionRequest(SQLModel):
-    """Modelo para solicitar una predicción con un clasificador entrenado."""
+class ClassifierPredictionBatchResult(SQLModel):
+    """Modelo para el resultado de inferencia de un lote de imágenes."""
 
-    image_data: str = Field(description="Imagen en formato base64 para clasificar")
-
-
-class ClassifierPredictionResult(SQLModel):
-    """Modelo para el resultado de una predicción."""
-
-    predicted_class: str = Field(description="Clase predicha por el modelo")
-    confidence: float = Field(description="Confianza de la predicción (0-1)")
-    all_predictions: Dict[str, float] = Field(
-        description="Todas las predicciones con sus probabilidades"
+    results: List[Dict[str, Any]] = Field(
+        description="Lista de resultados de predicción para cada imagen"
     )
+    model_name: str = Field(
+        description="Nombre del modelo utilizado para la inferencia"
+    )
+    processed_images: int = Field(description="Número de imágenes procesadas")
+    classifier_id: str = Field(description="ID del clasificador utilizado")

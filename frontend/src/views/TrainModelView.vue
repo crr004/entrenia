@@ -152,6 +152,7 @@ const validateArchitecture = () => {
 
 const getArchitectureLabel = (architecture) => {
   const architectureLabels = {
+    'xception_mini': 'Xception Mini',
     'resnet18': 'ResNet-18',
     'resnet34': 'ResNet-34',
     'resnet50': 'ResNet-50',
@@ -174,6 +175,7 @@ const fetchArchitectures = async () => {
     architectures.value = response.data;
   } catch (error) {
     console.error('Error fetching architectures: ', error);
+    handleApiError(error);
   }
 };
 

@@ -40,8 +40,7 @@ from app.models.classifiers import (
     ClassifierUpdate,
     ClassifierTrainingResult,
     ClassifierTrainingStatus,
-    ClassifierPredictionRequest,
-    ClassifierPredictionResult,
+    ClassifierPredictionBatchResult,
 )
 
 # Definir las relaciones.
@@ -89,6 +88,5 @@ __all__ = [
     "ClassifierUpdate",
     "ClassifierTrainingResult",
     "ClassifierTrainingStatus",
-    "ClassifierPredictionRequest",
-    "ClassifierPredictionResult",
+    "ClassifierPredictionBatchResult",
 ]

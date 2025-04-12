@@ -43,6 +43,10 @@ services:
       postgres:
         condition: service_healthy
         restart: true
+      rabbitmq:
+        condition: service_started
+      init-media:
+        condition: service_completed_successfully
     environment:
       - APP_NAME=${APP_NAME?Variable not set}
       - APP_DESCRIPTION=${APP_DESCRIPTION?Variable not set}
@@ -89,7 +93,55 @@ services:
       - .env
     depends_on:
       - backend
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbit-server
+    ports:
+    - 8080:15672
+    - 5672:5672
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+    - "6379:6379"
+  worker:
+    image: entrenia-worker
+    pull_policy: never
+    container_name: entrenia-worker
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    env_file:
+      - .env
+    volumes:
+      - result-backend:/app
+      - ./backend/app:/app/app
+      - media-data:/app/media
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      redis:
+        condition: service_started
+      init-media:
+        condition: service_completed_successfully
+    environment:
+      - BROKER_URL=${BROKER_URL?Variable not set}
+      - RESULT_BACKEND=${RESULT_BACKEND?Variable not set}
+      - POSTGRES_URL=${POSTGRES_URL?Variable not set}
+      - MEDIA_ROOT=${MEDIA_ROOT?Variable not set}
+    
+  init-media:
+    image: busybox
+    container_name: entrenia-media-init
+    volumes:
+      - media-data:/app/media
+    command: >
+      sh -c "mkdir -p /app/media/models && 
+             chmod -R 777 /app/media && 
+             echo 'Permisos establecidos correctamente para directorios de medios.'"
+    restart: "no"
       
 volumes:
   postgres-db:
   media-data:
+  result-backend:
