@@ -216,11 +216,11 @@ const handleZipFile = (file) => {
     return;
   }
   
-  // Validar tamaño máximo (50MB).
-  const maxSize = 50 * 1024 * 1024;
+  // Validar tamaño máximo (150MB).
+  const maxSize = 150 * 1024 * 1024;
   if (file.size > maxSize) {
     notifyError("Archivo demasiado grande",
-    "El tamaño del archivo ZIP no puede superar los 50MB.");
+    "El tamaño del archivo ZIP no puede superar los 150MB.");
     return;
   }
   
@@ -389,7 +389,7 @@ const handleApiError = (error) => {
         break;
       case 413:
         notifyError("Archivo demasiado grande",
-        "El tamaño del archivo supera el límite permitido por el servidor (50MB).");
+        "El tamaño del archivo supera el límite permitido por el servidor (150MB).");
         break;
       case 400:
         notifyError("Formato inválido",
