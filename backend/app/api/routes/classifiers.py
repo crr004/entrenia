@@ -501,13 +501,13 @@ async def predict_images(
     classifier_id: uuid.UUID,
     files: list[UploadFile] = File(...),
 ):
-    """Realiza predicciones en imágenes utilizando un modelo entrenado.
+    """Realiza inferencia en imágenes utilizando un modelo entrenado.
 
     Args:
         session: Sesión de la base de datos.
         current_user: Usuario actual.
         classifier_id: ID del clasificador a utilizar.
-        files: Archivos de imágenes para predecir.
+        files: Archivos de imágenes para realizar inferencia.
 
     Raises:
         HTTPException[404]: Si el clasificador no existe.
@@ -515,7 +515,7 @@ async def predict_images(
         HTTPException[400]: Si el modelo no está entrenado o no es válido.
 
     Returns:
-        ClassifierPredictionBatchResult: Resultados de la predicción.
+        ClassifierPredictionBatchResult: Resultados de la inferencia.
     """
 
     classifier = await crud_classifiers.get_classifier_by_id(

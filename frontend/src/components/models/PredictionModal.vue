@@ -35,7 +35,7 @@
             <div v-else class="file-selected">
               <div class="file-count">
                 <font-awesome-icon :icon="['fas', 'images']" />
-                <span>{{ selectedFiles.length }} imagen(es) seleccionada(s)</span>
+                <span>{{ selectedFiles.length }} imagen(es) subida(s)</span>
               </div>
               <div class="selected-files-list">
                 <div v-for="(file, index) in selectedFiles" :key="index" class="selected-file">
@@ -45,6 +45,9 @@
                       <div class="file-name">{{ file.name }}</div>
                       <div class="file-size">{{ formatFileSize(file.size) }}</div>
                     </div>
+                    <button class="remove-file" @click.stop="removeFile(index)">
+                      <font-awesome-icon :icon="['fas', 'times']" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -97,13 +100,24 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button 
-            v-if="showResults" 
-            class="app-button" 
-            @click="closeModal"
-          >
-            Aceptar
-          </button>
+          <template v-if="showResults">
+            <div class="modal-actions-left">
+              <button 
+                class="download-csv-button" 
+                @click="downloadResultsAsCSV"
+                :disabled="!results.length"
+              >
+                <font-awesome-icon :icon="['fas', 'file-csv']" />
+                Descargar como CSV
+              </button>
+            </div>
+            <button 
+              class="app-button" 
+              @click="closeModal"
+            >
+              Aceptar
+            </button>
+          </template>
           <template v-else>
             <button class="cancel-button" @click="closeModal" :disabled="isProcessing">
               Cancelar
@@ -218,6 +232,10 @@ const resetFiles = () => {
   }
 };
 
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1);
+};
+
 const formatFileSize = (size) => {
   if (size > 1024 * 1024) {
     return (size / (1024 * 1024)).toFixed(2) + ' MB';
@@ -235,6 +253,7 @@ const getFileName = (fullPath) => {
   return parts[parts.length - 1];
 };
 
+// Función para formatear la confianza de la predicción (que salga en pocentaje).
 const formatConfidence = (value) => {
   return (value * 100).toFixed(1);
 };
@@ -291,6 +310,75 @@ const closeModal = () => {
   showResults.value = false;
   results.value = [];
   emit('close');
+};
+
+const downloadResultsAsCSV = () => {
+  if (!results.value || results.value.length === 0) {
+    notifyInfo("Sin datos",
+    "No hay resultados para descargar");
+    return;
+  }
+  
+  try {
+    // Obtener todas las clases únicas de todos los resultados.
+    const allClasses = new Set();
+    results.value.forEach(result => {
+      if (result.all_predictions) {
+        Object.keys(result.all_predictions).forEach(className => {
+          allClasses.add(className);
+        });
+      }
+    });
+    
+    // Crear array con nombres de columnas (encabezados).
+    const headers = ['Nombre de archivo', 'Clase predicha', 'Confianza', ...Array.from(allClasses)];
+    
+    // Crear filas de datos.
+    const rows = results.value.map(result => {
+      const row = [
+        getFileName(result.filename),
+        result.error ? 'ERROR' : result.predicted_class,
+        result.error ? 'N/A' : result.confidence.toFixed(4)
+      ];
+      
+      // Añadir valores de predicción para cada clase.
+      allClasses.forEach(className => {
+        if (result.error) {
+          row.push('N/A');
+        } else {
+          const probability = result.all_predictions[className] || 0;
+          row.push(probability.toFixed(4));
+        }
+      });
+      
+      return row;
+    });
+    
+    // Combinar encabezados y filas.
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Crear blob y enlace de descarga.
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'resultados.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 100);
+  } catch (error) {
+    console.error("Error generando CSV: ", error);
+    notifyError("Error al generar CSV",
+    "No se pudo generar el archivo CSV");
+  }
 };
 
 const handleApiError = (error) => {
@@ -561,6 +649,39 @@ const handleApiError = (error) => {
   font-size: 0.9rem;
 }
 
+/* Botón de descarga del CSV */
+.download-csv-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  height: 100%;
+}
+
+.download-csv-button:hover {
+  background-color: #5a6268;
+}
+
+.download-csv-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.download-csv-button svg {
+  font-size: 0.9rem;
+}
+
+.modal-actions-left {
+  margin-right: auto;
+}
 /* Responsive */
 @media (max-width: 600px) {
   .result-item {
