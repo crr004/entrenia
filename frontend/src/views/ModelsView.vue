@@ -526,12 +526,14 @@ const deleteModel = async () => {
 const downloadModel = async (model) => {
   closeActionsMenu();
   
-  // Este caso no debería ocurrir, ya que el botón de descarga está oculto si el modelo no está entrenado.
   if (model.status !== 'trained') {
     notifyInfo("Modelo no disponible",
     "El modelo debe estar completamente entrenado para descargarlo");
     return;
   }
+
+  //notifyInfo("Iniciando descarga", 
+  //"Tu modelo comenzará a descargarse en breve...");
   
   try {    
     // Configurar la petición para descargar el archivo.
@@ -547,37 +549,82 @@ const downloadModel = async (model) => {
     link.href = url;
     
     // Configurar el nombre del archivo.
-    link.setAttribute('download', 'model.keras');
+    link.setAttribute('download', `model.zip`);
     
     // Añadir temporalmente el enlace al DOM y simular clic.
     document.body.appendChild(link);
     link.click();
+    
+    // Eliminar el enlace del DOM.
     document.body.removeChild(link);
+    
+    // Liberar el objeto URL para evitar fugas de memoria.
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+    }, 100);
   } catch (error) {
     console.error('Error downloading model: ', error);
     
     if (error.response) {
       const { status } = error.response;
       
-      if (status === 403) {
-        if (data.detail && data.detail.includes("credentials")) {
-          notifyInfo("Sesión expirada", 
-          "Por favor, inicia sesión de nuevo.");
-          authStore.logout();
-          router.push('/');
-        } else if (data.detail && data.detail.includes("privileges")) {
-          notifyError("Acceso denegado", 
-          "No tienes permisos suficientes para realizar esta acción.");
-        } else {
-          notifyError("Acceso denegado", 
-          "No tienes permisos suficientes para realizar esta acción.");
+      // Para manejar respuestas de error con responseType: 'blob'.
+      if (error.response.data instanceof Blob) {
+        // Convertir el Blob a texto para leer el mensaje de error JSON.
+        const errorText = await error.response.data.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          
+          switch (status) {
+            case 403:
+              if (errorData.detail && errorData.detail.includes("credentials")) {
+                notifyInfo("Sesión expirada", 
+                "Por favor, inicia sesión de nuevo.");
+                authStore.logout();
+                router.push('/');
+              } else {
+                notifyError("Acceso denegado", 
+                "No tienes permisos suficientes para realizar esta acción.");
+              }
+              break;
+            case 404:
+              notifyError("Modelo no disponible",
+              "El modelo no está disponible para descargar o no se ha encontrado");
+              break;
+            default:
+              notifyError("Error en la descarga",
+              "No se pudo descargar el modelo. Por favor, inténtalo de nuevo más tarde.");
+              break;
+          }
+        } catch (jsonError) {
+          notifyError("Error inesperado",
+          "Ha ocurrido un problema.");
         }
-      } else if (status === 404) {
-        notifyError("Modelo no disponible",
-        "El modelo no está disponible para descargar o no se ha encontrado");
       } else {
-        notifyError("Error en la descarga",
-        "No se pudo descargar el modelo. Por favor, inténtalo de nuevo más tarde.");
+        // Respuesta JSON.
+        const { data } = error.response;
+        
+        switch (status) {
+          case 403:
+            if (data && data.detail && data.detail.includes("credentials")) {
+              notifyInfo("Sesión expirada", 
+              "Por favor, inicia sesión de nuevo.");
+              authStore.logout();
+              router.push('/');
+            } else {
+              notifyError("Acceso denegado", 
+              "No tienes permisos suficientes para realizar esta acción.");
+            }
+            break;
+          case 404:
+            notifyError("Modelo no disponible",
+            "El modelo no está disponible para descargar o no se ha encontrado");
+            break;
+          default:
+            notifyError("Error en la descarga",
+            "No se pudo descargar el modelo. Por favor, inténtalo de nuevo más tarde.");
+            break;
+        }
       }
     } else {
       notifyError("Error de conexión",
@@ -625,14 +672,11 @@ const handleApiError = (error) => {
         router.push('/');
         break;
       case 403:
-        if (data.detail && data.detail.includes("credentials")) {
+        if (data && data.detail && typeof data.detail === 'string' && data.detail.includes("credentials")) {
           notifyInfo("Sesión expirada", 
           "Por favor, inicia sesión de nuevo.");
           authStore.logout();
           router.push('/');
-        } else if (data.detail && data.detail.includes("privileges")) {
-          notifyError("Acceso denegado", 
-          "No tienes permisos suficientes para realizar esta acción.");
         } else {
           notifyError("Acceso denegado", 
           "No tienes permisos suficientes para realizar esta acción.");

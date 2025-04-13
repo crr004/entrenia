@@ -1,10 +1,12 @@
 import os
 import uuid
 import logging
+import zipfile
+import tempfile
 from typing import Optional
 
 from fastapi.responses import FileResponse
-from fastapi import APIRouter, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, BackgroundTasks
 
 from app.models.classifiers import (
     ClassifierCreate,
@@ -392,9 +394,12 @@ async def delete_classifier(
 
 @router.get("/{classifier_id}/download", response_class=FileResponse)
 async def download_model(
-    session: SessionDep, current_user: CurrentUser, classifier_id: uuid.UUID
+    session: SessionDep,
+    current_user: CurrentUser,
+    classifier_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
 ):
-    """Descarga el archivo del modelo entrenado.
+    """Descarga el archivo del modelo entrenado junto con sus metadatos.
 
     Args:
         session (SessionDep): Sesión de la base de datos.
@@ -406,7 +411,7 @@ async def download_model(
         HTTPException[403]: Si el usuario no tiene privilegios suficientes.
 
     Returns:
-        FileResponse: Archivo del modelo para descargar.
+        FileResponse: FileResponse: Archivo ZIP con el modelo y sus metadatos para descargar.
     """
 
     classifier = await crud_classifiers.get_classifier_by_id(
@@ -436,22 +441,56 @@ async def download_model(
             detail="Model is not available for download (not trained or missing file)",
         )
 
-    # Construir la ruta del archivo.
+    # Construir la ruta de los archivos.
     model_dir = os.path.join(MEDIA_ROOT, classifier.file_path)
     model_file = os.path.join(model_dir, "model.keras")
+    metadata_file = os.path.join(model_dir, "metadata.json")
 
+    # Verificar que existen ambos archivos
     if not os.path.exists(model_file):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model file not found on server",
         )
 
-    # Retornar el archivo para descargar.
-    return FileResponse(
-        path=model_file,
-        filename=f"model.keras",
-        media_type="application/octet-stream",
-    )
+    if not os.path.exists(metadata_file):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Metadata file not found on server",
+        )
+
+    # Crear un archivo ZIP temporal para contener ambos archivos.
+    temp_dir = tempfile.gettempdir()
+    zip_filename = f"model_{classifier_id}.zip"
+    zip_path = os.path.join(temp_dir, zip_filename)
+
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Añadir archivos al ZIP dentro de un directorio "model".
+            zipf.write(model_file, "model/model.keras")
+            zipf.write(metadata_file, "model/metadata.json")
+
+        # Definir una función para eliminar el archivo.
+        def remove_temp_file(file_path: str):
+            if os.path.exists(file_path):
+                os.unlink(file_path)
+
+        # Configurar la respuesta sin el parámetro background.
+        return FileResponse(
+            path=zip_path,
+            filename=f"model_{classifier.name.replace(' ', '_')}.zip",
+            media_type="application/zip",
+            background=background_tasks.add_task(remove_temp_file, zip_path),
+        )
+    except Exception as e:
+        # Asegurarse de limpiar el archivo en caso de error.
+        if os.path.exists(zip_path):
+            os.unlink(zip_path)
+        logger.error(f"Error creating zip file: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error preparing model for download",
+        )
 
 
 @router.post("/{classifier_id}/predict", response_model=ClassifierPredictionBatchResult)

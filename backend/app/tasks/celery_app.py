@@ -175,7 +175,6 @@ def train_model(
                     str(idx): label for idx, label in index_to_label.items()
                 },
                 "metrics": train_metrics,
-                "dataset_id": str(dataset_uuid),
                 "train_params": {
                     "epochs": len(history.history["loss"]),
                     "batch_size": batch_size,

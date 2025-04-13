@@ -49,7 +49,7 @@
             </router-link>
             <router-link to="/my-datasets" @click="closeBurgerMenu" class="user-link-burger">
               <font-awesome-icon :icon="['fas', 'database']" class="link-icon" fixed-width />
-              Mis conjuntos
+              Mis conjuntos de imágenes
             </router-link>
             <router-link 
               v-if="isAdmin"
@@ -58,7 +58,7 @@
               class="user-link-burger admin-link-mobile"
             >
               <font-awesome-icon :icon="['fas', 'shield-alt']" class="link-icon" fixed-width />
-              Panel de admin
+              Panel de administración
             </router-link>
             <router-link to="/account" @click="closeBurgerMenu" class="user-link-burger">
               <font-awesome-icon :icon="['fas', 'user-cog']" class="link-icon" fixed-width />

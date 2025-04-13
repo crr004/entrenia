@@ -57,9 +57,9 @@
         class="app-button"
         :disabled="isSubmitting || !isFormValid"
       >
-        <font-awesome-icon v-if="isSubmitting" :icon="['fas', 'circle-notch']" spin class="button-icon" />
+        <font-awesome-icon v-if="isSubmitting" :icon="['fas', 'spinner']" spin class="button-icon" />
         <font-awesome-icon v-else :icon="['fas', 'robot']" class="button-icon" />
-        {{ isSubmitting ? 'Enviando...' : 'Entrenar modelo' }}
+        {{ isSubmitting ? '' : 'Entrenar modelo' }}
       </button>
     </form>
   </div>
