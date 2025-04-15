@@ -52,6 +52,110 @@
         <span v-if="errors.architecture" class="error">{{ errors.architecture }}</span>
         <span v-else class="hint">La arquitectura determina el tipo de red neuronal que se utilizará para el modelo.</span>
       </div>
+      <div v-if="formData.architecture" class="training-parameters">
+        <h3>Parámetros de entrenamiento</h3>
+        <div class="param-slider">
+          <div class="param-header">
+            <div class="param-label">
+              <label for="learning-rate">Tasa de aprendizaje</label>
+              <HelpTooltip 
+                text="Controla cuánto cambian los pesos de la red en cada paso. Valores más pequeños suelen dar resultados más precisos pero requieren más tiempo de entrenamiento."
+                label="tasa de aprendizaje"
+              />
+            </div>
+            <span class="param-value">{{ formatLearningRate(formData.model_parameters.learning_rate) }}</span>
+          </div>
+          <input 
+            type="range" 
+            id="learning-rate" 
+            v-model="logSliderValue" 
+            min="0" 
+            max="100" 
+            step="1"
+            class="slider"
+            @input="updateLearningRate"
+          >
+          <div class="param-range">
+            <span>0.00001</span>
+            <span>0.1</span>
+          </div>
+        </div>
+        <div class="param-slider">
+          <div class="param-header">
+            <div class="param-label">
+              <label for="epochs">Épocas</label>
+              <HelpTooltip 
+                text="Número de veces que el modelo procesará todo el conjunto de datos. Más épocas pueden mejorar los resultados pero también aumentar el riesgo de sobreajuste."
+                label="épocas"
+              />
+            </div>
+            <span class="param-value">{{ formData.model_parameters.epochs }}</span>
+          </div>
+          <input 
+            type="range" 
+            id="epochs" 
+            v-model.number="formData.model_parameters.epochs" 
+            min="1" 
+            max="200" 
+            step="1"
+            class="slider"
+          >
+          <div class="param-range">
+            <span>1</span>
+            <span>200</span>
+          </div>
+        </div>
+        <div class="param-slider">
+          <div class="param-header">
+            <div class="param-label">
+              <label for="batch-size">Tamaño del lote</label>
+              <HelpTooltip 
+                text="Número de imágenes procesadas antes de actualizar los pesos. Valores más altos pueden acelerar el entrenamiento pero pueden reducir la capacidad de generalización del modelo."
+                label="tamaño del lote"
+              />
+            </div>
+            <span class="param-value">{{ formData.model_parameters.batch_size }}</span>
+          </div>
+          <input 
+            type="range" 
+            id="batch-size" 
+            v-model.number="formData.model_parameters.batch_size" 
+            :min="8" 
+            :max="256" 
+            :step="8"
+            class="slider"
+          >
+          <div class="param-range">
+            <span>8</span>
+            <span>256</span>
+          </div>
+        </div>
+        <div class="param-slider">
+          <div class="param-header">
+            <div class="param-label">
+              <label for="validation-split">División de entrenamiento</label>
+              <HelpTooltip 
+                text="Porcentaje de datos utilizados para entrenar el modelo (el resto se usa para validación)."
+                label="división de entrenamiento"
+              />
+            </div>
+            <span class="param-value">{{ (formData.model_parameters.train_split * 100).toFixed(0) }}%</span>
+          </div>
+          <input 
+            type="range" 
+            id="validation-split" 
+            v-model.number="formData.model_parameters.train_split" 
+            min="0.5" 
+            max="0.95" 
+            step="0.01"
+            class="slider"
+          >
+          <div class="param-range">
+            <span>50%</span>
+            <span>95%</span>
+          </div>
+        </div>
+      </div>
       <button 
         type="submit" 
         class="app-button"
@@ -66,7 +170,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -75,15 +179,25 @@ import { useAuthStore } from '@/stores/authStore';
 import ModelNameField from '@/components/models/ModelNameField.vue';
 import ModelDescriptionField from '@/components/models/ModelDescriptionField.vue';
 import DatasetNameField from '@/components/datasets/DatasetNameField.vue';
+import HelpTooltip from '@/components/utils/HelpTooltip.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+
+// Para la escala logarítmica del learning rate.
+const logSliderValue = ref(50); // Valor inicial en el medio (corresponde a ~0.001).
 
 const formData = ref({
   name: '',
   description: '',
   dataset_name: '',
   architecture: '',
+  model_parameters: {
+    learning_rate: 0.001,
+    epochs: 20,
+    batch_size: 32,
+    train_split: 0.8
+  }
 });
 
 const errors = ref({
@@ -179,6 +293,43 @@ const fetchArchitectures = async () => {
   }
 };
 
+// Convertir el valor del slider a learning rate (escala logarítmica).
+const updateLearningRate = () => {
+  // Convertir de 0-100 a 0.00001-0.1 en escala logarítmica.
+  const min = Math.log10(0.00001);
+  const max = Math.log10(0.1);
+  const scale = (max - min) / 100;
+  
+  formData.value.model_parameters.learning_rate = 
+    Math.pow(10, min + scale * logSliderValue.value);
+};
+
+const formatLearningRate = (value) => {
+  // Primero convertir a string con suficientes decimales.
+  let strValue = value.toFixed(8);
+  
+  // Eliminar ceros a la derecha.
+  strValue = strValue.replace(/\.?0+$/, '');
+  
+  // Si termina con punto, se eliminar.
+  if (strValue.endsWith('.')) {
+    strValue = strValue.slice(0, -1);
+  }
+  
+  return strValue;
+};
+
+// Inicializar el valor del slider basado en el learning rate inicial.
+onMounted(() => {
+  const min = Math.log10(0.00001);
+  const max = Math.log10(0.1);
+  const scale = (max - min) / 100;
+  
+  logSliderValue.value = Math.round(
+    (Math.log10(formData.value.model_parameters.learning_rate) - min) / scale
+  );
+});
+
 const submitForm = async () => {
   // Validar todos los campos.
   validateName(formData.value.name);
@@ -199,11 +350,23 @@ const submitForm = async () => {
       authStore.setAuthHeader();
     }
 
+    // Convertir el train_split al formato validation_split que espera el backend.
+    const validation_split = 1 - formData.value.model_parameters.train_split;
+    
+    // Asegurar que los valores numéricos son números, no strings.
+    const model_parameters = {
+      learning_rate: Number(formData.value.model_parameters.learning_rate),
+      epochs: Number(formData.value.model_parameters.epochs),
+      batch_size: Number(formData.value.model_parameters.batch_size),
+      validation_split: Number(validation_split)
+    };
+
     const response = await axios.post('/classifiers/', {
       name: formData.value.name,
       description: formData.value.description || null,
       dataset_name: formData.value.dataset_name,
-      architecture: formData.value.architecture
+      architecture: formData.value.architecture,
+      model_parameters: model_parameters
     });
     
     notifySuccess("Modelo en entrenamiento", 
@@ -329,6 +492,13 @@ h1 {
   font-size: 1.8rem;
 }
 
+h3 {
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
 .train-model-form {
   display: flex;
   flex-direction: column;
@@ -374,6 +544,99 @@ select.text-input.input-error {
   box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.1);
 }
 
+/* Estilos para parámetros de entrenamiento */
+.training-parameters {
+  background: transparent;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(226, 215, 190, 0.7);
+  margin-top: 10px;
+  backdrop-filter: blur(2px);
+}
+
+.training-parameters h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.param-slider {
+  margin-bottom: 20px;
+}
+
+.param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.param-label {
+  display: flex;
+  align-items: baseline;
+}
+
+.param-header label {
+  font-weight: 500;
+  color: #444;
+  margin-right: 2px;
+}
+
+.param-value {
+  background-color: rgba(224, 229, 235, 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 5px;
+  background: #d3d3d3;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(34, 134, 141);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(34, 134, 141);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: rgb(24, 96, 100);
+  box-shadow: 0 0 5px rgba(34, 134, 141, 0.5);
+}
+
+.slider::-moz-range-thumb:hover {
+  background: rgb(24, 96, 100);
+  box-shadow: 0 0 5px rgba(34, 134, 141, 0.5);
+}
+
+.param-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #777;
+  margin-top: 6px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .train-model-view {
@@ -383,6 +646,10 @@ select.text-input.input-error {
   
   h1 {
     font-size: 1.5rem;
+  }
+
+  .training-parameters {
+    padding: 15px;
   }
 }
 </style>
