@@ -351,7 +351,7 @@ const submitForm = async () => {
     }
 
     // Convertir el train_split al formato validation_split que espera el backend.
-    const validation_split = 1 - formData.value.model_parameters.train_split;
+    const validation_split = Number((1 - formData.value.model_parameters.train_split).toFixed(2));
     
     // Asegurar que los valores numéricos son números, no strings.
     const model_parameters = {

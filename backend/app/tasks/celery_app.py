@@ -4,6 +4,13 @@ import logging
 import contextlib
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Generator
+import numpy as np
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    precision_recall_fscore_support,
+)
+import tensorflow as tf
 
 from celery import Celery
 from sqlalchemy import create_engine, select
@@ -161,10 +168,96 @@ def train_model(
                 learning_rate=learning_rate,
             )
 
-            # 5. Guardar métricas del entrenamiento.
+            # 5. Evaluar explícitamente el modelo en el conjunto de validación.
+            eval_metrics = model.evaluate(val_ds, verbose=0)
+            eval_results = dict(zip(model.metrics_names, eval_metrics))
+
+            # 5.1 Inicializar diccionario de métricas con las métricas de historia del entrenamiento.
             train_metrics = {}
             for k, v in history.history.items():
                 train_metrics[k] = float(v[-1])  # Convertir valores a float para JSON.
+
+            # 5.2 Actualizar con las métricas de la evaluación explícita.
+            train_metrics.update({k: float(v) for k, v in eval_results.items()})
+
+            # 5.3 Calcular matriz de confusión y métricas adicionales.
+            y_true = []
+            y_pred = []
+            y_prob = []  # Para métricas adicionales como AUC, si se necesitan.
+
+            # Recopilar predicciones y etiquetas reales del conjunto de validación.
+            for images, labels in val_ds:
+                predictions = model.predict(images, verbose=0)
+
+                # Guardar las probabilidades/logits originales para posibles métricas adicionales.
+                y_prob.extend(predictions)
+
+                # Convertir predicciones a clases dependiendo de si es binario o multiclase.
+                if num_classes == 2:
+                    # Modelo binario.
+                    predicted_classes = (
+                        (tf.nn.sigmoid(predictions) > 0.5).numpy().flatten()
+                    )
+                else:
+                    # Modelo multiclase.
+                    predicted_classes = np.argmax(predictions, axis=1)
+
+                # Extender listas con las nuevas predicciones y etiquetas.
+                y_true.extend(labels.numpy())
+                y_pred.extend(predicted_classes)
+
+            # Calcular matriz de confusión.
+            cm = confusion_matrix(y_true, y_pred)
+            confusion_matrix_json = cm.tolist()
+
+            # 5.4 Calcular accuracy a partir de la matriz de confusión para validar consistencia.
+            accuracy_from_cm = (
+                np.sum(np.diag(cm)) / np.sum(cm) if np.sum(cm) > 0 else 0.0
+            )
+            train_metrics["accuracy_from_confusion_matrix"] = float(accuracy_from_cm)
+
+            # 5.5 Añadir matriz de confusión a las métricas.
+            train_metrics["confusion_matrix"] = confusion_matrix_json
+
+            # 5.6 Añadir métricas adicionales: precision, recall, f1.
+            class_report = classification_report(
+                y_true,
+                y_pred,
+                target_names=[index_to_label[i] for i in range(num_classes)],
+                output_dict=True,
+            )
+            train_metrics["classification_report"] = class_report
+
+            # Calcular precisión, recall y f1 por clase.
+            precision, recall, f1, support = precision_recall_fscore_support(
+                y_true, y_pred, average=None
+            )
+
+            # Añadir métricas por clase.
+            for i in range(num_classes):
+                class_name = index_to_label[i]
+                train_metrics[f"precision_{class_name}"] = float(precision[i])
+                train_metrics[f"recall_{class_name}"] = float(recall[i])
+                train_metrics[f"f1_{class_name}"] = float(f1[i])
+
+            # Añadir métricas promedio.
+            train_metrics["precision_macro"] = float(np.mean(precision))
+            train_metrics["recall_macro"] = float(np.mean(recall))
+            train_metrics["f1_macro"] = float(np.mean(f1))
+
+            # Calcular promedio ponderado.
+            precision_weighted, recall_weighted, f1_weighted, _ = (
+                precision_recall_fscore_support(y_true, y_pred, average="weighted")
+            )
+            train_metrics["precision_weighted"] = float(precision_weighted)
+            train_metrics["recall_weighted"] = float(recall_weighted)
+            train_metrics["f1_weighted"] = float(f1_weighted)
+
+            # 5.7 Añadir información sobre las clases y la distribución.
+            train_metrics["num_samples_per_class"] = {
+                label: int(np.sum(np.array(y_true) == idx))
+                for idx, label in index_to_label.items()
+            }
 
             # 6. Preparar metadatos del modelo.
             metadata = {
@@ -197,7 +290,7 @@ def train_model(
                 model_path=model_rel_path,
             )
 
-            # logger.info(f"Clasificador {classifier_uuid} entrenado exitosamente")
+            logger.info(f"Clasificador {classifier_uuid} entrenado exitosamente")
             return {
                 "status": "success",
                 "classifier_id": classifier_id,
@@ -226,7 +319,7 @@ def train_model(
 def update_classifier_status(
     classifier_uuid: uuid.UUID,
     status: ClassifierTrainingStatus,
-    metrics: Optional[Dict[str, float]] = None,
+    metrics: Optional[Dict[str, Any]] = None,
     error_message: Optional[str] = None,
     model_path: Optional[str] = None,
 ) -> None:
@@ -235,7 +328,7 @@ def update_classifier_status(
     Args:
         classifier_uuid (uuid.UUID): UUID del clasificador.
         status (ClassifierTrainingStatus): Nuevo estado del clasificador.
-        metrics (Optional[Dict[str, float]]): Métricas del entrenamiento.
+        metrics (Optional[Dict[str, Any]]): Métricas del entrenamiento, incluye matriz de confusión.
         error_message (Optional[str]): Mensaje de error si aplica.
         model_path (Optional[str]): Ruta al modelo guardado.
 
@@ -253,13 +346,20 @@ def update_classifier_status(
 
         classifier.status = status
 
-        if metrics:
-            classifier.metrics = metrics
+        # Inicializar diccionario de métricas.
+        current_metrics = dict(classifier.metrics or {})
 
+        # Añadir o actualizar métricas si están presentes.
+        if metrics:
+            current_metrics.update(metrics)
+
+        # Añadir mensaje de error a las métricas si está presente.
         if error_message:
-            current_params = dict(classifier.model_parameters or {})
-            current_params["error"] = error_message
-            classifier.model_parameters = current_params
+            current_metrics["error_message"] = error_message
+
+        # Actualizar las métricas solo si hay algo que actualizar.
+        if current_metrics:
+            classifier.metrics = current_metrics
 
         if model_path:
             classifier.file_path = model_path

@@ -132,11 +132,18 @@ class ClassifierDetailReturn(ClassifierReturn):
     trained_at: datetime | None = Field(
         default=None, description="Fecha en que se completó el entrenamiento"
     )
-    metrics: Dict[str, float] | None = Field(
-        default=None, description="Métricas del entrenamiento"
+    metrics: Dict[str, Any] | None = Field(
+        default=None,
+        description="Métricas del entrenamiento (puede incluir estructuras complejas)",
     )
     model_parameters: Dict[str, Any] | None = Field(
         default=None, description="Parámetros utilizados para entrenar el modelo"
+    )
+    architecture: str | None = Field(
+        default=None, description="Tipo de arquitectura del modelo"
+    )
+    file_path: str | None = Field(
+        default=None, description="Ruta al archivo del modelo entrenado"
     )
 
 

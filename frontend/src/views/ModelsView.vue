@@ -69,8 +69,9 @@
               </thead>
               <tbody>
                 <tr v-for="model in models" :key="model.id" 
-                    @click="viewModel(model)" 
-                    class="model-row">
+                    @click="isClickableModel(model) ? viewModel(model) : null" 
+                    class="model-row"
+                    :class="{ 'clickable': isClickableModel(model) }">
                   <td v-if="isAdmin">
                     <span class="truncate" :title="model.username || '-'">
                       {{ truncateText(model.username, 20) || '-' }}
@@ -755,12 +756,32 @@ const handleScroll = () => {
   }
 };
 
+const isClickableModel = (model) => {
+  return model.status === 'trained' || model.status === 'failed';
+};
+
 const getModelMenuActions = (model) => {
-  const baseActions = [
-    { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
-    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' },
-  ];
+  const baseActions = [];
   
+  // Acción de abrir solo disponible para modelos entrenados o fallidos.
+  if (isClickableModel(model)) {
+    baseActions.push({ 
+      label: 'Abrir', 
+      event: 'view', 
+      icon: ['fas', 'folder-open'], 
+      class: 'view' 
+    });
+  }
+  
+  // Editar siempre disponible.
+  baseActions.push({ 
+    label: 'Editar', 
+    event: 'edit', 
+    icon: ['fas', 'edit'], 
+    class: 'edit' 
+  });
+  
+  // Resto de acciones según el estado.
   if (model.status === 'trained') {
     baseActions.push({ 
       label: 'Inferencia', 
@@ -907,12 +928,15 @@ watch([currentPage, sortBy, sortOrder, searchQuery], () => {
 }
 
 .model-row {
-  cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.model-row:hover {
-  background-color: #f8f9fa;
+.model-row.clickable {
+  cursor: pointer;
+}
+
+.model-row:not(.clickable) {
+  cursor: default;
 }
 
 /* Anchura de columnas y truncamiento de texto */

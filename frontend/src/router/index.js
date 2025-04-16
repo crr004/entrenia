@@ -70,6 +70,12 @@ const routes = [
     meta: { showNav: true, showFooter: true, title: 'EntrenIA - Entrenar nuevo modelo' }
   },
   {
+    path: '/model/:id',
+    name: 'model-detail',
+    component: () => import('../views/ModelDetailView.vue'),
+    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Detalles del modelo' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue'),
