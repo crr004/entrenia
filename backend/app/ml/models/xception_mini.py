@@ -35,7 +35,7 @@ def create_model(input_shape, num_classes):
 
         x = layers.MaxPooling2D(3, strides=2, padding="same")(x)
 
-        # Project residual
+        # Proyección residual.
         residual = layers.Conv2D(size, 1, strides=2, padding="same")(
             previous_block_activation
         )
@@ -53,11 +53,9 @@ def create_model(input_shape, num_classes):
 
     # Capa de salida.
     if num_classes == 2:
-        # Clasificación binaria.
-        outputs = layers.Dense(1, activation=None)(x)
+        outputs = layers.Dense(1, activation="sigmoid")(x)
     else:
-        # Clasificación multiclase.
-        outputs = layers.Dense(num_classes, activation=None)(x)
+        outputs = layers.Dense(num_classes, activation="softmax")(x)
 
     return keras.Model(inputs, outputs)
 
@@ -92,10 +90,10 @@ def train(
     # Compilar modelo.
     # Usar BinaryCrossentropy para clasificación binaria y SparseCategoricalCrossentropy para multiclase.
     if num_classes == 2:
-        loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         metrics = [tf.keras.metrics.BinaryAccuracy(name="accuracy")]
     else:
-        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
         metrics = [tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy")]
 
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)

@@ -417,11 +417,8 @@ const getStatusIcon = (status) => {
 const getArchitectureLabel = (architecture) => {
   const architectureLabels = {
     'xception_mini': 'Xception Mini',
-    'resnet18': 'ResNet-18',
-    'resnet34': 'ResNet-34',
     'resnet50': 'ResNet-50',
-    'mobilenet': 'MobileNet',
-    'efficientnet': 'EfficientNet'
+    'efficientnetb3': 'EfficientNet-B3',
   };
   
   return architectureLabels[architecture] || architecture;

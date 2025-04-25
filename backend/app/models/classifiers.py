@@ -74,7 +74,7 @@ class Classifier(ClassifierBase, table=True):
         default=None,
         description="Tipo de arquitectura del modelo",
     )
-    metrics: Dict[str, float] | None = Field(
+    metrics: Dict[str, Any] | None = Field(
         sa_column=Column(JSON),
         default=None,
         description="Métricas del entrenamiento en formato JSON",
@@ -172,7 +172,7 @@ class ClassifierTrainingResult(SQLModel):
     status: ClassifierTrainingStatus = Field(
         description="Estado final del entrenamiento"
     )
-    metrics: Dict[str, float] | None = Field(description="Métricas del entrenamiento")
+    metrics: Dict[str, Any] | None = Field(description="Métricas del entrenamiento")
     trained_at: datetime | None = Field(
         description="Fecha en que se completó el entrenamiento"
     )

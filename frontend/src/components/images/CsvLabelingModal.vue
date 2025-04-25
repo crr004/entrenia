@@ -92,7 +92,7 @@
             </span>
             <span v-else>
               <font-awesome-icon :icon="['fas', 'spinner']" spin />
-              <span>Procesando...</span>
+              <span></span>
             </span>
           </button>
         </div>

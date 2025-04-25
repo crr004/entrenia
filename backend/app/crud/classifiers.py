@@ -115,6 +115,12 @@ async def create_classifier(
     architecture = classifier_data["architecture"]
     if architecture == "xception_mini":
         image_size = [180, 180]
+    elif architecture == "efficientnetb3":
+        image_size = [300, 300]
+    elif architecture == "resnet50":
+        image_size = [224, 224]
+    else:
+        image_size = [180, 180]
 
     model_parameters["image_size"] = image_size
 
@@ -433,6 +439,25 @@ async def perform_inference(
         logger.error(f"Error loading model: {str(e)}", exc_info=True)
         raise ValueError(f"Error loading model: {str(e)}")
 
+    # Definir preprocesamiento específico según arquitectura.
+    def get_preprocessor(architecture):
+        # Función identidad para modelos que ya incluyen normalización.
+        def preprocess_identity(img_array):
+            return img_array
+
+        # Para modelos sin normalización interna.
+        def preprocess_default(img_array):
+            return img_array / 255.0
+
+        # Seleccionar el preprocesador adecuado según el modelo.
+        if architecture in ["xception_mini", "efficientnetb3", "resnet50"]:
+            return preprocess_identity
+        else:
+            return preprocess_default
+
+    # Seleccionar el preprocesador adecuado.
+    preprocessor = get_preprocessor(classifier.architecture)
+
     # Función para preprocesar imágenes.
     def preprocess_image(img_data: bytes) -> np.ndarray:
         try:
@@ -440,7 +465,9 @@ async def perform_inference(
             img = img.convert("RGB")  # Asegurar que sea RGB.
             img = img.resize(tuple(image_size))
             img_array = np.array(img)
-            img_array = img_array / 255.0  # Normalizar a [0,1].
+            img_array = preprocessor(
+                img_array
+            )  # Aplicar el preprocesamiento específico del modelo.
             return img_array
         except Exception as e:
             logger.error(f"Error preprocessing image: {str(e)}", exc_info=True)
@@ -463,8 +490,7 @@ async def perform_inference(
 
             # Formatear resultados según tipo de modelo (binario o multiclase).
             if num_classes == 2:
-                # Modelo binario.
-                score = float(tf.keras.activations.sigmoid(predictions[0][0]))
+                score = float(predictions[0][0])
                 class_predictions = {
                     class_mapping["0"]: float(1 - score),
                     class_mapping["1"]: float(score),
@@ -475,7 +501,7 @@ async def perform_inference(
                 confidence = max(score, 1 - score)
             else:
                 # Modelo multiclase.
-                probabilities = tf.keras.activations.softmax(predictions[0]).numpy()
+                probabilities = predictions[0]
                 class_predictions = {
                     class_mapping[str(i)]: float(prob)
                     for i, prob in enumerate(probabilities)

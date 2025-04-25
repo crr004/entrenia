@@ -31,6 +31,15 @@
         <label for="architecture-select">
           Arquitectura
           <span class="required-asterisk">*</span>
+          <HelpTooltip 
+            text="Xception Mini - Arquitectura pequeña entrenada desde cero.
+
+            ResNet-50 - Arquitectura profunda con aprendizaje por transferencia.
+
+            EfficientNet-B3 - Arquitectura profunda con aprendizaje por transferencia y ajuste fino (fine-tuning)."
+            label="arquitecturas disponibles"
+            class="architecture-tooltip"
+          />
         </label>
         <div class="input-container">
           <div class="input-icon">
@@ -267,11 +276,8 @@ const validateArchitecture = () => {
 const getArchitectureLabel = (architecture) => {
   const architectureLabels = {
     'xception_mini': 'Xception Mini',
-    'resnet18': 'ResNet-18',
-    'resnet34': 'ResNet-34',
     'resnet50': 'ResNet-50',
-    'mobilenet': 'MobileNet',
-    'efficientnet': 'EfficientNet'
+    'efficientnetb3': 'EfficientNet-B3',
   };
   
   return architectureLabels[architecture] || architecture;
@@ -635,6 +641,11 @@ select.text-input.input-error {
   font-size: 0.75rem;
   color: #777;
   margin-top: 6px;
+}
+
+/* Estilo para el tooltip */
+.architecture-tooltip :deep(.tooltip-content) {
+  white-space: pre-line;
 }
 
 /* Responsive */

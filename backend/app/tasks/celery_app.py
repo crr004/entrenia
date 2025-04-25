@@ -156,6 +156,7 @@ def train_model(
                 validation_split=validation_split,
                 batch_size=batch_size,
                 image_size=image_size,
+                architecture=classifier_architecture,
             )
 
             # 4. Obtener el módulo del modelo seleccionado y entrenar.
@@ -172,13 +173,19 @@ def train_model(
             eval_metrics = model.evaluate(val_ds, verbose=0)
             eval_results = dict(zip(model.metrics_names, eval_metrics))
 
-            # 5.1 Inicializar diccionario de métricas con las métricas de historia del entrenamiento.
+            # 5.1 Inicializar diccionario de métricas con las métricas del historial.
             train_metrics = {}
             for k, v in history.history.items():
                 train_metrics[k] = float(v[-1])  # Convertir valores a float para JSON.
 
-            # 5.2 Actualizar con las métricas de la evaluación explícita.
-            train_metrics.update({k: float(v) for k, v in eval_results.items()})
+            # 5.2 Añadir métricas de evaluación explícita pero mantener las originales.
+            eval_metrics = model.evaluate(val_ds, verbose=0)
+            eval_results = dict(zip(model.metrics_names, eval_metrics))
+
+            # Solo actualizar métricas que no existan o que sean específicas de validación.
+            for k, v in eval_results.items():
+                if k not in train_metrics or k.startswith("val_"):
+                    train_metrics[k] = float(v)
 
             # 5.3 Calcular matriz de confusión y métricas adicionales.
             y_true = []
@@ -192,12 +199,16 @@ def train_model(
                 # Guardar las probabilidades/logits originales para posibles métricas adicionales.
                 y_prob.extend(predictions)
 
-                # Convertir predicciones a clases dependiendo de si es binario o multiclase.
-                if num_classes == 2:
-                    # Modelo binario.
-                    predicted_classes = (
-                        (tf.nn.sigmoid(predictions) > 0.5).numpy().flatten()
-                    )
+                # Convertir predicciones a clases dependiendo de la arquitectura y tipo de salida.
+                if classifier_architecture == "efficientnetb3" and num_classes == 2:
+                    # EfficientNetB3 con 1 neurona de salida y sigmoid.
+                    predicted_classes = (predictions > 0.5).astype(int).flatten()
+                elif classifier_architecture == "xception_mini" and num_classes == 2:
+                    # Xception Mini con 1 neurona de salida y sigmoid.
+                    predicted_classes = (predictions > 0.5).astype(int).flatten()
+                elif classifier_architecture == "resnet50" and num_classes == 2:
+                    # ResNet50 con 1 neurona de salida y sigmoid.
+                    predicted_classes = (predictions > 0.5).astype(int).flatten()
                 else:
                     # Modelo multiclase.
                     predicted_classes = np.argmax(predictions, axis=1)

@@ -16,6 +16,7 @@ def prepare_dataset(
     image_size: Tuple[int, int],
     validation_split: float = 0.2,
     seed: int = 42,
+    architecture: str = None,
 ) -> Tuple[tf.data.Dataset, tf.data.Dataset, Dict[str, Any]]:
     """Prepara datasets de entrenamiento y validación a partir de rutas de imágenes.
 
@@ -27,6 +28,7 @@ def prepare_dataset(
         image_size: Tamaño al que redimensionar las imágenes (ancho, alto).
         validation_split: Proporción de datos para validación.
         seed: Semilla para reproducibilidad.
+        architecture: Arquitectura del modelo para normalización específica.
 
     Returns:
         train_ds: Dataset de entrenamiento.
@@ -55,11 +57,11 @@ def prepare_dataset(
     val_labels = [numeric_labels[i] for i in val_indices]
 
     # Crear datasets de TensorFlow.
-    train_ds = create_dataset(train_paths, train_labels, image_size)
-    val_ds = create_dataset(val_paths, val_labels, image_size)
+    train_ds = create_dataset(train_paths, train_labels, image_size, architecture)
+    val_ds = create_dataset(val_paths, val_labels, image_size, architecture)
 
     # Aplicar aumentación de datos al conjunto de entrenamiento.
-    train_ds = apply_data_augmentation(train_ds)
+    train_ds = apply_data_augmentation(train_ds, architecture)
 
     # Optimizar rendimiento de los datasets.
     train_ds = train_ds.batch(batch_size).prefetch(AUTOTUNE)
@@ -78,7 +80,10 @@ def prepare_dataset(
 
 
 def create_dataset(
-    image_paths: List[str], labels: List[int], image_size: Tuple[int, int]
+    image_paths: List[str],
+    labels: List[int],
+    image_size: Tuple[int, int],
+    architecture: str = None,
 ) -> tf.data.Dataset:
     """Crea un dataset de TensorFlow a partir de rutas de imágenes y etiquetas.
 
@@ -86,6 +91,7 @@ def create_dataset(
         image_paths: Lista de rutas a las imágenes.
         labels: Lista de etiquetas numéricas.
         image_size: Dimensiones a las que redimensionar las imágenes (ancho, alto).
+        architecture: Arquitectura del modelo para normalización específica.
 
     Returns:
         Dataset de TensorFlow.
@@ -96,11 +102,13 @@ def create_dataset(
         tf.constant(image_paths, dtype=tf.string)
     )
 
-    def load_and_preprocess_with_size(path):
-        return load_and_preprocess_image(path, image_size)
+    def load_and_preprocess_with_params(path):
+        return load_and_preprocess_image(path, image_size, architecture)
 
     # Mapear función de carga y preprocesamiento.
-    images_ds = paths_ds.map(load_and_preprocess_with_size, num_parallel_calls=AUTOTUNE)
+    images_ds = paths_ds.map(
+        load_and_preprocess_with_params, num_parallel_calls=AUTOTUNE
+    )
 
     # Crear tensor con las etiquetas.
     labels_ds = tf.data.Dataset.from_tensor_slices(labels)
@@ -109,12 +117,13 @@ def create_dataset(
     return tf.data.Dataset.zip((images_ds, labels_ds))
 
 
-def load_and_preprocess_image(path, image_size: Tuple[int, int]):
+def load_and_preprocess_image(path, image_size: Tuple[int, int], architecture=None):
     """Carga y preprocesa una imagen desde su ruta.
 
     Args:
         path: Ruta de la imagen.
         image_size: Dimensiones a las que redimensionar la imagen (ancho, alto).
+        architecture: Arquitectura del modelo para normalización específica.
 
     Returns:
         Imagen preprocesada como tensor.
@@ -123,28 +132,44 @@ def load_and_preprocess_image(path, image_size: Tuple[int, int]):
     img = tf.io.read_file(path)
     img = tf.image.decode_jpeg(img, channels=3)
     img = tf.image.resize(img, image_size)
-    img = tf.cast(img, tf.float32) / 255.0  # Normalización.
+    img = tf.cast(img, tf.float32)
+
     return img
 
 
-def apply_data_augmentation(dataset):
+def apply_data_augmentation(dataset, architecture=None):
     """Aplica aumentación de datos al dataset de entrenamiento.
 
     Args:
         dataset: Dataset de TensorFlow.
+        architecture: Arquitectura del modelo para aumentación específica.
 
     Returns:
         Dataset aumentado.
     """
 
     # Definir capas de aumentación de datos.
-    data_augmentation = keras.Sequential(
-        [
-            keras.layers.RandomFlip("horizontal"),
-            keras.layers.RandomRotation(0.2),
-            keras.layers.RandomZoom(0.2),
-        ]
-    )
+    if architecture == "efficientnetb3":
+        # Aumentación específica para EfficientNetB3 más conservadora.
+        data_augmentation = keras.Sequential(
+            [
+                keras.layers.RandomFlip("horizontal"),
+                keras.layers.RandomRotation(0.1),
+                keras.layers.RandomZoom(0.1),
+                keras.layers.RandomContrast(0.1),
+                keras.layers.RandomBrightness(0.05),
+            ]
+        )
+    else:
+        data_augmentation = keras.Sequential(
+            [
+                keras.layers.RandomFlip("horizontal"),
+                keras.layers.RandomRotation(0.2),
+                keras.layers.RandomZoom(0.2),
+                keras.layers.RandomContrast(0.2),
+                keras.layers.RandomBrightness(0.1),
+            ]
+        )
 
     # Función para aplicar aumentación.
     def apply_augmentation(image, label):
