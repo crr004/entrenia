@@ -288,18 +288,22 @@ def train_model(
                 },
             }
 
-            # 7. Guardar modelo entrenado.
-            model_rel_path = save_trained_model(
-                model, MODELS_DIR, metadata, classifier_id
-            )
+            # Generar la ruta del modelo.
+            model_rel_path = os.path.join("models", classifier_id)
 
-            # 8. Actualizar estado del clasificador en la BD.
-            update_classifier_status(
+            # 7. Actualizar estado del clasificador en la BD.
+            update_successful = update_classifier_status(
                 classifier_uuid=classifier_uuid,
                 status=ClassifierTrainingStatus.TRAINED,
                 metrics=train_metrics,
                 model_path=model_rel_path,
             )
+
+            # 8. Guardar modelo entrenado.
+            if update_successful:
+                model_rel_path = save_trained_model(
+                    model, MODELS_DIR, metadata, classifier_id
+                )
 
             logger.info(f"Clasificador {classifier_uuid} entrenado exitosamente")
             return {
@@ -333,7 +337,7 @@ def update_classifier_status(
     metrics: Optional[Dict[str, Any]] = None,
     error_message: Optional[str] = None,
     model_path: Optional[str] = None,
-) -> None:
+) -> bool:
     """Actualiza el estado de un clasificador en la base de datos.
 
     Args:
@@ -344,38 +348,43 @@ def update_classifier_status(
         model_path (Optional[str]): Ruta al modelo guardado.
 
     Returns:
-        None
+        bool: True si la actualización fue exitosa, False en caso contrario.
     """
 
-    with get_celery_session() as session:
-        stmt = select(Classifier).where(Classifier.id == classifier_uuid)
-        classifier = session.execute(stmt).scalar_one_or_none()
+    try:
+        with get_celery_session() as session:
+            stmt = select(Classifier).where(Classifier.id == classifier_uuid)
+            classifier = session.execute(stmt).scalar_one_or_none()
 
-        if not classifier:
-            logger.error(f"Classifier not found: {classifier_uuid}")
-            return
+            if not classifier:
+                logger.error(f"Classifier not found: {classifier_uuid}")
+                return False
 
-        classifier.status = status
+            classifier.status = status
 
-        # Inicializar diccionario de métricas.
-        current_metrics = dict(classifier.metrics or {})
+            # Inicializar diccionario de métricas.
+            current_metrics = dict(classifier.metrics or {})
 
-        # Añadir o actualizar métricas si están presentes.
-        if metrics:
-            current_metrics.update(metrics)
+            # Añadir o actualizar métricas si están presentes.
+            if metrics:
+                current_metrics.update(metrics)
 
-        # Añadir mensaje de error a las métricas si está presente.
-        if error_message:
-            current_metrics["error_message"] = error_message
+            # Añadir mensaje de error a las métricas si está presente.
+            if error_message:
+                current_metrics["error_message"] = error_message
 
-        # Actualizar las métricas solo si hay algo que actualizar.
-        if current_metrics:
-            classifier.metrics = current_metrics
+            # Actualizar las métricas solo si hay algo que actualizar.
+            if current_metrics:
+                classifier.metrics = current_metrics
 
-        if model_path:
-            classifier.file_path = model_path
+            if model_path:
+                classifier.file_path = model_path
 
-        if status == ClassifierTrainingStatus.TRAINED:
-            classifier.trained_at = datetime.now(timezone.utc)
+            if status == ClassifierTrainingStatus.TRAINED:
+                classifier.trained_at = datetime.now(timezone.utc)
 
-        session.add(classifier)
+            session.add(classifier)
+            return True
+    except Exception as e:
+        logger.error(f"Error while updating classifier status: {str(e)}")
+        return False
