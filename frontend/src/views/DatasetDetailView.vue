@@ -24,6 +24,16 @@
           </span>
         </div>
       </div>
+      <div class="model-actions">
+        <button @click="trainWithDataset" class="app-button prediction-button">
+          <font-awesome-icon :icon="['fas', 'robot']" class="button-icon" />
+          Usar para entrenar un modelo
+        </button>
+        <button @click="toggleVisibility" class="app-button download-button">
+          <font-awesome-icon :icon="['fas', dataset.is_public ? 'lock' : 'globe']" class="button-icon" />
+          {{ dataset.is_public ? 'Privatizar' : 'Compartir' }}
+        </button>
+      </div>
       <div class="dataset-description" v-if="dataset.description">
         <h2>Descripción</h2>
         <p>{{ dataset.description }}</p>
@@ -159,6 +169,16 @@
         @close="closeLabelingResultModal"
       />
     </div>
+    <ConfirmationModal
+      :isOpen="isShareModalOpen"
+      :title="shareModalTitle"
+      :message="shareModalMessage"
+      :confirmText="dataset && dataset.is_public ? 'Privatizar' : 'Compartir'"
+      cancelText="Cancelar"
+      buttonType="success"
+      @confirm="processShareAction"
+      @cancel="cancelShareAction"
+    />
   </div>
 </template>
 
@@ -168,7 +188,7 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Chart from 'chart.js/auto';
 
-import { notifyError, notifyInfo } from '@/utils/notifications';
+import { notifyError, notifyInfo, notifySuccess } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
 import ImagesTable from '@/components/images/ImagesTable.vue';
 import UploadImagesModal from '@/components/images/UploadImagesModal.vue';
@@ -177,11 +197,15 @@ import LabelingMethodModal from '@/components/images/LabelingMethodModal.vue';
 import ManualLabelingModal from '@/components/images/ManualLabelingModal.vue';
 import CsvLabelingModal from '@/components/images/CsvLabelingModal.vue';
 import LabelingResultsModal from '@/components/images/LabelingResultsModal.vue';
+import ConfirmationModal from '@/components/utils/ConfirmationModal.vue';
 
 const isLabelingMethodModalOpen = ref(false);
 const isManualLabelingModalOpen = ref(false);
 const isCsvLabelingModalOpen = ref(false);
 const isLabelingResultModalOpen = ref(false);
+const isShareModalOpen = ref(false);
+const shareModalTitle = ref('');
+const shareModalMessage = ref('');
 
 const labelingResultData = ref({
   labeledCount: 0,
@@ -550,6 +574,63 @@ const handleImagesLabeled = (result) => {
     }
   });
 };
+
+// Navegar a la vista de entrenamiento con el dataset seleccionado.
+const trainWithDataset = () => {
+  router.push({
+    path: '/train-model',
+    query: { dataset: dataset.value.name }
+  });
+};
+
+// Mostrar el modal de confirmación de cambio de visibilidad.
+const toggleVisibility = () => {
+  const isPublic = dataset.value.is_public;
+  
+  shareModalTitle.value = isPublic ? 'Privatizar conjunto de imágenes' : 'Compartir conjunto de imágenes';
+  shareModalMessage.value = isPublic 
+    ? 'Al dejar de compartir este conjunto de imágenes, ya no será visible para otros usuarios. ¿Deseas continuar?' 
+    : 'Al compartir este conjunto de imágenes, será visible para todos los usuarios de la plataforma. ¿Deseas continuar?';
+  
+  isShareModalOpen.value = true;
+};
+
+// Cancelar el cambio de visibilidad.
+const cancelShareAction = () => {
+  isShareModalOpen.value = false;
+};
+
+// Procesar el cambio de visibilidad.
+const processShareAction = async () => {
+  try {
+    // Asegurar que el token de autenticación esté configurado en la cabecera de la petición.
+    const hasToken = !!localStorage.getItem('token') || !!authStore.token;
+    if(hasToken) {
+      authStore.setAuthHeader();
+    }
+    
+    // Invertir el estado actual.
+    const newVisibility = !dataset.value.is_public;
+    
+    // Actualizar el dataset.
+    await axios.patch(`/datasets/${dataset.value.id}`, {
+      is_public: newVisibility
+    });
+    
+    // Actualizar la vista.
+    dataset.value.is_public = newVisibility;
+    
+    notifySuccess(
+      newVisibility ? "Conjunto compartido" : "Conjunto privatizado", 
+      `El conjunto ${dataset.value.name} se ha ${newVisibility ? "compartido" : "dejado de compartir"} con éxito.`
+    );
+  } catch (error) {
+    console.error('Error toggling dataset visibility: ', error);
+    handleApiError(error);
+  } finally {
+    isShareModalOpen.value = false;
+  }
+};
 </script>
 
 <style scoped src="@/assets/styles/buttons.css"></style>
@@ -590,7 +671,32 @@ const handleImagesLabeled = (result) => {
   margin-right: 8px;
 }
 
-/* Estilos responsive */
+/* Los botones de acción */
+.model-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+  margin-bottom: 20px;
+  justify-content: center;
+  margin-bottom: 30px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #eee;
+}
+
+.prediction-button,
+.download-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-icon {
+  margin-right: 10px;
+  font-size: 1.1em;
+}
+
+/* Responsive */
 @media (max-width: 1100px) {
   .categories-chart {
     margin-left: 0;
@@ -628,6 +734,9 @@ const handleImagesLabeled = (result) => {
   .dataset-stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+  }
+  .model-actions {
+    flex-direction: column;
   }
 }
 

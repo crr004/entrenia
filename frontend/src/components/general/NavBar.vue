@@ -534,7 +534,7 @@ hr {
   
   .nav-content {
     position: fixed;
-    top: 70px;
+    top: 47px;
     left: 0;
     right: 0;
     background-color: #FFFDF5;
@@ -545,6 +545,7 @@ hr {
     transform: translateY(-100vh);
     transition: transform 0.3s ease-in-out;
     z-index: 90;
+    border-top: 1px solid #b4b4b4;
   }
   
   .nav-content.active {

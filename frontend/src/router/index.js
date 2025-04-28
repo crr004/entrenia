@@ -16,6 +16,12 @@ const routes = [
     meta: { showNav: true, showFooter: true, title: 'EntrenIA - Sobre EntrenIA' }
   },
   {
+    path: '/help',
+    name: 'help',
+    component: () => import('../views/HelpView.vue'),
+    meta: { showNav: true, showFooter: true, title: 'EntrenIA - Ayuda' }
+  },
+  {
     path: '/reset-password',
     name: 'reset-password',
     component: () => import('../views/ResetPasswordView.vue'),

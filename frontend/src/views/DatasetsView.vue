@@ -125,6 +125,7 @@
                         @delete="confirmDeleteDataset"
                         @publish="confirmPublishDataset"
                         @unpublish="confirmUnpublishDataset"
+                        @train="trainWithDataset"
                         @close="closeActionsMenu"
                       />
                     </div>
@@ -634,6 +635,14 @@ const processShareAction = async () => {
   }
 };
 
+const trainWithDataset = (dataset) => {
+  closeActionsMenu();
+  router.push({
+    path: '/train-model',
+    query: { dataset: dataset.name }
+  });
+};
+
 const handleApiError = (error) => {
   if (error.response) {
     const { status, data } = error.response;
@@ -717,7 +726,8 @@ const getDatasetMenuActions = (dataset) => {
   // Acciones básicas que siempre estarán presentes.
   const baseActions = [
     { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
-    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' }
+    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' },
+    { label: 'Usar', event: 'train', icon: ['fas', 'robot'], class: 'train' }
   ];
   
   // Acción de compartir/no compartir según el estado actual.

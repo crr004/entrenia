@@ -180,7 +180,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
 import { notifySuccess, notifyError, notifyInfo } from '@/utils/notifications';
@@ -191,6 +191,7 @@ import DatasetNameField from '@/components/datasets/DatasetNameField.vue';
 import HelpTooltip from '@/components/utils/HelpTooltip.vue';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
 // Para la escala logarítmica del learning rate.
@@ -448,6 +449,13 @@ const handleApiError = (error) => {
 onMounted(async () => {
   // Cargar arquitecturas disponibles.
   await fetchArchitectures();
+  
+  // Verificar si hay un dataset pasado como parámetro.
+  // Si existe, cargarlo en el campo correspondiente.
+  if (route.query.dataset) {
+    formData.value.dataset_name = route.query.dataset;
+    await validateDataset(formData.value.dataset_name);
+  }
   
   // Enfocar el campo de nombre del modelo después de renderizar.
   await nextTick(() => {
