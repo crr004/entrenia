@@ -177,7 +177,7 @@ const handleSubmit = async () => {
     const response = await axios.patch(`/classifiers/${props.model.id}`, updateData);
     
     notifySuccess("Modelo actualizado", 
-    `Se ha actualizado el modelo ${modelData.value.name} con éxito.`);
+    `Se ha actualizado el modelo "${modelData.value.name}" con éxito.`);
     
     emit('model-updated', response.data);
     closeModal();

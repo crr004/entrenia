@@ -183,7 +183,7 @@ const handleSubmit = async () => {
     const response = await axios.patch(`/images/${props.image.id}`, updateData);
     
     notifySuccess("Imagen actualizada", 
-    `Se ha actualizado la imagen ${formData.value.name} con éxito.`);
+    `Se ha actualizado la imagen "${formData.value.name}" con éxito.`);
     
     emit('image-updated', response.data);
     

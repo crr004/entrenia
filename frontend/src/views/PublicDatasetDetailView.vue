@@ -332,8 +332,8 @@ const confirmCloneDataset = async () => {
     showCloneModal.value = false;
     
     // Notificar éxito.
-    notifySuccess("Conjunto de imágenes añadido",
-    "Se ha añadido el conjunto de imágenes con éxito.");
+    notifySuccess("Conjunto de imágenes clonado",
+    "Se ha clonado el conjunto de imágenes con éxito.");
     
     // Redirigir al usuario a la vista de detalle del dataset clonado, ya en su biblioteca personal.
     router.push({ name: 'dataset-detail', params: { id: response.data.id } });

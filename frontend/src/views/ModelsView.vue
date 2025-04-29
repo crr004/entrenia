@@ -514,7 +514,7 @@ const deleteModel = async () => {
     }
     
     notifySuccess("Modelo eliminado", 
-    `Se ha eliminado el modelo ${modelToDelete.value.name} con éxito.`);
+    `Se ha eliminado el modelo "${modelToDelete.value.name}" con éxito.`);
   } catch (error) {
     console.error('Error while deleting model: ', error);
     handleApiError(error);

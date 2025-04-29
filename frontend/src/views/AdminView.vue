@@ -542,7 +542,7 @@ const deleteUser = async () => {
     await fetchUsers();
     
     notifySuccess("Usuario eliminado", 
-      `Se ha eliminado el usuario ${userToDelete.value.username} con éxito.`);
+      `Se ha eliminado el usuario "${userToDelete.value.username}" con éxito.`);
   } catch (error) {
     console.error('Error deleting user:', error);
     handleApiError(error);

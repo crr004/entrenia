@@ -561,7 +561,7 @@ const deleteImage = async () => {
     }
     
     notifySuccess("Imagen eliminada",
-    `Se ha eliminado la imagen ${imageToDelete.value.name} con éxito.`);
+    `Se ha eliminado la imagen "${imageToDelete.value.name}" con éxito.`);
     
     // Informar al componente padre que se han actualizado los datos.
     emit('refresh-dataset-stats');

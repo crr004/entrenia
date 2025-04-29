@@ -329,7 +329,7 @@ const handleEditUser = async () => {
     const response = await axios.patch(`/users/${props.userId}`, updateData);
     
     notifySuccess("Usuario actualizado", 
-    `Se ha actualizado el usuario ${username.value} con éxito.`);
+    `Se ha actualizado el usuario "${username.value}" con éxito.`);
     
     emit('userUpdated', response.data);
     closeModal();

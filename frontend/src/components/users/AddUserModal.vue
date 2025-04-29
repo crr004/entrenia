@@ -234,7 +234,7 @@ const handleAddUser = async () => {
     const response = await axios.post('/users/', userData);
     
     notifySuccess("Usuario creado", 
-    `Se ha creado el usuario ${username.value} con éxito.`);
+    `Se ha creado el usuario "${username.value}" con éxito.`);
     
     emit('userAdded', response.data);
     closeModal();

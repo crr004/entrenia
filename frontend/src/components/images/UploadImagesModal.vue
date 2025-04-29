@@ -112,7 +112,7 @@
           <div class="progress-text">{{ uploadProgress }}% completado</div>
         </div>
         <div class="modal-actions">
-          <button class="cancel-button" @click="closeModal" :disabled="isUploading">
+          <button class="cancel-button" @click="closeModal" v-if="!isUploading">
             Cancelar
           </button>
           <button 
@@ -126,7 +126,7 @@
             </span>
             <span v-else>
               <font-awesome-icon :icon="['fas', 'spinner']" spin />
-              <span></span>
+              <span> Subiendo...</span>
             </span>
           </button>
         </div>

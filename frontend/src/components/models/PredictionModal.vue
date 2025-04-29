@@ -119,7 +119,7 @@
             </button>
           </template>
           <template v-else>
-            <button class="cancel-button" @click="closeModal" :disabled="isProcessing">
+            <button class="cancel-button" @click="closeModal" v-if="!isProcessing">
               Cancelar
             </button>
             <button 
@@ -133,7 +133,7 @@
               </span>
               <span v-else>
                 <font-awesome-icon :icon="['fas', 'spinner']" spin />
-                <span></span>
+                <span> Procesando...</span>
               </span>
             </button>
           </template>

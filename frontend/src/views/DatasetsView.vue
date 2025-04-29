@@ -556,7 +556,7 @@ const deleteDataset = async () => {
     }
     
     notifySuccess("Conjunto de imágenes eliminado", 
-    `Se ha eliminado el conjunto ${datasetToDelete.value.name} con éxito.`);
+    `Se ha eliminado el conjunto "${datasetToDelete.value.name}" con éxito.`);
   } catch (error) {
     console.error('Error while deleting dataset: ', error);
     handleApiError(error);
@@ -624,7 +624,7 @@ const processShareAction = async () => {
     }
     
     notifySuccess(isPublic ? "Conjunto compartido" : "Conjunto no compartido", 
-    `El conjunto ${datasetToShare.value.name} se ha ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
+    `El conjunto "${datasetToShare.value.name}" se ha ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
   } catch (error) {
     console.error('Error while updating dataset sharing status: ', error);
     handleApiError(error);

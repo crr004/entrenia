@@ -377,7 +377,7 @@ const submitForm = async () => {
     });
     
     notifySuccess("Modelo en entrenamiento", 
-    `El modelo ${formData.value.name} se ha creado y está siendo entrenado.`
+    `El modelo "${formData.value.name}" se ha creado y está siendo entrenado.`
     );
     
     // Redireccionar a la vista de modelos.

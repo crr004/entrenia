@@ -622,7 +622,7 @@ const processShareAction = async () => {
     
     notifySuccess(
       newVisibility ? "Conjunto compartido" : "Conjunto privatizado", 
-      `El conjunto ${dataset.value.name} se ha ${newVisibility ? "compartido" : "dejado de compartir"} con éxito.`
+      `El conjunto "${dataset.value.name}" se ha ${newVisibility ? "compartido" : "dejado de compartir"} con éxito.`
     );
   } catch (error) {
     console.error('Error toggling dataset visibility: ', error);
