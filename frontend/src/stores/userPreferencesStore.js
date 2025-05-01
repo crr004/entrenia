@@ -40,7 +40,6 @@ export const userPreferencesStore = defineStore('preferences', {
     }
   },
 
-   /*
   persist: {
     enabled: true,
     strategies: [
@@ -51,12 +50,12 @@ export const userPreferencesStore = defineStore('preferences', {
       }
     ]
   }
-    */
-  
+  /*
   persist: {
     enabled: true,
     storage: window.sessionStorage,
     key: 'preferences-store',
     paths: ['adminPageSize', 'datasetPageSize', 'imagePageSize', 'modelPageSize']
   }
+  */
 });
