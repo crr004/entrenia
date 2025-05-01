@@ -446,7 +446,7 @@ async def download_model(
     model_file = os.path.join(model_dir, "model.keras")
     metadata_file = os.path.join(model_dir, "metadata.json")
 
-    # Verificar que existen ambos archivos
+    # Verificar que existen ambos archivos.
     if not os.path.exists(model_file):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

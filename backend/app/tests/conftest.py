@@ -10,16 +10,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.testclient import TestClient
 
 
-# Ignorar advertencias de deprecación de 'crypt', ya que lo usa passlib internamente
+# Ignorar advertencias de deprecación de 'crypt', ya que lo usa passlib internamente.
 warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*'crypt' is deprecated.*"
 )
 
-# Añado la ruta de la app al path
+# Añado la ruta de la app al path.
 app_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(app_dir))
 
-# Configuración de pytest para ejecutar pruebas asíncronas
+# Configuración de pytest para ejecutar pruebas asíncronas.
 pytestmark = pytest.mark.asyncio
 
 
@@ -750,3 +750,158 @@ def mock_get_dataset_by_userid_and_name():
 
     with patch("app.api.routes.datasets.get_dataset_by_userid_and_name") as mock:
         yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_classifier():
+    """Fixture para mockear un modelo Classifier."""
+
+    mock = MagicMock()
+    mock.id = uuid.uuid4()
+    mock.name = "Test Classifier"
+    mock.description = "This is a test classifier"
+    mock.user_id = uuid.uuid4()
+    mock.dataset_id = uuid.uuid4()
+    mock.status = "trained"
+    mock.architecture = "efficientnetb3"
+    mock.created_at = datetime.now(timezone.utc)
+    mock.trained_at = datetime.now(timezone.utc)
+    mock.file_path = "models/test_classifier"
+    mock.metrics = {"accuracy": 0.95, "precision": 0.92}
+    mock.model_parameters = {"epochs": 20, "batch_size": 32}
+
+    dict_result = {
+        "id": mock.id,
+        "name": mock.name,
+        "description": mock.description,
+        "user_id": mock.user_id,
+        "dataset_id": mock.dataset_id,
+        "status": mock.status,
+        "architecture": mock.architecture,
+        "created_at": mock.created_at,
+        "trained_at": mock.trained_at,
+        "file_path": mock.file_path,
+        "metrics": mock.metrics,
+        "model_parameters": mock.model_parameters,
+    }
+    mock.model_dump.return_value = dict_result
+
+    return mock
+
+
+@pytest.fixture
+def mock_untrained_classifier():
+    """Fixture para mockear un modelo Classifier sin entrenar."""
+
+    mock = MagicMock()
+    mock.id = uuid.uuid4()
+    mock.name = "Untrained Classifier"
+    mock.description = "This is an untrained classifier"
+    mock.user_id = uuid.uuid4()
+    mock.dataset_id = uuid.uuid4()
+    mock.status = "not_trained"
+    mock.architecture = "efficientnetb3"
+    mock.created_at = datetime.now(timezone.utc)
+    mock.trained_at = None
+    mock.file_path = None
+    mock.metrics = None
+    mock.model_parameters = {"epochs": 20, "batch_size": 32}
+
+    dict_result = {
+        "id": mock.id,
+        "name": mock.name,
+        "description": mock.description,
+        "user_id": mock.user_id,
+        "dataset_id": mock.dataset_id,
+        "status": mock.status,
+        "architecture": mock.architecture,
+        "created_at": mock.created_at,
+        "trained_at": mock.trained_at,
+        "file_path": mock.file_path,
+        "metrics": mock.metrics,
+        "model_parameters": mock.model_parameters,
+    }
+    mock.model_dump.return_value = dict_result
+
+    return mock
+
+
+@pytest.fixture
+def mock_get_classifier_by_id():
+    """Mock para get_classifier_by_id en rutas de clasificadores."""
+
+    with patch(
+        "app.api.routes.classifiers.crud_classifiers.get_classifier_by_id"
+    ) as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_classifier_by_userid_and_name():
+    """Mock para get_classifier_by_userid_and_name en rutas de clasificadores."""
+
+    with patch(
+        "app.api.routes.classifiers.crud_classifiers.get_classifier_by_userid_and_name"
+    ) as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_create_classifier():
+    """Mock para create_classifier en rutas de clasificadores."""
+
+    with patch("app.api.routes.classifiers.crud_classifiers.create_classifier") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_update_classifier():
+    """Mock para update_classifier en rutas de clasificadores."""
+
+    with patch("app.api.routes.classifiers.crud_classifiers.update_classifier") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_delete_classifier():
+    """Mock para delete_classifier en rutas de clasificadores."""
+
+    with patch("app.api.routes.classifiers.crud_classifiers.delete_classifier") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_get_classifiers_sorted():
+    """Mock para get_classifiers_sorted en rutas de clasificadores."""
+
+    with patch(
+        "app.api.routes.classifiers.crud_classifiers.get_classifiers_sorted"
+    ) as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_perform_inference():
+    """Mock para perform_inference en rutas de clasificadores."""
+
+    with patch("app.api.routes.classifiers.crud_classifiers.perform_inference") as mock:
+        yield make_async_mock(mock)
+
+
+@pytest.fixture
+def mock_temp_dir(monkeypatch):
+    """Mock para tempfile.gettempdir."""
+
+    temp_dir = "test_temp_dir"
+    with patch("app.api.routes.classifiers.tempfile.gettempdir", return_value=temp_dir):
+        yield temp_dir
+
+
+@pytest.fixture
+def mock_zipfile():
+    """Mock para zipfile.ZipFile."""
+
+    with patch("app.api.routes.classifiers.zipfile.ZipFile") as mock:
+        zipf_mock = MagicMock()
+        mock.return_value.__enter__.return_value = zipf_mock
+        yield zipf_mock

@@ -24,7 +24,8 @@ class TestDatasetsCRUD:
 
     async def test_get_dataset_by_id_success(self, mock_session):
         """Prueba de obtención exitosa de un dataset por ID."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
 
         mock_dataset = MagicMock()
@@ -36,30 +37,32 @@ class TestDatasetsCRUD:
 
         mock_session.get = AsyncMock(return_value=mock_dataset)
 
-        # Ejecución
+        # Ejecución.
         result = await get_dataset_by_id(session=mock_session, id=dataset_id)
 
-        # Verificación
+        # Verificación.
         assert result is mock_dataset
         mock_session.get.assert_called_once_with(Dataset, dataset_id)
 
     async def test_get_dataset_by_id_not_found(self, mock_session):
-        """Prueba cuando el dataset no existe."""
-        # Configuración
+        """Prueba de cuando el dataset no existe."""
+
+        # Configuración.
         dataset_id = uuid.uuid4()
 
         mock_session.get = AsyncMock(return_value=None)
 
-        # Ejecución
+        # Ejecución.
         result = await get_dataset_by_id(session=mock_session, id=dataset_id)
 
-        # Verificación
+        # Verificación.
         assert result is None
         mock_session.get.assert_called_once_with(Dataset, dataset_id)
 
     async def test_create_dataset_success(self, mock_session):
         """Prueba de creación exitosa de un dataset."""
-        # Configuración
+
+        # Configuración.
         user_id = uuid.uuid4()
 
         dataset_create = DatasetCreate(
@@ -77,12 +80,12 @@ class TestDatasetsCRUD:
         with patch("app.crud.datasets.Dataset.model_validate") as mock_validate:
             mock_validate.return_value = mock_dataset
 
-            # Ejecución
+            # Ejecución.
             result = await create_dataset(
                 session=mock_session, user_id=user_id, dataset_in=dataset_create
             )
 
-            # Verificación
+            # Verificación.
             assert result is mock_dataset
             mock_validate.assert_called_once()
             mock_session.add.assert_called_once_with(mock_dataset)
@@ -91,7 +94,8 @@ class TestDatasetsCRUD:
 
     async def test_update_dataset_success(self, mock_session):
         """Prueba de actualización exitosa de un dataset."""
-        # Configuración
+
+        # Configuración.
         dataset = MagicMock()
         dataset.id = uuid.uuid4()
         dataset.name = "Original Name"
@@ -103,12 +107,12 @@ class TestDatasetsCRUD:
             name="Updated Name", description="Updated Description", is_public=True
         )
 
-        # Ejecución
+        # Ejecución.
         result = await update_dataset(
             session=mock_session, dataset=dataset, dataset_data=dataset_update
         )
 
-        # Verificación
+        # Verificación.
         assert result is dataset
         dataset.sqlmodel_update.assert_called_once_with(dataset_update)
         mock_session.add.assert_called_once_with(dataset)
@@ -117,7 +121,8 @@ class TestDatasetsCRUD:
 
     async def test_get_dataset_counts_with_cache(self, mock_session):
         """Prueba de obtención de conteos de dataset usando caché."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         cached_image_count = 10
         cached_category_count = 5
@@ -135,12 +140,12 @@ class TestDatasetsCRUD:
 
             mock_get_dataset.side_effect = mock_get_dataset_impl
 
-            # Ejecución
+            # Ejecución.
             result = await get_dataset_counts(
                 session=mock_session, dataset_id=dataset_id
             )
 
-            # Verificación
+            # Verificación.
             assert result["image_count"] == cached_image_count
             assert result["category_count"] == cached_category_count
             mock_get_dataset.assert_called_once_with(
@@ -149,19 +154,20 @@ class TestDatasetsCRUD:
 
     async def test_get_dataset_counts_without_cache(self, mock_session):
         """Prueba de obtención de conteos de dataset recalculando (sin usar caché)."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image_count = 15
         category_count = 7
 
-        # Dataset sin caché (valores None)
+        # Dataset sin caché (valores None).
         mock_dataset = MagicMock()
         mock_dataset.id = dataset_id
         mock_dataset.cached_image_count = None
         mock_dataset.cached_category_count = None
         mock_dataset.__class__ = Dataset
 
-        # Dataset después de actualizar la caché
+        # Dataset después de actualizar la caché.
         updated_dataset = MagicMock()
         updated_dataset.id = dataset_id
         updated_dataset.cached_image_count = image_count
@@ -190,12 +196,12 @@ class TestDatasetsCRUD:
 
                 mock_update_cache.side_effect = mock_update_cache_impl
 
-                # Ejecución
+                # Ejecución.
                 result = await get_dataset_counts(
                     session=mock_session, dataset_id=dataset_id
                 )
 
-                # Verificación
+                # Verificación.
                 assert result["image_count"] == image_count
                 assert result["category_count"] == category_count
                 assert mock_get_dataset.call_count == 2
@@ -205,7 +211,8 @@ class TestDatasetsCRUD:
 
     async def test_get_dataset_by_userid_and_name_success(self, mock_session):
         """Prueba de obtención exitosa de un dataset por ID de usuario y nombre."""
-        # Configuración
+
+        # Configuración.
         user_id = uuid.uuid4()
         name = "Test Dataset"
 
@@ -215,7 +222,7 @@ class TestDatasetsCRUD:
         mock_dataset.user_id = user_id
         mock_dataset.__class__ = Dataset
 
-        # Configurar el resultado de la consulta
+        # Configurar el resultado de la consulta.
         execute_result = MagicMock()
         scalars_result = MagicMock()
         scalars_result.first.return_value = mock_dataset
@@ -223,7 +230,7 @@ class TestDatasetsCRUD:
 
         mock_session.execute = AsyncMock(return_value=execute_result)
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.datasets.select") as mock_select:
             mock_select.return_value = MagicMock()
 
@@ -231,14 +238,15 @@ class TestDatasetsCRUD:
                 session=mock_session, user_id=user_id, name=name
             )
 
-            # Verificación
+            # Verificación.
             assert result is mock_dataset
             mock_session.execute.assert_called_once()
             mock_select.assert_called_once()
 
     async def test_get_image_count_success(self, mock_session):
         """Prueba de obtención exitosa del conteo de imágenes de un dataset."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         expected_count = 15
 
@@ -247,7 +255,7 @@ class TestDatasetsCRUD:
 
         mock_session.execute = AsyncMock(return_value=execute_result)
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.datasets.select") as mock_select, patch(
             "app.crud.datasets.func"
         ) as mock_func:
@@ -257,24 +265,25 @@ class TestDatasetsCRUD:
 
             result = await get_image_count(session=mock_session, dataset_id=dataset_id)
 
-            # Verificación
+            # Verificación.
             assert result == expected_count
             mock_session.execute.assert_called_once()
             mock_select.assert_called_once()
 
     async def test_get_category_count_success(self, mock_session):
         """Prueba de obtención exitosa del conteo de categorías distintas de un dataset."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         expected_count = 7
 
-        # Configurar el resultado de la consulta
+        # Configurar el resultado de la consulta.
         execute_result = MagicMock()
         execute_result.scalar_one_or_none.return_value = expected_count
 
         mock_session.execute = AsyncMock(return_value=execute_result)
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.datasets.select") as mock_select, patch(
             "app.crud.datasets.func"
         ) as mock_func, patch("app.crud.datasets.distinct") as mock_distinct:
@@ -287,7 +296,7 @@ class TestDatasetsCRUD:
                 session=mock_session, dataset_id=dataset_id
             )
 
-            # Verificación
+            # Verificación.
             assert result == expected_count
             mock_session.execute.assert_called_once()
             mock_select.assert_called_once()
@@ -296,10 +305,11 @@ class TestDatasetsCRUD:
 
     async def test_get_unlabeled_images(self, mock_session):
         """Prueba de obtención exitosa de imágenes sin etiquetar de un dataset."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
 
-        # Crear algunas imágenes sin etiqueta para el resultado
+        # Crear algunas imágenes sin etiqueta para el resultado.
         mock_images = []
         for i in range(3):
             img = MagicMock()
@@ -311,7 +321,7 @@ class TestDatasetsCRUD:
             img.thumbnail = f"base64_thumbnail_{i}"
             mock_images.append(img)
 
-        # Configurar el resultado de la consulta
+        # Configurar el resultado de la consulta.
         execute_result = MagicMock()
         scalars_result = MagicMock()
         scalars_result.all.return_value = mock_images
@@ -319,7 +329,7 @@ class TestDatasetsCRUD:
 
         mock_session.execute = AsyncMock(return_value=execute_result)
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.datasets.select") as mock_select:
             mock_select.return_value = MagicMock()
 
@@ -327,7 +337,7 @@ class TestDatasetsCRUD:
                 session=mock_session, dataset_id=dataset_id
             )
 
-            # Verificación
+            # Verificación.
             assert result == mock_images
             mock_session.execute.assert_called_once()
             mock_select.assert_called_once()
@@ -335,10 +345,11 @@ class TestDatasetsCRUD:
 
     async def test_label_images_with_csv(self, mock_session):
         """Prueba de etiquetado de imágenes con datos CSV."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
 
-        # Datos de etiquetas desde el CSV
+        # Datos de etiquetas desde el CSV.
         labels_data = [
             {"image_name": "image1.jpg", "label": "cat"},
             {"image_name": "image2.jpg", "label": "dog"},
@@ -365,33 +376,34 @@ class TestDatasetsCRUD:
 
                 mock_update_image.side_effect = mock_update_impl
 
-                # Ejecución
+                # Ejecución.
                 result = await label_images_with_csv(
                     session=mock_session, dataset_id=dataset_id, labels_data=labels_data
                 )
 
-                # Verificación
+                # Verificación.
                 assert (
                     result["labeled_count"] == 2
-                )  # Solo dos imágenes fueron etiquetadas
-                assert result["not_found_count"] == 1  # Una imagen no fue encontrada
+                )  # Solo dos imágenes fueron etiquetadas.
+                assert result["not_found_count"] == 1  # Una imagen no fue encontrada.
                 assert (
                     len(result["not_found_details"]) == 1
-                )  # Detalle de la imagen no encontrada
+                )  # Detalle de la imagen no encontrada.
                 assert "nonexistent.jpg" in result["not_found_details"][0]
-                assert mock_get_image.call_count == 3  # Se buscaron las tres imágenes
+                assert mock_get_image.call_count == 3  # Se buscaron las tres imágenes.
                 assert (
                     mock_update_image.call_count == 2
-                )  # Solo se actualizaron dos imágenes
+                )  # Solo se actualizaron dos imágenes.
 
     async def test_delete_dataset_success(self, mock_session):
         """Prueba de eliminación exitosa de un dataset."""
-        # Configuración
+
+        # Configuración.
         dataset = MagicMock()
         dataset.id = uuid.uuid4()
         dataset.__class__ = Dataset
 
-        # Mock para select y execute que devuelve imágenes asociadas al dataset
+        # Mock para select y execute que devuelve imágenes asociadas al dataset.
         mock_images = []
         for i in range(3):
             img = MagicMock()
@@ -410,12 +422,12 @@ class TestDatasetsCRUD:
 
             mock_select.return_value = MagicMock()
             mock_session.execute = AsyncMock(return_value=execute_result)
-            mock_exists.return_value = True  # Simular que los archivos existen
+            mock_exists.return_value = True  # Simular que los archivos existen.
 
-            # Ejecución
+            # Ejecución.
             await delete_dataset(session=mock_session, dataset=dataset)
 
-            # Verificación
+            # Verificación.
             mock_session.execute.assert_called_once()
             mock_session.delete.assert_called_once_with(dataset)
             mock_session.commit.assert_called_once()

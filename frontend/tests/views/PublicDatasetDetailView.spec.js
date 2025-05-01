@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import * as notifications from '@/utils/notifications'
 import { globalOptions } from '../../tests/helpers/test-utils'
 
-// Mock de Chart.js
+// Mock de Chart.js.
 vi.mock('chart.js/auto', () => ({
   default: class ChartMock {
     constructor() {
@@ -16,11 +16,11 @@ vi.mock('chart.js/auto', () => ({
   }
 }))
 
-// Definir routerPushMock fuera del ámbito de los mocks para accederlo desde cualquier test
+// Definir routerPushMock fuera del ámbito de los mocks para accederlo desde cualquier test.
 const routerPushMock = vi.fn();
 const routerReplaceMock = vi.fn();
 
-// Mock del store de autenticación
+// Mock del store de autenticación.
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: vi.fn(() => ({
     token: 'mock-token',
@@ -35,14 +35,14 @@ vi.mock('@/stores/authStore', () => ({
   }))
 }))
 
-// Mock de las funciones de notificación
+// Mock de las funciones de notificación.
 vi.mock('@/utils/notifications', () => ({
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
   notifyInfo: vi.fn()
 }))
 
-// Mock del router
+// Mock del router.
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: routerPushMock,
@@ -55,7 +55,7 @@ vi.mock('vue-router', () => ({
   })
 }))
 
-// Mock de los componentes utilizados
+// Mock de los componentes utilizados.
 vi.mock('@/components/utils/ConfirmationModal.vue', () => ({
   default: {
     name: 'ConfirmationModal',
@@ -65,7 +65,7 @@ vi.mock('@/components/utils/ConfirmationModal.vue', () => ({
   }
 }))
 
-// Añadir el mock del componente ReadOnlyImagesTable
+// Añadir el mock del componente ReadOnlyImagesTable.
 vi.mock('@/components/images/ReadOnlyImagesTable.vue', () => ({
   default: {
     name: 'ReadOnlyImagesTable',
@@ -74,7 +74,7 @@ vi.mock('@/components/images/ReadOnlyImagesTable.vue', () => ({
   }
 }))
 
-// Datos mock para las pruebas
+// Datos mock para las pruebas.
 const mockDataset = {
   id: '1',
   name: 'Dataset público de prueba',
@@ -83,7 +83,7 @@ const mockDataset = {
   category_count: 3,
   created_at: '2023-03-15T14:30:00Z',
   is_public: true,
-  user_id: '2', // ID diferente al usuario actual (que es 1)
+  user_id: '2', // ID diferente al usuario actual (que es 1).
   username: 'otro_usuario'
 }
 
@@ -97,19 +97,19 @@ const mockLabelDetails = {
   ]
 }
 
-// Servidor mock para simular respuestas de la API
+// Servidor mock para simular respuestas de la API.
 const server = setupServer(
-  // Obtener detalles del dataset público
+  // Obtener detalles del dataset público.
   http.get('/datasets/public/:id', () => {
     return HttpResponse.json(mockDataset, { status: 200 })
   }),
   
-  // Obtener detalles de etiquetas del dataset público
+  // Obtener detalles de etiquetas del dataset público.
   http.get('/datasets/public/:id/label-details', () => {
     return HttpResponse.json(mockLabelDetails, { status: 200 })
   }),
   
-  // Clonar dataset
+  // Clonar dataset.
   http.post('/datasets/:id/clone', () => {
     return HttpResponse.json({
       id: '3',
@@ -121,7 +121,7 @@ const server = setupServer(
     }, { status: 200 })
   }),
 
-  // Añadir handler para imágenes de datasets públicos
+  // Añadir handler para imágenes de datasets públicos.
   http.get('/images/public-dataset/:id', () => {
     return HttpResponse.json({
       images: [
@@ -145,75 +145,75 @@ const server = setupServer(
   })
 )
 
-// Configuración del servidor
+// Configuración del servidor.
 beforeEach(() => server.listen())
 afterEach(() => server.resetHandlers())
 afterEach(() => server.close())
 afterEach(() => vi.clearAllMocks())
 
-// Restaurar el objeto Element.scrollIntoView porque lo usamos en pruebas
+// Restaurar el objeto Element.scrollIntoView.
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
 describe('PublicDatasetDetailView.vue', () => {
-  // Test 1: Carga inicial de datos del dataset público
+  // Test 1: Carga inicial de datos del dataset público.
   it('carga correctamente los detalles del dataset público', async () => {
     const wrapper = mount(PublicDatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que los datos del dataset están presentes
+    // Verificar que los datos del dataset están presentes.
     expect(wrapper.vm.dataset).toEqual(mockDataset)
     expect(wrapper.vm.labelDetails).toEqual(mockLabelDetails)
     
-    // Verificar título y detalles básicos
+    // Verificar título y detalles básicos.
     expect(wrapper.find('h1').text()).toBe(mockDataset.name)
     expect(wrapper.find('.dataset-description p').text()).toBe(mockDataset.description)
     
-    // Verificar información del usuario creador
+    // Verificar información del usuario creador.
     expect(wrapper.find('.dataset-user').text()).toContain('otro_usuario')
     
-    // Verificar que se muestra como público
+    // Verificar que se muestra como público.
     expect(wrapper.find('.dataset-visibility.public').exists()).toBe(true)
   })
   
-  // Test 2: Visualización correcta de categorías
+  // Test 2: Visualización correcta de categorías.
   it('muestra correctamente las categorías del dataset público', async () => {
     const wrapper = mount(PublicDatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que la tabla de categorías existe
+    // Verificar que la tabla de categorías existe.
     expect(wrapper.find('.categories-table').exists()).toBe(true)
     
-    // Verificar que se muestran todas las categorías
+    // Verificar que se muestran todas las categorías.
     const categoryRows = wrapper.findAll('.categories-table tbody tr')
     expect(categoryRows.length).toBe(3)
     
-    // Verificar el contenido de la primera categoría
+    // Verificar el contenido de la primera categoría.
     const firstCategoryRow = categoryRows[0]
     expect(firstCategoryRow.findAll('td')[0].text()).toBe('Categoría 1')
     expect(firstCategoryRow.findAll('td')[1].text()).toBe('3')
   })
   
-  // Test 3: Redireccionamiento si es el propietario del dataset
+  // Test 3: Redireccionamiento si es el propietario del dataset.
   it('redirige a la vista personal cuando el usuario es propietario del dataset', async () => {
-    // Mock del store con el usuario como propietario del dataset
+    // Mock del store con el usuario como propietario del dataset.
     vi.mocked(useAuthStore).mockReturnValue({
       token: 'mock-token',
       user: { 
-        id: '2',  // Mismo ID que el propietario del dataset
+        id: '2',  // Mismo ID que el propietario del dataset.
         username: 'otro_usuario',
         email: 'otro@example.com',
         is_admin: false
@@ -226,7 +226,7 @@ describe('PublicDatasetDetailView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos y se procese la redirección
+    // Esperar a que se carguen los datos y se procese la redirección.
     await vi.waitFor(() => {
       expect(routerReplaceMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -237,43 +237,43 @@ describe('PublicDatasetDetailView.vue', () => {
     })
   })
   
-  // Test 4: Mostrar modal de confirmación para clonar dataset
+  // Test 4: Mostrar modal de confirmación para clonar dataset.
   it('muestra el modal de confirmación al intentar clonar el dataset', async () => {
     const wrapper = mount(PublicDatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que el modal está cerrado inicialmente
+    // Verificar que el modal está cerrado inicialmente.
     expect(wrapper.vm.showCloneModal).toBe(false)
     
-    // Buscar el botón de clonar y hacer clic
+    // Buscar el botón de clonar y hacer clic.
     const cloneButton = wrapper.find('.clone-button')
     expect(cloneButton.exists()).toBe(true)
     
     await cloneButton.trigger('click')
     
-    // Verificar que el modal se abrió
+    // Verificar que el modal se abrió.
     expect(wrapper.vm.showCloneModal).toBe(true)
     expect(wrapper.find('.mock-confirmation-modal').exists()).toBe(true)
   })
   
-  // Test 5: Clonación exitosa de dataset
+  // Test 5: Clonación exitosa de dataset.
   it('clona el dataset correctamente y redirige al usuario', async () => {
     const wrapper = mount(PublicDatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Abrir modal de confirmación
+    // Abrir modal de confirmación.
     wrapper.vm.showCloneConfirmation()
     await wrapper.vm.$nextTick()
     expect(wrapper.vm.showCloneModal).toBe(true)
@@ -281,10 +281,10 @@ describe('PublicDatasetDetailView.vue', () => {
     // Confirmar la clonación
     await wrapper.vm.confirmCloneDataset()
     
-    // Verificar que se muestra notificación de éxito
+    // Verificar que se muestra notificación de éxito.
     expect(notifications.notifySuccess).toHaveBeenCalled()
     
-    // Verificar que se redirige al usuario a la vista del dataset clonado
+    // Verificar que se redirige al usuario a la vista del dataset clonado.
     expect(routerPushMock).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'dataset-detail',
@@ -292,13 +292,13 @@ describe('PublicDatasetDetailView.vue', () => {
       })
     )
     
-    // Verificar que el modal se cierra
+    // Verificar que el modal se cierra.
     expect(wrapper.vm.showCloneModal).toBe(false)
   })
   
-  // Test 6: No mostrar botón de clonar si no está autenticado
+  // Test 6: No mostrar botón de clonar si no está autenticado.
   it('no muestra el botón de clonar si el usuario no está autenticado', async () => {
-    // Mock del store con usuario no autenticado
+    // Mock del store con usuario no autenticado.
     vi.mocked(useAuthStore).mockReturnValue({
       token: null,
       user: null,
@@ -310,18 +310,18 @@ describe('PublicDatasetDetailView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que el botón de clonar no existe
+    // Verificar que el botón de clonar no existe.
     expect(wrapper.find('.clone-button').exists()).toBe(false)
   })
   
-  // Test 7: Manejo de intento de clonar sin autenticación
+  // Test 7: Manejo de intento de clonar sin autenticación.
   it('muestra notificación y redirige al intentar clonar sin estar autenticado', async () => {
-    // Mock del store con usuario no autenticado
+    // Mock del store con usuario no autenticado.
     vi.mocked(useAuthStore).mockReturnValue({
       token: null,
       user: null,
@@ -333,24 +333,24 @@ describe('PublicDatasetDetailView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Llamar directamente al método de confirmar clonación
+    // Llamar directamente al método de confirmar clonación.
     wrapper.vm.showCloneConfirmation()
     
-    // Verificar que se muestra notificación informativa
+    // Verificar que se muestra notificación informativa.
     expect(notifications.notifyInfo).toHaveBeenCalled()
     
-    // Verificar que se redirige al inicio
+    // Verificar que se redirige al inicio.
     expect(routerPushMock).toHaveBeenCalledWith('/')
   })
   
-  // Test 8: Manejo de error al clonar dataset
+  // Test 8: Manejo de error al clonar dataset.
   it('maneja correctamente los errores al clonar el dataset', async () => {
-    // Configurar respuesta de error para la clonación
+    // Configurar respuesta de error para la clonación.
     server.use(
       http.post('/datasets/:id/clone', () => {
         return HttpResponse.json(
@@ -364,28 +364,28 @@ describe('PublicDatasetDetailView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Preparar para clonar
+    // Preparar para clonar.
     wrapper.vm.showCloneModal = true
     await wrapper.vm.$nextTick()
     
-    // Intentar clonar
+    // Intentar clonar.
     await wrapper.vm.confirmCloneDataset()
     
-    // Verificar que se muestra notificación de error
+    // Verificar que se muestra notificación de error.
     expect(notifications.notifyError).toHaveBeenCalled()
     
-    // Verificar que isCloning vuelve a false
+    // Verificar que isCloning vuelve a false.
     expect(wrapper.vm.isCloning).toBe(false)
   })
   
-  // Test 9: Manejo de dataset ya clonado
+  // Test 9: Manejo de dataset ya clonado.
   it('redirige al dataset existente si ya fue clonado previamente', async () => {
-    // Configurar respuesta para dataset ya clonado
+    // Configurar respuesta para dataset ya clonado.
     server.use(
       http.post('/datasets/:id/clone', () => {
         return new HttpResponse(
@@ -404,19 +404,19 @@ describe('PublicDatasetDetailView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Preparar para clonar
+    // Preparar para clonar.
     wrapper.vm.showCloneModal = true
     await wrapper.vm.$nextTick()
     
-    // Intentar clonar
+    // Intentar clonar.
     await wrapper.vm.confirmCloneDataset()
     
-    // Verificar que se redirige al dataset existente
+    // Verificar que se redirige al dataset existente.
     expect(routerPushMock).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'dataset-detail',
@@ -424,37 +424,37 @@ describe('PublicDatasetDetailView.vue', () => {
       })
     )
     
-    // Verificar que el modal se cierra
+    // Verificar que el modal se cierra.
     expect(wrapper.vm.showCloneModal).toBe(false)
   })
   
-  // Test 10: Formateo correcto de fechas
+  // Test 10: Formateo correcto de fechas.
   it('formatea correctamente las fechas', async () => {
     const wrapper = mount(PublicDatasetDetailView, {
       global: globalOptions
     })
     
-    // Probar la función de formateo de fechas
+    // Probar la función de formateo de fechas.
     const formattedDate = wrapper.vm.formatDate('2023-03-15T14:30:00Z')
     
     // La implementación exacta dependerá del navegador y la zona horaria,
-    // pero podemos comprobar que devuelve un string no vacío
+    // pero se puede comprobar que devuelve un string no vacío.
     expect(typeof formattedDate).toBe('string')
     expect(formattedDate.length).toBeGreaterThan(0)
   })
 
-  // Test 11: Mostrar tabla de imágenes del dataset público
+  // Test 11: Mostrar tabla de imágenes del dataset público.
   it('muestra la tabla de imágenes del dataset público', async () => {
     const wrapper = mount(PublicDatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que la tabla de imágenes existe
+    // Verificar que la tabla de imágenes existe.
     expect(wrapper.find('.images-section').exists()).toBe(true)
     expect(wrapper.find('.mock-readonly-images-table').exists()).toBe(true)
   })

@@ -12,21 +12,21 @@ class TestTokens:
     def test_create_access_token(self, mock_env_vars):
         """Prueba de creación de un token de acceso."""
 
-        # Preparación
+        # Preparación.
         user_id = "test123"
         expires_delta = timedelta(minutes=30)
 
-        # Ejecución
+        # Ejecución.
         token = create_access_token(subject=user_id, expires_delta=expires_delta)
 
-        # Decodificación y verificación
+        # Decodificación y verificación.
         decoded = jwt.decode(token, "test_secret_key_123", algorithms=["HS256"])
 
-        # Verificación
+        # Verificación.
         assert decoded["sub"] == user_id
         assert decoded["type"] == "auth"
         assert isinstance(decoded["exp"], int)
-        # Verificar que el tiempo de expiración está en el futuro
+        # Verificar que el tiempo de expiración está en el futuro.
         assert datetime.fromtimestamp(decoded["exp"], tz=timezone.utc) > datetime.now(
             timezone.utc
         )
@@ -34,20 +34,20 @@ class TestTokens:
     def test_verify_password_reset_token_valid(self, mock_env_vars):
         """Prueba de verificación de un token válido de restablecimiento de contraseña."""
 
-        # Preparación
+        # Preparación.
         email = "test@example.com"
         token = create_password_reset_token(email=email)
 
-        # Ejecución
+        # Ejecución.
         result = verify_password_reset_token(token=token)
 
-        # Verificación
+        # Verificación.
         assert result == email
 
     def test_verify_password_reset_token_invalid(self, mock_env_vars):
         """Prueba de verificación de un token inválido de restablecimiento de contraseña."""
 
-        # Preparación - Crear token con tipo incorrecto
+        # Preparación - Crear token con tipo incorrecto.
         email = "test@example.com"
         wrong_token = jwt.encode(
             {
@@ -59,8 +59,8 @@ class TestTokens:
             algorithm="HS256",
         )
 
-        # Ejecución
+        # Ejecución.
         result = verify_password_reset_token(token=wrong_token)
 
-        # Verificación
+        # Verificación.
         assert result is None

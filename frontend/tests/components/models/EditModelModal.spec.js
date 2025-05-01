@@ -30,18 +30,18 @@ vi.mock('@fortawesome/vue-fontawesome', () => ({
 }))
 
 // Mock para componentes de campo.
-vi.mock('@/components/datasets/DatasetNameField.vue', () => ({
+vi.mock('@/components/models/ModelNameField.vue', () => ({
   default: {
-    name: 'DatasetNameField',
+    name: 'ModelNameField',
     template: '<div class="mock-field"><input type="text" /></div>',
     props: ['modelValue', 'error', 'placeholder'],
     emits: ['update:modelValue', 'input']
   }
 }))
 
-vi.mock('@/components/datasets/DatasetDescriptionField.vue', () => ({
+vi.mock('@/components/models/ModelDescriptionField.vue', () => ({
   default: {
-    name: 'DatasetDescriptionField',
+    name: 'ModelDescriptionField',
     template: '<div class="mock-field"><input type="text" /></div>',
     props: ['modelValue', 'error', 'placeholder'],
     emits: ['update:modelValue', 'input']
@@ -70,13 +70,13 @@ vi.mock('@/stores/authStore', () => ({
   })
 }))
 
-vi.mock('@/components/datasets/EditDatasetModal.vue', () => ({
+vi.mock('@/components/models/EditModelModal.vue', () => ({
   default: {
-    name: 'EditDatasetModal',
+    name: 'EditModelModal',
     template: `
       <div v-if="isOpen" class="modal-overlay">
-        <div class="auth-modal edit-dataset-modal">
-          <h1>Editar conjunto de imágenes</h1>
+        <div class="auth-modal edit-model-modal">
+          <h1>Editar modelo</h1>
           <form @submit.prevent="handleSubmit">
             <div class="auth-modal-form">
               <div class="mock-field"></div>
@@ -87,10 +87,10 @@ vi.mock('@/components/datasets/EditDatasetModal.vue', () => ({
         </div>
       </div>
     `,
-    props: ['isOpen', 'dataset'],
+    props: ['isOpen', 'model'],
     data() {
       return {
-        datasetData: {
+        modelData: {
           name: '',
           description: ''
         },
@@ -105,19 +105,19 @@ vi.mock('@/components/datasets/EditDatasetModal.vue', () => ({
     },
     computed: {
       hasChanges() {
-        return this.datasetData.name !== this.originalData.name || 
-               this.datasetData.description !== this.originalData.description;
+        return this.modelData.name !== this.originalData.name || 
+               this.modelData.description !== this.originalData.description;
       },
       isFormValid() {
-        return !this.nameError && !this.descriptionError && this.datasetData.name;
+        return !this.nameError && !this.descriptionError && this.modelData.name;
       }
     },
     methods: {
       validateName() {
-        if (!this.datasetData.name) {
-          this.nameError = 'El nombre del conjunto es obligatorio.';
+        if (!this.modelData.name) {
+          this.nameError = 'El nombre del modelo es obligatorio.';
           return false;
-        } else if (this.datasetData.name.length > 255) {
+        } else if (this.modelData.name.length > 255) {
           this.nameError = 'El nombre no puede exceder los 255 caracteres.';
           return false;
         } else {
@@ -126,7 +126,7 @@ vi.mock('@/components/datasets/EditDatasetModal.vue', () => ({
         }
       },
       validateDescription() {
-        if (this.datasetData.description && this.datasetData.description.length > 1000) {
+        if (this.modelData.description && this.modelData.description.length > 1000) {
           this.descriptionError = 'La descripción no puede exceder los 1000 caracteres.';
           return false;
         } else {
@@ -141,12 +141,12 @@ vi.mock('@/components/datasets/EditDatasetModal.vue', () => ({
       },
       initForm() {
         this.originalData = {
-          name: this.dataset?.name || '',
-          description: this.dataset?.description || ''
+          name: this.model?.name || '',
+          description: this.model?.description || ''
         };
-        this.datasetData = {
-          name: this.dataset?.name || '',
-          description: this.dataset?.description || ''
+        this.modelData = {
+          name: this.model?.name || '',
+          description: this.model?.description || ''
         };
         this.nameError = '';
         this.descriptionError = '';
@@ -158,14 +158,14 @@ vi.mock('@/components/datasets/EditDatasetModal.vue', () => ({
   }
 }))
 
-import EditDatasetModal from '@/components/datasets/EditDatasetModal.vue'
+import EditModelModal from '@/components/models/EditModelModal.vue'
 
-describe('EditDatasetModal.vue', () => {
-  const testDataset = {
+describe('EditModelModal.vue', () => {
+  const testModel = {
     id: '1',
-    name: 'Test Dataset',
+    name: 'Test Model',
     description: 'Test description',
-    is_public: false
+    status: 'trained'
   }
   
   // Configurar mocks antes de cada test.
@@ -177,11 +177,11 @@ describe('EditDatasetModal.vue', () => {
     // Preparar el DOM para teleport.
     document.body.innerHTML = '<div id="teleport-target"></div>'
     
-    // Mock de axios.patch para simular la actualización exitosa del dataset.
+    // Mock de axios.patch para simular la actualización exitosa del modelo.
     axios.patch = vi.fn().mockResolvedValue({
       data: {
-        ...testDataset,
-        name: 'Updated Dataset',
+        ...testModel,
+        name: 'Updated Model',
         description: 'Updated description'
       }
     })
@@ -192,10 +192,10 @@ describe('EditDatasetModal.vue', () => {
   
   // Test 1: Visualización del modal.
   it('muestra el modal cuando isOpen es true', () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -205,15 +205,15 @@ describe('EditDatasetModal.vue', () => {
     })
     
     // Verificar que el modal está visible.
-    expect(wrapper.find('.edit-dataset-modal').exists()).toBe(true)
+    expect(wrapper.find('.edit-model-modal').exists()).toBe(true)
   })
   
   // Test 2: Ocultamiento del modal.
   it('oculta el modal cuando isOpen es false', () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: false,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -223,15 +223,15 @@ describe('EditDatasetModal.vue', () => {
     })
     
     // Verificar que el modal no está visible.
-    expect(wrapper.find('.edit-dataset-modal').exists()).toBe(false)
+    expect(wrapper.find('.edit-model-modal').exists()).toBe(false)
   })
   
   // Test 3: Validación del nombre.
   it('valida el nombre correctamente', async () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -241,25 +241,25 @@ describe('EditDatasetModal.vue', () => {
     })
     
     // Establecer valores y disparar validación.
-    wrapper.vm.datasetData.name = '';
+    wrapper.vm.modelData.name = '';
     wrapper.vm.validateName();
-    expect(wrapper.vm.nameError).toBe('El nombre del conjunto es obligatorio.');
+    expect(wrapper.vm.nameError).toBe('El nombre del modelo es obligatorio.');
     
-    wrapper.vm.datasetData.name = 'a'.repeat(256);
+    wrapper.vm.modelData.name = 'a'.repeat(256);
     wrapper.vm.validateName();
     expect(wrapper.vm.nameError).toBe('El nombre no puede exceder los 255 caracteres.');
     
-    wrapper.vm.datasetData.name = 'Valid Name';
+    wrapper.vm.modelData.name = 'Valid Name';
     wrapper.vm.validateName();
     expect(wrapper.vm.nameError).toBe('');
   })
   
   // Test 4: Validación de la descripción.
   it('valida la descripción correctamente', async () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -269,21 +269,21 @@ describe('EditDatasetModal.vue', () => {
     })
     
     // Establecer valores y disparar validación.
-    wrapper.vm.datasetData.description = 'a'.repeat(1001);
+    wrapper.vm.modelData.description = 'a'.repeat(1001);
     wrapper.vm.validateDescription();
     expect(wrapper.vm.descriptionError).toBe('La descripción no puede exceder los 1000 caracteres.');
     
-    wrapper.vm.datasetData.description = 'Valid description';
+    wrapper.vm.modelData.description = 'Valid description';
     wrapper.vm.validateDescription();
     expect(wrapper.vm.descriptionError).toBe('');
   })
   
   // Test 5: Inicialización del formulario.
-  it('inicializa el formulario con los datos del dataset', async () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+  it('inicializa el formulario con los datos del modelo', async () => {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -297,18 +297,18 @@ describe('EditDatasetModal.vue', () => {
     await wrapper.vm.$nextTick();
     
     // Verificar que los datos se inicializaron correctamente.
-    expect(wrapper.vm.datasetData.name).toBe('Test Dataset');
-    expect(wrapper.vm.datasetData.description).toBe('Test description');
-    expect(wrapper.vm.originalData.name).toBe('Test Dataset');
+    expect(wrapper.vm.modelData.name).toBe('Test Model');
+    expect(wrapper.vm.modelData.description).toBe('Test description');
+    expect(wrapper.vm.originalData.name).toBe('Test Model');
     expect(wrapper.vm.originalData.description).toBe('Test description');
   })
   
   // Test 6: Detección de cambios en el formulario.
   it('detecta cambios en el formulario correctamente', async () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -325,28 +325,28 @@ describe('EditDatasetModal.vue', () => {
     expect(wrapper.vm.hasChanges).toBe(false);
     
     // Cambiar el nombre.
-    wrapper.vm.datasetData.name = 'New Name';
+    wrapper.vm.modelData.name = 'New Name';
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.hasChanges).toBe(true);
     
     // Restaurar nombre y cambiar descripción.
-    wrapper.vm.datasetData.name = 'Test Dataset';
-    wrapper.vm.datasetData.description = 'New description';
+    wrapper.vm.modelData.name = 'Test Model';
+    wrapper.vm.modelData.description = 'New description';
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.hasChanges).toBe(true);
     
     // Restaurar a valores originales.
-    wrapper.vm.datasetData.description = 'Test description';
+    wrapper.vm.modelData.description = 'Test description';
     await wrapper.vm.$nextTick();
     expect(wrapper.vm.hasChanges).toBe(false);
   })
   
   // Test 7: Actualización exitosa.
-  it('actualiza el dataset correctamente', async () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+  it('actualiza el modelo correctamente', async () => {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -359,24 +359,24 @@ describe('EditDatasetModal.vue', () => {
     wrapper.vm.initForm();
     
     // Modificar valores.
-    wrapper.vm.datasetData.name = 'Updated Dataset';
-    wrapper.vm.datasetData.description = 'Updated description';
+    wrapper.vm.modelData.name = 'Updated Model';
+    wrapper.vm.modelData.description = 'Updated description';
     
     // Mock del método handleSubmit para simular actualización exitosa.
     wrapper.vm.handleSubmit = vi.fn(async function() {
       // Simular respuesta exitosa.
       try {
-        const response = await axios.patch(`/datasets/${testDataset.id}`, {
-          name: 'Updated Dataset',
+        const response = await axios.patch(`/classifiers/${testModel.id}`, {
+          name: 'Updated Model',
           description: 'Updated description'
         });
         
         notifications.notifySuccess(
-          'Conjunto de imágenes actualizado',
-          'Se ha actualizado el conjunto Updated Dataset con éxito.'
+          'Modelo actualizado',
+          'Se ha actualizado el modelo Updated Model con éxito.'
         );
         
-        this.$emit('dataset-updated', response.data);
+        this.$emit('model-updated', response.data);
         this.$emit('close');
       } catch (error) {
         console.error(error);
@@ -388,19 +388,19 @@ describe('EditDatasetModal.vue', () => {
     await flushPromises();
     
     // Verificar que se llamó a axios.patch con los datos correctos.
-    expect(axios.patch).toHaveBeenCalledWith('/datasets/1', {
-      name: 'Updated Dataset',
+    expect(axios.patch).toHaveBeenCalledWith('/classifiers/1', {
+      name: 'Updated Model',
       description: 'Updated description'
     });
     
     // Verificar que se mostró la notificación de éxito.
     expect(notifications.notifySuccess).toHaveBeenCalledWith(
-      'Conjunto de imágenes actualizado',
-      'Se ha actualizado el conjunto Updated Dataset con éxito.'
+      'Modelo actualizado',
+      'Se ha actualizado el modelo Updated Model con éxito.'
     );
     
     // Verificar que se emitieron los eventos adecuados.
-    expect(wrapper.emitted('dataset-updated')).toBeTruthy();
+    expect(wrapper.emitted('model-updated')).toBeTruthy();
     expect(wrapper.emitted('close')).toBeTruthy();
   })
   
@@ -410,14 +410,14 @@ describe('EditDatasetModal.vue', () => {
     axios.patch = vi.fn().mockRejectedValue({
       response: {
         status: 409,
-        data: { detail: 'Ya tienes un conjunto de imágenes con este nombre.' }
+        data: { detail: 'Ya tienes un modelo con este nombre.' }
       }
     });
     
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {
@@ -430,20 +430,20 @@ describe('EditDatasetModal.vue', () => {
     wrapper.vm.initForm();
     
     // Modificar valores.
-    wrapper.vm.datasetData.name = 'Duplicate Dataset';
+    wrapper.vm.modelData.name = 'Duplicate Model';
     
     // Mock del método handleApiError.
     wrapper.vm.handleApiError = vi.fn(function(error) {
       if (error.response && error.response.status === 409) {
-        this.nameError = 'Ya tienes un conjunto de imágenes con este nombre.';
+        this.nameError = 'Ya tienes un modelo con este nombre.';
       }
     });
     
     // Mock para el método handleSubmit que llama a handleApiError.
     wrapper.vm.handleSubmit = vi.fn(async function() {
       try {
-        await axios.patch(`/datasets/${testDataset.id}`, {
-          name: 'Duplicate Dataset'
+        await axios.patch(`/classifiers/${testModel.id}`, {
+          name: 'Duplicate Model'
         });
       } catch (error) {
         this.handleApiError(error);
@@ -458,15 +458,15 @@ describe('EditDatasetModal.vue', () => {
     expect(wrapper.vm.handleApiError).toHaveBeenCalled();
     
     // Verificar que se estableció el error.
-    expect(wrapper.vm.nameError).toBe('Ya tienes un conjunto de imágenes con este nombre.');
+    expect(wrapper.vm.nameError).toBe('Ya tienes un modelo con este nombre.');
   })
   
   // Test 9: Cierre del modal.
   it('cierra el modal y emite evento close', async () => {
-    const wrapper = shallowMount(EditDatasetModal, {
+    const wrapper = shallowMount(EditModelModal, {
       props: {
         isOpen: true,
-        dataset: testDataset
+        model: testModel
       },
       global: {
         stubs: {

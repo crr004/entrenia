@@ -25,10 +25,11 @@ class TestImageRoutes:
         mock_dataset,
     ):
         """Prueba de lectura exitosa de imágenes de un dataset."""
-        # Configuración
+
+        # Configuración.
         mock_user.is_admin = False
         mock_user.id = uuid.uuid4()
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
         dataset_id = mock_dataset.id
 
         with patch("app.api.routes.images.get_dataset_by_id") as mock_get_dataset_by_id:
@@ -74,7 +75,7 @@ class TestImageRoutes:
 
                     mock_validate.side_effect = side_effect
 
-                    # Ejecución
+                    # Ejecución.
                     response = await read_images(
                         session=mock_session,
                         current_user=mock_user,
@@ -83,7 +84,7 @@ class TestImageRoutes:
                         limit=100,
                     )
 
-                    # Verificación
+                    # Verificación.
                     assert response.count == total_count
                     assert len(response.images) == total_count
                     mock_get_dataset_by_id.assert_called_once_with(
@@ -97,14 +98,15 @@ class TestImageRoutes:
         mock_user,
     ):
         """Prueba de error al leer imágenes de un dataset que no existe."""
-        # Configuración
+
+        # Configuración.
         mock_user.is_admin = False
         dataset_id = uuid.uuid4()
 
         with patch("app.api.routes.images.get_dataset_by_id") as mock_get_dataset_by_id:
             mock_get_dataset_by_id.return_value = None
 
-            # Ejecución y verificación
+            # Ejecución y verificación.
             with pytest.raises(HTTPException) as exc_info:
                 await read_images(
                     session=mock_session,
@@ -119,13 +121,14 @@ class TestImageRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_id, mock_dataset
     ):
         """Prueba de error al leer imágenes de un dataset al que el usuario no tiene acceso."""
-        # Configuración
+
+        # Configuración.
         other_user_id = uuid.uuid4()
-        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario
+        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario.
         mock_get_dataset_by_id.return_value = mock_dataset
         dataset_id = mock_dataset.id
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await read_images(
                 session=mock_session,
@@ -138,10 +141,11 @@ class TestImageRoutes:
 
     async def test_read_images_invalid_sort_params(self, mock_session, mock_user):
         """Prueba de error al usar parámetros de ordenación inválidos."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
 
-        # Ejecución y verificación - Sort order inválido
+        # Ejecución y verificación - Sort order inválido.
         with pytest.raises(HTTPException) as exc_info:
             await read_images(
                 session=mock_session,
@@ -153,7 +157,7 @@ class TestImageRoutes:
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "Invalid sort_order" in exc_info.value.detail
 
-        # Ejecución y verificación - Sort by inválido
+        # Ejecución y verificación - Sort by inválido.
         with pytest.raises(HTTPException) as exc_info:
             await read_images(
                 session=mock_session,
@@ -167,9 +171,10 @@ class TestImageRoutes:
 
     async def test_read_image_success(self, mock_session, mock_user, mock_dataset):
         """Prueba de lectura exitosa de una imagen específica."""
-        # Configuración
+
+        # Configuración.
         mock_user.is_admin = False
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
 
         image_id = uuid.uuid4()
 
@@ -203,14 +208,14 @@ class TestImageRoutes:
                     mock_return.created_at = mock_image.created_at
                     mock_validate.return_value = mock_return
 
-                    # Ejecución
+                    # Ejecución.
                     response = await read_image(
                         session=mock_session,
                         current_user=mock_user,
                         image_id=image_id,
                     )
 
-                    # Verificación
+                    # Verificación.
                     mock_get_image.assert_called_once_with(
                         session=mock_session, id=image_id
                     )
@@ -222,7 +227,8 @@ class TestImageRoutes:
 
     async def test_read_image_not_found(self, mock_session, mock_user):
         """Prueba de error al leer una imagen que no existe."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
 
         with patch(
@@ -230,7 +236,7 @@ class TestImageRoutes:
         ) as mock_get_image:
             mock_get_image.return_value = None
 
-            # Ejecución y verificación
+            # Ejecución y verificación.
             with pytest.raises(HTTPException) as exc_info:
                 await read_image(
                     session=mock_session,
@@ -243,7 +249,8 @@ class TestImageRoutes:
 
     async def test_read_image_dataset_not_found(self, mock_session, mock_user):
         """Prueba de error cuando el dataset de la imagen no existe."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
         mock_image = MagicMock()
         mock_image.id = image_id
@@ -257,7 +264,7 @@ class TestImageRoutes:
             with patch("app.api.routes.images.get_dataset_by_id") as mock_get_dataset:
                 mock_get_dataset.return_value = None
 
-                # Ejecución y verificación
+                # Ejecución y verificación.
                 with pytest.raises(HTTPException) as exc_info:
                     await read_image(
                         session=mock_session,
@@ -270,14 +277,15 @@ class TestImageRoutes:
 
     async def test_read_image_unauthorized(self, mock_session, mock_user, mock_dataset):
         """Prueba de error al leer una imagen a la que el usuario no tiene acceso."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
         mock_image = MagicMock()
         mock_image.id = image_id
         mock_image.dataset_id = mock_dataset.id
 
         other_user_id = uuid.uuid4()
-        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario
+        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario.
 
         with patch(
             "app.api.routes.images.crud_images.get_image_by_id"
@@ -287,7 +295,7 @@ class TestImageRoutes:
             with patch("app.api.routes.images.get_dataset_by_id") as mock_get_dataset:
                 mock_get_dataset.return_value = mock_dataset
 
-                # Ejecución y verificación
+                # Ejecución y verificación.
                 with pytest.raises(HTTPException) as exc_info:
                     await read_image(
                         session=mock_session,
@@ -300,7 +308,8 @@ class TestImageRoutes:
 
     async def test_update_image_success(self, mock_session, mock_user, mock_dataset):
         """Prueba de actualización exitosa de una imagen."""
-        # Configuración
+
+        # Configuración.
         mock_user.is_admin = False
 
         image_id = uuid.uuid4()
@@ -313,7 +322,7 @@ class TestImageRoutes:
         mock_image.thumbnail = "base64data"
         mock_image.created_at = datetime.now(timezone.utc)
 
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
 
         image_update = ImageUpdate(
             name="new_name.jpg",
@@ -360,7 +369,7 @@ class TestImageRoutes:
                             mock_return.created_at = updated_image.created_at
                             mock_validate.return_value = mock_return
 
-                            # Ejecución
+                            # Ejecución.
                             response = await update_image(
                                 session=mock_session,
                                 current_user=mock_user,
@@ -368,7 +377,7 @@ class TestImageRoutes:
                                 image_in=image_update,
                             )
 
-                            # Verificación
+                            # Verificación.
                             mock_get_image.assert_called_once_with(
                                 session=mock_session, id=image_id
                             )
@@ -384,20 +393,21 @@ class TestImageRoutes:
         self, mock_session, mock_user, mock_dataset
     ):
         """Prueba de error al actualizar una imagen con un nombre que ya existe."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
         mock_image = MagicMock()
         mock_image.id = image_id
         mock_image.dataset_id = mock_dataset.id
         mock_image.name = "original_name.jpg"
 
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
 
         existing_image = MagicMock()
         existing_image.id = uuid.uuid4()
 
         image_update = ImageUpdate(
-            name="existing_name.jpg",  # Nombre ya existente
+            name="existing_name.jpg",  # Nombre ya existente.
         )
 
         with patch(
@@ -412,10 +422,10 @@ class TestImageRoutes:
                     "app.api.routes.images.crud_images.get_image_by_datasetid_and_name"
                 ) as mock_get_by_name:
                     mock_get_by_name.return_value = (
-                        existing_image  # Ya existe otra imagen con ese nombre
+                        existing_image  # Ya existe otra imagen con ese nombre.
                     )
 
-                    # Ejecución y verificación
+                    # Ejecución y verificación.
                     with pytest.raises(HTTPException) as exc_info:
                         await update_image(
                             session=mock_session,
@@ -431,13 +441,14 @@ class TestImageRoutes:
 
     async def test_delete_image_success(self, mock_session, mock_user, mock_dataset):
         """Prueba de eliminación exitosa de una imagen."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
         mock_image = MagicMock()
         mock_image.id = image_id
         mock_image.dataset_id = mock_dataset.id
 
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
 
         with patch(
             "app.api.routes.images.crud_images.get_image_by_id"
@@ -450,14 +461,14 @@ class TestImageRoutes:
                 with patch(
                     "app.api.routes.images.crud_images.delete_image"
                 ) as mock_delete:
-                    # Ejecución
+                    # Ejecución.
                     response = await delete_image(
                         session=mock_session,
                         current_user=mock_user,
                         image_id=image_id,
                     )
 
-                    # Verificación
+                    # Verificación.
                     mock_get_image.assert_called_once_with(
                         session=mock_session, id=image_id
                     )
@@ -473,7 +484,8 @@ class TestImageRoutes:
         self, mock_session, mock_admin_user, mock_dataset
     ):
         """Prueba que un admin puede acceder a imágenes de otro usuario."""
-        # Configuración
+
+        # Configuración.
         mock_admin_user.is_admin = True
 
         image_id = uuid.uuid4()
@@ -488,7 +500,7 @@ class TestImageRoutes:
         mock_image.thumbnail = "base64data"
         mock_image.created_at = datetime.now(timezone.utc)
 
-        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario
+        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario.
 
         with patch(
             "app.api.routes.images.crud_images.get_image_by_id"
@@ -511,14 +523,15 @@ class TestImageRoutes:
                     mock_return.created_at = mock_image.created_at
                     mock_validate.return_value = mock_return
 
-                    # Ejecución - No debería lanzar excepción porque es admin
+                    # Ejecución.
+                    # No debería lanzar excepción porque es admin.
                     response = await read_image(
                         session=mock_session,
                         current_user=mock_admin_user,
                         image_id=image_id,
                     )
 
-                    # Verificación
+                    # Verificación.
                     assert response is not None
                     mock_get_image.assert_called_once()
                     mock_get_dataset.assert_called_once()

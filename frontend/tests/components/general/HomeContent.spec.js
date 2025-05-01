@@ -56,8 +56,8 @@ describe('HomeContent.vue - Sin token', () => {
     })
     
     // Verificar que el componente se renderiza correctamente.
-    expect(wrapper.find('h1').text()).toBe('EntrenIA')
-    expect(wrapper.find('p').text()).toBe('Texto de inicio.')
+    expect(wrapper.find('h1').text()).toBe('Entrena modelos de IA sin escribir código')
+    expect(wrapper.find('p').text()).toBe('Una plataforma intuitiva para crear clasificadores de imágenes de forma fácil y directa')
     
     // Verificar que no se llama a ninguna notificación.
     expect(notifications.notifySuccess).not.toHaveBeenCalled()

@@ -13,7 +13,7 @@ class TestUserUtils:
     ):
         """Prueba de autenticación exitosa con email."""
 
-        # Preparación
+        # Preparación.
         email = "test@example.com"
         password = "correctpassword"
         utils_mock_verify_password.return_value = True
@@ -21,12 +21,12 @@ class TestUserUtils:
         with patch("app.utils.users.get_user_by_email") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            # Ejecución
+            # Ejecución.
             result = await authenticate_user(
                 session=mock_session, email_or_username=email, password=password
             )
 
-            # Verificación
+            # Verificación.
             assert result == mock_user
             mock_get_user.assert_called_once_with(session=mock_session, email=email)
             utils_mock_verify_password.assert_called_once_with(
@@ -38,7 +38,7 @@ class TestUserUtils:
     ):
         """Prueba de autenticación exitosa con nombre de usuario."""
 
-        # Preparación
+        # Preparación.
         username = "testuser"
         password = "correctpassword"
         utils_mock_verify_password.return_value = True
@@ -46,12 +46,12 @@ class TestUserUtils:
         with patch("app.utils.users.get_user_by_username") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            # Ejecución
+            # Ejecución.
             result = await authenticate_user(
                 session=mock_session, email_or_username=username, password=password
             )
 
-            # Verificación
+            # Verificación.
             assert result == mock_user
             mock_get_user.assert_called_once_with(
                 session=mock_session, username=username
@@ -65,7 +65,7 @@ class TestUserUtils:
     ):
         """Prueba de fallo de autenticación debido a contraseña incorrecta."""
 
-        # Preparación
+        # Preparación.
         email = "test@example.com"
         password = "wrongpassword"
         utils_mock_verify_password.return_value = False
@@ -73,12 +73,12 @@ class TestUserUtils:
         with patch("app.utils.users.get_user_by_email") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            # Ejecución
+            # Ejecución.
             result = await authenticate_user(
                 session=mock_session, email_or_username=email, password=password
             )
 
-            # Verificación
+            # Verificación.
             assert result is None
             mock_get_user.assert_called_once_with(session=mock_session, email=email)
             utils_mock_verify_password.assert_called_once_with(
