@@ -117,6 +117,22 @@
   color: #e65100;
 }
 
+/* Colores para los estados de los modelos */
+.status-badge.training {
+  background-color: #e6e6fa;
+  color: #6a0dad;
+}
+
+.status-badge.failed {
+  background-color: #f7e6e6;
+  color: #b30000;
+}
+
+.status-badge.not-trained {
+  background-color: #e6e6e6;
+  color: #666666;
+}
+
 /* Paginación */
 .pagination-controls {
   display: flex;

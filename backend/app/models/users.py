@@ -8,6 +8,7 @@ from pydantic import EmailStr
 
 if TYPE_CHECKING:
     from app.models.datasets import Dataset
+    from app.models.classifiers import Classifier
 
 
 class UserBase(SQLModel):
@@ -51,6 +52,7 @@ class User(UserBase, table=True):
 
     if TYPE_CHECKING:
         datasets: list["Dataset"] = []
+        classifiers: list["Classifier"] = []
 
 
 class UserCreate(UserBase):

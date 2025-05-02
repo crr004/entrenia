@@ -20,16 +20,16 @@ class TestLoginRoutes:
     ):
         """Prueba de inicio de sesión exitoso."""
 
-        # Preparación
+        # Preparación.
         mock_authenticate_user.return_value = mock_user
         mock_user.is_active = True
         mock_user.is_verified = True
         mock_user.id = "user_id_123"
 
-        # Ejecución
+        # Ejecución.
         result = await login_user(mock_session, mock_oauth_form)
 
-        # Verificación
+        # Verificación.
         mock_authenticate_user.assert_called_once_with(
             session=mock_session,
             email_or_username=mock_oauth_form.username,
@@ -43,10 +43,10 @@ class TestLoginRoutes:
     ):
         """Prueba de inicio de sesión con credenciales inválidas."""
 
-        # Preparación
+        # Preparación.
         mock_authenticate_user.return_value = None
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await login_user(mock_session, mock_oauth_form)
 
@@ -58,12 +58,12 @@ class TestLoginRoutes:
     ):
         """Prueba de inicio de sesión con usuario inactivo."""
 
-        # Preparación
+        # Preparación.
         mock_authenticate_user.return_value = mock_user
         mock_user.is_active = False
         mock_user.is_verified = True
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await login_user(mock_session, mock_oauth_form)
 
@@ -75,12 +75,12 @@ class TestLoginRoutes:
     ):
         """Prueba de inicio de sesión con usuario no verificado."""
 
-        # Preparación
+        # Preparación.
         mock_authenticate_user.return_value = mock_user
         mock_user.is_active = True
         mock_user.is_verified = False
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await login_user(mock_session, mock_oauth_form)
 
@@ -99,18 +99,18 @@ class TestLoginRoutes:
     ):
         """Prueba de recuperación de contraseña exitosa."""
 
-        # Preparación
+        # Preparación.
         mock_login_get_user_by_email.return_value = mock_user
         mock_user.email = "test@example.com"
         mock_user.full_name = "Test User"
         mock_generate_password_reset_email.return_value = mock_email_data
 
-        # Ejecución
+        # Ejecución.
         result = await recover_password(
             mock_session, "test@example.com", mock_background_tasks
         )
 
-        # Verificación
+        # Verificación.
         mock_login_get_user_by_email.assert_called_once_with(
             session=mock_session, email="test@example.com"
         )
@@ -135,19 +135,19 @@ class TestLoginRoutes:
     ):
         """Prueba de recuperación de contraseña para usuario sin nombre completo."""
 
-        # Preparación
+        # Preparación.
         mock_login_get_user_by_email.return_value = mock_user
         mock_user.email = "test@example.com"
         mock_user.username = "testuser"
         mock_user.full_name = None
         mock_generate_password_reset_email.return_value = mock_email_data
 
-        # Ejecución
+        # Ejecución.
         result = await recover_password(
             mock_session, "test@example.com", mock_background_tasks
         )
 
-        # Verificación
+        # Verificación.
         mock_generate_password_reset_email.assert_called_once_with(
             email_to="test@example.com",
             username="testuser",
@@ -163,10 +163,10 @@ class TestLoginRoutes:
     ):
         """Prueba de recuperación de contraseña para usuario inexistente."""
 
-        # Preparación
+        # Preparación.
         mock_login_get_user_by_email.return_value = None
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await recover_password(
                 mock_session, "nonexistent@example.com", mock_background_tasks
@@ -187,19 +187,19 @@ class TestLoginRoutes:
     ):
         """Prueba de restablecimiento de contraseña exitoso."""
 
-        # Preparación
+        # Preparación.
         mock_verify_password_reset_token.return_value = "test@example.com"
         mock_login_get_user_by_email.return_value = mock_user
         mock_user.is_active = True
-        mock_verify_password.return_value = False  # La contraseña es diferente
+        mock_verify_password.return_value = False  # La contraseña es diferente.
         mock_update_password.return_value = mock_user
 
         body = NewPassword(token="valid_token", new_password="NewSecurePassword123!")
 
-        # Ejecución
+        # Ejecución.
         result = await reset_password(mock_session, body)
 
-        # Verificación
+        # Verificación.
         mock_verify_password_reset_token.assert_called_once_with(token="valid_token")
         mock_login_get_user_by_email.assert_called_once_with(
             session=mock_session, email="test@example.com"
@@ -216,12 +216,12 @@ class TestLoginRoutes:
     ):
         """Prueba de restablecimiento de contraseña con token inválido."""
 
-        # Preparación
+        # Preparación.
         mock_verify_password_reset_token.return_value = None
 
         body = NewPassword(token="invalid_token", new_password="NewSecurePassword123!")
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await reset_password(mock_session, body)
 
@@ -236,13 +236,13 @@ class TestLoginRoutes:
     ):
         """Prueba de restablecimiento de contraseña para usuario inexistente."""
 
-        # Preparación
+        # Preparación.
         mock_verify_password_reset_token.return_value = "nonexistent@example.com"
         mock_login_get_user_by_email.return_value = None
 
         body = NewPassword(token="valid_token", new_password="NewSecurePassword123!")
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await reset_password(mock_session, body)
 
@@ -258,14 +258,14 @@ class TestLoginRoutes:
     ):
         """Prueba de restablecimiento de contraseña para usuario inactivo."""
 
-        # Preparación
+        # Preparación.
         mock_verify_password_reset_token.return_value = "test@example.com"
         mock_login_get_user_by_email.return_value = mock_user
         mock_user.is_active = False
 
         body = NewPassword(token="valid_token", new_password="NewSecurePassword123!")
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await reset_password(mock_session, body)
 
@@ -282,15 +282,15 @@ class TestLoginRoutes:
     ):
         """Prueba de error al intentar restablecer la misma contraseña."""
 
-        # Preparación
+        # Preparación.
         mock_verify_password_reset_token.return_value = "test@example.com"
         mock_login_get_user_by_email.return_value = mock_user
         mock_user.is_active = True
-        mock_verify_password.return_value = True  # Misma contraseña
+        mock_verify_password.return_value = True  # Misma contraseña.
 
         body = NewPassword(token="valid_token", new_password="SamePassword123!")
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await reset_password(mock_session, body)
 

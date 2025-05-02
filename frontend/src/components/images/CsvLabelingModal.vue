@@ -78,7 +78,7 @@
           </div>
         </div>
         <div class="modal-actions" v-if="!isLoading && unlabeledImages.length > 0">
-          <button type="button" class="cancel-button" @click="handleClose" :disabled="isProcessing">
+          <button type="button" class="cancel-button" @click="handleClose" v-if="!isProcessing">
             Cancelar
           </button>
           <button 
@@ -92,7 +92,7 @@
             </span>
             <span v-else>
               <font-awesome-icon :icon="['fas', 'spinner']" spin />
-              <span>Procesando...</span>
+              <span> Procesando...</span>
             </span>
           </button>
         </div>

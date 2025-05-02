@@ -27,7 +27,7 @@ class TestUsersCRUD:
     async def test_create_user(self, mock_session, mock_crud_hash_password):
         """Prueba de creación de usuario con contraseña cifrada."""
 
-        # Preparación
+        # Preparación.
         user_in = UserCreate(
             email="test@example.com",
             username="testuser",
@@ -36,10 +36,10 @@ class TestUsersCRUD:
             is_admin=False,
         )
 
-        # Ejecución
+        # Ejecución.
         result = await create_user(session=mock_session, user_in=user_in)
 
-        # Verificación
+        # Verificación.
         assert result is not None
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()
@@ -49,17 +49,15 @@ class TestUsersCRUD:
     async def test_get_user_by_email_found(self, mock_session, mock_user):
         """Prueba de obtención de usuario por email cuando el usuario existe."""
 
-        # Preparación
+        # Preparación.
         email = "test@example.com"
 
-        # Crear una cadena de mocks personalizada para esta prueba específica
         scalars_mock = MagicMock()
         scalars_mock.first.return_value = mock_user
 
         execute_result = MagicMock()
         execute_result.scalars = MagicMock(return_value=scalars_mock)
 
-        # Reemplazar el método execute para esta prueba
         original_execute = mock_session.execute
 
         async def mock_execute(*args, **kwargs):
@@ -67,43 +65,41 @@ class TestUsersCRUD:
 
         mock_session.execute = AsyncMock(side_effect=mock_execute)
 
-        # Ejecución
+        # Ejecución.
         result = await get_user_by_email(session=mock_session, email=email)
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
 
-        # Restaurar método execute original
+        # Restaurar método execute original.
         mock_session.execute = original_execute
 
     async def test_get_user_by_email_not_found(self, mock_session):
         """Prueba de obtención de usuario por email cuando el usuario no existe."""
 
-        # Preparación
+        # Preparación.
         email = "nonexistent@example.com"
         mock_session.execute.return_value.scalars.return_value.first.return_value = None
 
-        # Ejecución
+        # Ejecución.
         result = await get_user_by_email(session=mock_session, email=email)
 
-        # Verificación
+        # Verificación.
         assert result is None
         mock_session.execute.assert_called_once()
 
     async def test_get_user_by_username_found(self, mock_session, mock_user):
         """Prueba de obtención de usuario por nombre de usuario cuando el usuario existe."""
 
-        # Preparación
+        # Preparación.
         username = "testuser"
 
-        # Crear una cadena de mocks personalizada para esta prueba específica
         scalars_mock = MagicMock()
         scalars_mock.first.return_value = mock_user
 
         execute_result = MagicMock()
         execute_result.scalars = MagicMock(return_value=scalars_mock)
 
-        # Reemplazar el método execute para esta prueba
         original_execute = mock_session.execute
 
         async def mock_execute(*args, **kwargs):
@@ -111,62 +107,62 @@ class TestUsersCRUD:
 
         mock_session.execute = AsyncMock(side_effect=mock_execute)
 
-        # Ejecución
+        # Ejecución.
         result = await get_user_by_username(session=mock_session, username=username)
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
 
-        # Restaurar método execute original
+        # Restaurar método execute original.
         mock_session.execute = original_execute
 
     async def test_get_user_by_username_not_found(self, mock_session):
         """Prueba de obtención de usuario por nombre de usuario cuando el usuario no existe."""
 
-        # Preparación
+        # Preparación.
         username = "nonexistent"
         mock_session.execute.return_value.scalars.return_value.first.return_value = None
 
-        # Ejecución
+        # Ejecución.
         result = await get_user_by_username(session=mock_session, username=username)
 
-        # Verificación
+        # Verificación.
         assert result is None
         mock_session.execute.assert_called_once()
 
     async def test_get_user_by_id_found(self, mock_session, mock_user):
         """Prueba de obtención de usuario por ID cuando el usuario existe."""
 
-        # Preparación
+        # Preparación.
         user_id = uuid.uuid4()
         mock_session.get.return_value = mock_user
 
-        # Ejecución
+        # Ejecución.
         result = await get_user_by_id(session=mock_session, id=user_id)
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
         mock_session.get.assert_called_once()
 
     async def test_get_user_by_id_not_found(self, mock_session):
         """Prueba de obtención de usuario por ID cuando el usuario no existe."""
 
-        # Preparación
+        # Preparación.
         user_id = uuid.uuid4()
         mock_session.get.return_value = None
 
-        # Ejecución
+        # Ejecución.
         result = await get_user_by_id(session=mock_session, id=user_id)
 
-        # Verificación
+        # Verificación.
         assert result is None
         mock_session.get.assert_called_once()
 
     async def test_get_all_users(self, mock_session):
         """Prueba de obtención de todos los usuarios con paginación."""
 
-        # Preparación
-        # Crear instancias reales de User
+        # Preparación.
+        # Crear instancias reales de User.
         user1 = User(
             email="user1@example.com",
             username="user1",
@@ -190,18 +186,18 @@ class TestUsersCRUD:
         )
         mock_users = [user1, user2, user3]
 
-        # Configurar el mock para la consulta de usuarios
+        # Configurar el mock para la consulta de usuarios.
         users_execute_result = MagicMock()
         users_execute_result.scalars().all.return_value = mock_users
 
-        # Configurar el mock para la consulta de conteo
+        # Configurar el mock para la consulta de conteo.
         count_execute_result = MagicMock()
         count_execute_result.scalar.return_value = 10
 
-        # Configurar los efectos secundarios para las dos llamadas a execute
+        # Configurar los efectos secundarios para las dos llamadas a execute.
         mock_session.execute.side_effect = [users_execute_result, count_execute_result]
 
-        # Ejecución
+        # Ejecución.
         result = await get_all_users(
             session=mock_session,
             skip=0,
@@ -211,7 +207,7 @@ class TestUsersCRUD:
             sort_order="desc",
         )
 
-        # Verificación
+        # Verificación.
         assert isinstance(result, UsersReturn)
         assert result.count == 10
         assert len(result.users) == 3
@@ -227,17 +223,17 @@ class TestUsersCRUD:
     ):
         """Prueba de obtención del usuario actual con token válido y usuario activo y verificado."""
 
-        # Preparación
+        # Preparación.
         token = "valid.jwt.token"
         mock_crud_jwt_decode.return_value = mock_crud_token_data
         mock_crud_get_user_by_id.return_value = mock_user
         mock_user.is_active = True
         mock_user.is_verified = True
 
-        # Ejecución
+        # Ejecución.
         result = await get_current_user(session=mock_session, token=token)
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
         mock_crud_jwt_decode.assert_called_once()
         mock_crud_get_user_by_id.assert_called_once_with(
@@ -249,11 +245,11 @@ class TestUsersCRUD:
     ):
         """Prueba de excepción cuando el token es inválido."""
 
-        # Preparación
+        # Preparación.
         token = "invalid.jwt.token"
         mock_crud_jwt_decode.side_effect = InvalidTokenError("Invalid token")
 
-        # Ejecución y Verificación
+        # Ejecución y Verificación.
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(session=mock_session, token=token)
 
@@ -265,13 +261,13 @@ class TestUsersCRUD:
     ):
         """Prueba de excepción cuando los datos del token son inválidos."""
 
-        # Preparación
+        # Preparación.
         token = "valid.but.malformed.token"
         mock_crud_jwt_decode.return_value = {
             "invalid": "data"
-        }  # Faltan campos requeridos
+        }  # Faltan campos requeridos.
 
-        # Ejecución y Verificación
+        # Ejecución y Verificación.
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(session=mock_session, token=token)
 
@@ -283,11 +279,11 @@ class TestUsersCRUD:
     ):
         """Prueba de excepción cuando el tipo de token no es 'auth'."""
 
-        # Preparación
+        # Preparación.
         token = "wrong.type.token"
         mock_crud_jwt_decode.return_value = mock_crud_invalid_token_data
 
-        # Ejecución y Verificación
+        # Ejecución y Verificación.
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(session=mock_session, token=token)
 
@@ -302,18 +298,18 @@ class TestUsersCRUD:
     ):
         """Prueba de excepción cuando no se encuentra el usuario."""
 
-        # Preparación
+        # Preparación.
         token = "valid.jwt.token"
         mock_crud_jwt_decode.return_value = mock_crud_token_data
 
         with patch("app.crud.users.get_user_by_id") as local_mock_get_user:
-            # Configurar la función para devolver None en esta prueba
+            # Configurar la función para devolver None en esta prueba.
             async def return_none(*args, **kwargs):
                 return None
 
             local_mock_get_user.side_effect = return_none
 
-            # Ejecución y Verificación
+            # Ejecución y Verificación.
             with pytest.raises(HTTPException) as exc_info:
                 await get_current_user(session=mock_session, token=token)
 
@@ -330,14 +326,14 @@ class TestUsersCRUD:
     ):
         """Prueba de excepción cuando el usuario está inactivo."""
 
-        # Preparación
+        # Preparación.
         token = "valid.jwt.token"
         mock_crud_jwt_decode.return_value = mock_crud_token_data
         mock_crud_get_user_by_id.return_value = mock_user
         mock_user.is_active = False
         mock_user.is_verified = True
 
-        # Ejecución y Verificación
+        # Ejecución y Verificación.
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(session=mock_session, token=token)
 
@@ -354,14 +350,14 @@ class TestUsersCRUD:
     ):
         """Prueba de excepción cuando el usuario no está verificado."""
 
-        # Preparación
+        # Preparación.
         token = "valid.jwt.token"
         mock_crud_jwt_decode.return_value = mock_crud_token_data
         mock_crud_get_user_by_id.return_value = mock_user
         mock_user.is_active = True
         mock_user.is_verified = False
 
-        # Ejecución y Verificación
+        # Ejecución y Verificación.
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(session=mock_session, token=token)
 
@@ -371,21 +367,19 @@ class TestUsersCRUD:
     async def test_get_current_admin_success(self, mock_admin_user):
         """Prueba de obtención del administrador actual cuando el usuario es administrador."""
 
-        # Preparación - Usando el fixture mock_admin_user
-
-        # Ejecución
+        # Ejecución.
         result = await get_current_admin(current_user=mock_admin_user)
 
-        # Verificación
+        # Verificación.
         assert result is mock_admin_user
 
     async def test_get_current_admin_not_admin(self, mock_user):
         """Prueba de excepción cuando el usuario no es administrador."""
 
-        # Preparación
+        # Preparación.
         mock_user.is_admin = False
 
-        # Ejecución y Verificación
+        # Ejecución y Verificación.
         with pytest.raises(HTTPException) as exc_info:
             await get_current_admin(current_user=mock_user)
 
@@ -395,11 +389,11 @@ class TestUsersCRUD:
     async def test_update_user(self, mock_session, mock_user):
         """Prueba de actualización de datos de usuario."""
 
-        # Preparación
+        # Preparación.
         user_data = {"full_name": "Updated Name"}
         extra_data = {"custom_field": "custom_value"}
 
-        # Ejecución
+        # Ejecución.
         result = await update_user(
             session=mock_session,
             user=mock_user,
@@ -407,7 +401,7 @@ class TestUsersCRUD:
             extra_data=extra_data,
         )
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
         mock_user.sqlmodel_update.assert_called_once()
         mock_session.add.assert_called_once_with(mock_user)
@@ -419,7 +413,7 @@ class TestUsersCRUD:
     ):
         """Prueba de actualización de usuario por administrador incluyendo cambio de contraseña."""
 
-        # Preparación
+        # Preparación.
         user_in = UserUpdate(
             email="updated@example.com",
             username="updateduser",
@@ -430,14 +424,14 @@ class TestUsersCRUD:
             is_verified=True,
         )
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.users.update_user") as mock_update_user:
             mock_update_user.return_value = mock_user
             result = await update_user_by_admin(
                 session=mock_session, db_user=mock_user, user_in=user_in
             )
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
         mock_crud_hash_password.assert_called_once_with(password="newpassword123")
         mock_update_user.assert_called_once()
@@ -445,7 +439,7 @@ class TestUsersCRUD:
     async def test_update_user_by_admin_no_password(self, mock_session, mock_user):
         """Prueba de actualización de usuario por administrador sin cambiar contraseña."""
 
-        # Preparación
+        # Preparación.
         user_in = UserUpdate(
             email="updated@example.com",
             username="updateduser",
@@ -455,29 +449,29 @@ class TestUsersCRUD:
             is_verified=True,
         )
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.users.update_user") as mock_update_user:
             mock_update_user.return_value = mock_user
             result = await update_user_by_admin(
                 session=mock_session, db_user=mock_user, user_in=user_in
             )
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
         mock_update_user.assert_called_once()
 
     async def test_update_password(self, mock_session, mock_user):
         """Prueba de actualización de contraseña de usuario."""
 
-        # Preparación
+        # Preparación.
         new_password = "new_hashed_password"
 
-        # Ejecución
+        # Ejecución.
         result = await update_password(
             session=mock_session, user=mock_user, new_password=new_password
         )
 
-        # Verificación
+        # Verificación.
         assert result is mock_user
         assert mock_user.password == new_password
         mock_session.add.assert_called_once_with(mock_user)
@@ -486,11 +480,9 @@ class TestUsersCRUD:
     async def test_delete_user(self, mock_session, mock_user):
         """Prueba de eliminación de usuario."""
 
-        # Preparación
-
-        # Ejecución
+        # Ejecución.
         await delete_user(session=mock_session, user=mock_user)
 
-        # Verificación
+        # Verificación.
         mock_session.delete.assert_called_once_with(mock_user)
         mock_session.commit.assert_called_once()

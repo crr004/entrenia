@@ -33,6 +33,15 @@
           </span>
         </div>
       </div>
+      <div v-if="isAuthenticated" class="dataset-actions">
+        <button 
+            class="app-button clone-button"
+            @click="showCloneConfirmation"
+          >
+            <font-awesome-icon :icon="['fas', 'plus-circle']" />
+            Clonar conjunto de imágenes
+        </button>
+      </div>
       <div class="dataset-description" v-if="dataset.description">
         <h2>Descripción</h2>
         <p>{{ dataset.description }}</p>
@@ -103,21 +112,19 @@
           <p>Este conjunto aún no tiene categorías definidas.</p>
         </div>
       </div>
-      <div v-if="isAuthenticated" class="dataset-actions">
-        <button 
-          class="app-button clone-button"
-          @click="showCloneConfirmation"
-        >
-          <font-awesome-icon :icon="['fas', 'plus-circle']" />
-          Añadir a mis conjuntos de imágenes
-        </button>
+      <div class="images-section">
+        <h2>Imágenes</h2>
+        <ReadOnlyImagesTable 
+          v-if="dataset && dataset.id" 
+          :datasetId="dataset.id"
+        />
       </div>
     </div>
     <ConfirmationModal
       :is-open="showCloneModal"
-      title="Añadir a mis conjuntos"
+      title="Clonar conjunto de imágenes"
       :message="`Se guardará una copia del conjunto de imágenes en tu biblioteca personal. ¿Deseas continuar?`"
-      confirm-text="Añadir conjunto"
+      confirm-text="Clonar conjunto"
       cancel-text="Cancelar"
       button-type="success"
       :is-loading="isCloning"
@@ -136,6 +143,7 @@ import Chart from 'chart.js/auto';
 import { notifyError, notifySuccess, notifyInfo } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/authStore';
 import ConfirmationModal from '@/components/utils/ConfirmationModal.vue';
+import ReadOnlyImagesTable from '@/components/images/ReadOnlyImagesTable.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -295,8 +303,6 @@ const formatDate = (dateString) => {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
   }).format(date);
 };
 
@@ -326,8 +332,8 @@ const confirmCloneDataset = async () => {
     showCloneModal.value = false;
     
     // Notificar éxito.
-    notifySuccess("Conjunto de imágenes añadido",
-    "Se ha añadido el conjunto de imágenes con éxito.");
+    notifySuccess("Conjunto de imágenes clonado",
+    "Se ha clonado el conjunto de imágenes con éxito.");
     
     // Redirigir al usuario a la vista de detalle del dataset clonado, ya en su biblioteca personal.
     router.push({ name: 'dataset-detail', params: { id: response.data.id } });
@@ -423,5 +429,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.images-section h2 {
+  font-size: 1.1rem;
+  color: #444;
+  font-weight: 600;
+  margin-bottom: 15px;
 }
 </style>

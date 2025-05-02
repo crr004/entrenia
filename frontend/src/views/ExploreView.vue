@@ -85,16 +85,16 @@
             @click.stop="showCloneConfirmation(dataset, $event)"
           >
             <font-awesome-icon :icon="['fas', 'plus-circle']" />
-            Añadir a mis conjuntos de imágenes
+            Clonar conjunto de imágenes
           </button>
         </div>
       </div>
     </div>
     <ConfirmationModal
       :is-open="showCloneModal"
-      title="Añadir a mis conjuntos"
+      title="Clonar conjunto de imágenes"
       :message="`Se guardará una copia del conjunto de imágenes en tu biblioteca personal. ¿Deseas continuar?`"
-      confirm-text="Añadir conjunto"
+      confirm-text="Clonar conjunto"
       cancel-text="Cancelar"
       button-type="success"
       :is-loading="isCloning"
@@ -329,8 +329,8 @@ const confirmCloneDataset = async () => {
     showCloneModal.value = false;
     
     // Notificar éxito.
-    notifySuccess("Conjunto de imágenes añadido",
-    "Se ha añadido el conjunto de imágenes con éxito.");
+    notifySuccess("Conjunto de imágenes clonado",
+    "Se ha clonado el conjunto de imágenes con éxito.");
     
     // Redirigir al usuario a la vista de detalle del dataset clonado, ya en su biblioteca personal.
     router.push({ name: 'dataset-detail', params: { id: response.data.id } });

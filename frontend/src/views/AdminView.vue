@@ -471,8 +471,33 @@ const closeEditUserModal = () => {
 };
 
 const handleUserUpdated = async (updatedUser) => {
-  // Recargar datos para reflejar cambios.
-  await fetchUsers();
+  // Verificar si hay búsqueda activa o si el campo actualizado afecta a la ordenación.
+  if (
+    searchQuery.value.trim() || 
+    (sortBy.value !== 'created_at' && updatedUser.hasOwnProperty(sortBy.value))
+  ) {
+    const paginaActual = currentPage.value;
+    
+    // Recargar la tabla completa.
+    await fetchUsers();
+    
+    // Si después de recargar no hay usuarios en la página actual pero hay usuarios en total,
+    // retroceder a la página anterior.
+    if (users.value.length === 0 && totalUsers.value > 0 && paginaActual > 1) {
+      currentPage.value = paginaActual - 1;
+      await fetchUsers();
+    }
+  } else {
+    // Si no hay búsqueda ni actualización de campos de orden, simplemente
+    // actualizar el usuario en la lista local si es posible.
+    const index = users.value.findIndex(u => u.id === updatedUser.id);
+    if (index !== -1) {
+      users.value[index] = updatedUser;
+    } else {
+      // Si no se encuentra el usuario, recargar todo.
+      await fetchUsers();
+    }
+  }
 };
 
 const confirmDeleteUser = (user) => {
@@ -517,7 +542,7 @@ const deleteUser = async () => {
     await fetchUsers();
     
     notifySuccess("Usuario eliminado", 
-      `Se ha eliminado el usuario ${userToDelete.value.username} con éxito.`);
+      `Se ha eliminado el usuario "${userToDelete.value.username}" con éxito.`);
   } catch (error) {
     console.error('Error deleting user:', error);
     handleApiError(error);

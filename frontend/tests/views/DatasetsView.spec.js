@@ -3,10 +3,8 @@ import { mount } from '@vue/test-utils'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 import DatasetsView from '@/views/DatasetsView.vue'
-import { useAuthStore } from '@/stores/authStore'
 import * as notifications from '@/utils/notifications'
 import { globalOptions } from '../../tests/helpers/test-utils'
-import axios from 'axios';
 
 // Mock del store de preferencias.
 vi.mock('@/stores/userPreferencesStore', () => ({
@@ -209,8 +207,8 @@ describe('DatasetsView.vue', () => {
     const firstDatasetCells = datasetRows[0].findAll('td')
     expect(firstDatasetCells[0].text()).toContain('Dataset 1')
     expect(firstDatasetCells[1].text()).toContain('Description for dataset 1')
-    expect(firstDatasetCells[2].text()).toBe('10')  // image_count
-    expect(firstDatasetCells[3].text()).toBe('3')   // category_count
+    expect(firstDatasetCells[2].text()).toBe('10') // image_count.
+    expect(firstDatasetCells[3].text()).toBe('3') // category_count.
   })
   
   // Test 2: Búsqueda de datasets.
@@ -354,7 +352,7 @@ describe('DatasetsView.vue', () => {
     expect(wrapper.vm.isShareModalOpen).toBe(false)
     
     // Llamar directamente al método de confirmación para compartir un dataset privado.
-    const privateDataset = mockDatasets[1]; // Dataset 2 que no es público
+    const privateDataset = mockDatasets[1]; // Dataset 2 que no es público.
     await wrapper.vm.confirmPublishDataset(privateDataset)
     
     // Verificar que el modal se abre con los datos correctos.
@@ -375,11 +373,11 @@ describe('DatasetsView.vue', () => {
     })
     
     // Configurar para cambiar visibilidad.
-    wrapper.vm.datasetToShare = mockDatasets[1]; // Dataset privado
+    wrapper.vm.datasetToShare = mockDatasets[1]; // Dataset privado.
     wrapper.vm.shareModalAction = 'publish';
     wrapper.vm.isShareModalOpen = true;
     
-    // Espiar el método processShareAction
+    // Espiar el método processShareAction.
     const processShareActionSpy = vi.spyOn(wrapper.vm, 'processShareAction')
     
     // Llamar al método para procesar el cambio.

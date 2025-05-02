@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt /app/
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./app /app/app
+
+# Ejecutar como usuario no privilegiado por seguridad.
+CMD ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info", "--uid=nobody", "--gid=nogroup"]

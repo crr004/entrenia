@@ -3,12 +3,10 @@ import { mount } from '@vue/test-utils'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 import DatasetDetailView from '@/views/DatasetDetailView.vue'
-import { useAuthStore } from '@/stores/authStore'
 import * as notifications from '@/utils/notifications'
 import { globalOptions } from '../../tests/helpers/test-utils'
-import axios from 'axios'
 
-// Mock de Chart.js
+// Mock de Chart.js.
 vi.mock('chart.js/auto', () => ({
   default: class ChartMock {
     constructor() {
@@ -17,10 +15,10 @@ vi.mock('chart.js/auto', () => ({
   }
 }))
 
-// Definir routerPushMock fuera del ámbito de los mocks para accederlo desde cualquier test
+// Definir routerPushMock fuera del ámbito de los mocks para accederlo desde cualquier test.
 const routerPushMock = vi.fn();
 
-// Mock del store de autenticación
+// Mock del store de autenticación.
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: vi.fn(() => ({
     token: 'mock-token',
@@ -35,14 +33,14 @@ vi.mock('@/stores/authStore', () => ({
   }))
 }))
 
-// Mock de las funciones de notificación
+// Mock de las funciones de notificación.
 vi.mock('@/utils/notifications', () => ({
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
   notifyInfo: vi.fn()
 }))
 
-// Mock del router
+// Mock del router.
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: routerPushMock,
@@ -55,7 +53,7 @@ vi.mock('vue-router', () => ({
   })
 }))
 
-// Mock de los componentes utilizados en DatasetDetailView
+// Mock de los componentes utilizados en DatasetDetailView.
 vi.mock('@/components/images/ImagesTable.vue', () => ({
   default: {
     name: 'ImagesTable',
@@ -122,7 +120,7 @@ vi.mock('@/components/images/LabelingResultsModal.vue', () => ({
   }
 }))
 
-// Datos mock para las pruebas
+// Datos mock para las pruebas.
 const mockDataset = {
   id: '1',
   name: 'Dataset de prueba',
@@ -144,201 +142,201 @@ const mockLabelDetails = {
   ]
 }
 
-// Servidor mock para simular respuestas de la API
+// Servidor mock para simular respuestas de la API.
 const server = setupServer(
-  // Obtener detalles del dataset
+  // Obtener detalles del dataset.
   http.get('/datasets/:id', ({ params }) => {
     return HttpResponse.json(mockDataset, { status: 200 })
   }),
   
-  // Obtener detalles de etiquetas
+  // Obtener detalles de etiquetas.
   http.get('/datasets/:id/label-details', ({ params }) => {
     return HttpResponse.json(mockLabelDetails, { status: 200 })
   })
 )
 
-// Configuración del servidor
+// Configuración del servidor.
 beforeEach(() => server.listen())
 afterEach(() => server.resetHandlers())
 afterEach(() => server.close())
 afterEach(() => vi.clearAllMocks())
 
-// Restaurar el objeto Element.scrollIntoView porque lo usamos en pruebas
+// Restaurar el objeto Element.scrollIntoView porque lo usamos en pruebas.
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
 describe('DatasetDetailView.vue', () => {
-  // Test 1: Carga inicial de datos
+  // Test 1: Carga inicial de datos.
   it('carga correctamente los detalles del dataset', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que los datos del dataset están presentes
+    // Verificar que los datos del dataset están presentes.
     expect(wrapper.vm.dataset).toEqual(mockDataset)
     expect(wrapper.vm.labelDetails).toEqual(mockLabelDetails)
     
-    // Verificar el título del dataset
+    // Verificar el título del dataset.
     expect(wrapper.find('h1').text()).toBe(mockDataset.name)
     
-    // Verificar que se muestra la descripción
+    // Verificar que se muestra la descripción.
     expect(wrapper.find('.dataset-description p').text()).toBe(mockDataset.description)
     
-    // Verificar las estadísticas del dataset
+    // Verificar las estadísticas del dataset.
     const statItems = wrapper.findAll('.stat-item')
     expect(statItems.length).toBe(4)
     
-    // Verificar que el componente ImagesTable está presente
+    // Verificar que el componente ImagesTable está presente.
     expect(wrapper.find('.mock-images-table').exists()).toBe(true)
   })
   
-  // Test 2: Visualización correcta de categorías
+  // Test 2: Visualización correcta de categorías.
   it('muestra correctamente las categorías del dataset', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que la tabla de categorías existe
+    // Verificar que la tabla de categorías existe.
     expect(wrapper.find('.categories-table').exists()).toBe(true)
     
-    // Verificar que se muestran todas las categorías
+    // Verificar que se muestran todas las categorías.
     const categoryRows = wrapper.findAll('.categories-table tbody tr')
     expect(categoryRows.length).toBe(3)
     
-    // Verificar el contenido de la primera categoría
+    // Verificar el contenido de la primera categoría.
     const firstCategoryRow = categoryRows[0]
     expect(firstCategoryRow.findAll('td')[0].text()).toBe('Categoría 1')
     expect(firstCategoryRow.findAll('td')[1].text()).toBe('3')
   })
   
-  // Test 3: Apertura del modal para subir imágenes
+  // Test 3: Apertura del modal para subir imágenes.
   it('abre el modal para subir imágenes', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que el modal está cerrado inicialmente
+    // Verificar que el modal está cerrado inicialmente.
     expect(wrapper.vm.isUploadModalOpen).toBe(false)
     
-    // Buscar el botón de subir imágenes y hacer clic
+    // Buscar el botón de subir imágenes y hacer clic.
     const uploadButton = wrapper.findAll('.app-button').filter(button => 
       button.text().includes('Subir imágenes')
     )[0]
     
     await uploadButton.trigger('click')
     
-    // Verificar que el modal se abrió
+    // Verificar que el modal se abrió.
     expect(wrapper.vm.isUploadModalOpen).toBe(true)
     expect(wrapper.find('.mock-upload-modal').exists()).toBe(true)
   })
   
-  // Test 4: Apertura del modal de selección de método de etiquetado
+  // Test 4: Apertura del modal de selección de método de etiquetado.
   it('abre el modal de selección de método de etiquetado', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que el modal está cerrado inicialmente
+    // Verificar que el modal está cerrado inicialmente.
     expect(wrapper.vm.isLabelingMethodModalOpen).toBe(false)
     
-    // Buscar el botón de etiquetar imágenes y hacer clic
+    // Buscar el botón de etiquetar imágenes y hacer clic.
     const labelButton = wrapper.findAll('.app-button').filter(button => 
       button.text().includes('Etiquetar imágenes')
     )[0]
     
     await labelButton.trigger('click')
     
-    // Verificar que el modal se abrió
+    // Verificar que el modal se abrió.
     expect(wrapper.vm.isLabelingMethodModalOpen).toBe(true)
     expect(wrapper.find('.mock-labeling-method-modal').exists()).toBe(true)
   })
   
-  // Test 5: Selección de método de etiquetado manual
+  // Test 5: Selección de método de etiquetado manual.
   it('abre el modal de etiquetado manual al seleccionar este método', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Abrir el modal de selección de método
+    // Abrir el modal de selección de método.
     wrapper.vm.isLabelingMethodModalOpen = true
     await wrapper.vm.$nextTick()
     
-    // Simular selección de etiquetado manual
+    // Simular selección de etiquetado manual.
     await wrapper.vm.handleSelectLabelingMethod('manual')
     
-    // Verificar que se cerró el modal de selección
+    // Verificar que se cerró el modal de selección.
     expect(wrapper.vm.isLabelingMethodModalOpen).toBe(false)
     
-    // Verificar que se abrió el modal de etiquetado manual
+    // Verificar que se abrió el modal de etiquetado manual.
     expect(wrapper.vm.isManualLabelingModalOpen).toBe(true)
     expect(wrapper.find('.mock-manual-labeling-modal').exists()).toBe(true)
   })
   
-  // Test 6: Selección de método de etiquetado CSV
+  // Test 6: Selección de método de etiquetado CSV.
   it('abre el modal de etiquetado CSV al seleccionar este método', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Esperar a que se carguen los datos
+    // Esperar a que se carguen los datos.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Abrir el modal de selección de método
+    // Abrir el modal de selección de método.
     wrapper.vm.isLabelingMethodModalOpen = true
     await wrapper.vm.$nextTick()
     
-    // Simular selección de etiquetado CSV
+    // Simular selección de etiquetado CSV.
     await wrapper.vm.handleSelectLabelingMethod('csv')
     
-    // Verificar que se cerró el modal de selección
+    // Verificar que se cerró el modal de selección.
     expect(wrapper.vm.isLabelingMethodModalOpen).toBe(false)
     
-    // Verificar que se abrió el modal de etiquetado CSV
+    // Verificar que se abrió el modal de etiquetado CSV.
     expect(wrapper.vm.isCsvLabelingModalOpen).toBe(true)
     expect(wrapper.find('.mock-csv-labeling-modal').exists()).toBe(true)
   })
   
-  // Test 7: Manejo de imágenes etiquetadas
+  // Test 7: Manejo de imágenes etiquetadas.
   it('muestra el modal de resultados después de etiquetar imágenes', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Establecer isLoading a false directamente y asegurar que los componentes necesarios existan
+    // Establecer isLoading a false directamente y asegurar que los componentes necesarios existan.
     wrapper.vm.isLoading = false;
     wrapper.vm.dataset = {...mockDataset};
     wrapper.vm.labelDetails = {...mockLabelDetails};
     await wrapper.vm.$nextTick();
     
-    // Verificar que los modales están cerrados inicialmente
+    // Verificar que los modales están cerrados inicialmente.
     expect(wrapper.vm.isLabelingResultModalOpen).toBe(false);
     
     const labelingResult = {
@@ -347,32 +345,32 @@ describe('DatasetDetailView.vue', () => {
       notFoundDetails: ['image1.jpg']
     }
     
-    // Llamar directamente al método que maneja el etiquetado completado
+    // Llamar directamente al método que maneja el etiquetado completado.
     wrapper.vm.handleImagesLabeled(labelingResult);
-    await wrapper.vm.$nextTick(); // Esperar a que Vue actualice el DOM
+    await wrapper.vm.$nextTick(); // Esperar a que Vue actualice el DOM.
     
-    // Verificar que los modales de etiquetado se cerraron
+    // Verificar que los modales de etiquetado se cerraron.
     expect(wrapper.vm.isManualLabelingModalOpen).toBe(false)
     expect(wrapper.vm.isCsvLabelingModalOpen).toBe(false)
     
-    // Verificar que se abrió el modal de resultados
+    // Verificar que se abrió el modal de resultados.
     expect(wrapper.vm.isLabelingResultModalOpen).toBe(true)
     expect(wrapper.vm.labelingResultData).toEqual(labelingResult)
   })
 
-  // Test 8: Manejo de carga de imágenes
+  // Test 8: Manejo de carga de imágenes.
   it('muestra el modal de resultados después de cargar imágenes', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Establecer isLoading a false directamente y asegurar que los componentes necesarios existan
+    // Establecer isLoading a false directamente y asegurar que los componentes necesarios existan.
     wrapper.vm.isLoading = false;
     wrapper.vm.dataset = {...mockDataset};
     wrapper.vm.labelDetails = {...mockLabelDetails};
     await wrapper.vm.$nextTick();
     
-    // Verificar que los modales están cerrados inicialmente
+    // Verificar que los modales están cerrados inicialmente.
     expect(wrapper.vm.showResultModal).toBe(false);
     
     const uploadResult = {
@@ -386,14 +384,14 @@ describe('DatasetDetailView.vue', () => {
       skipped_label_details: []
     }
     
-    // Llamar directamente al método que maneja la carga completada
+    // Llamar directamente al método que maneja la carga completada.
     wrapper.vm.handleImagesUploaded(uploadResult);
-    await wrapper.vm.$nextTick(); // Esperar a que Vue actualice el DOM
+    await wrapper.vm.$nextTick(); // Esperar a que Vue actualice el DOM.
     
-    // Verificar que el modal de carga se cerró
+    // Verificar que el modal de carga se cerró.
     expect(wrapper.vm.isUploadModalOpen).toBe(false)
     
-    // Verificar que se actualizaron las estadísticas
+    // Verificar que se actualizaron las estadísticas.
     expect(wrapper.vm.uploadStats).toMatchObject({
       processed_images: 5,
       skipped_images: 1,
@@ -402,13 +400,13 @@ describe('DatasetDetailView.vue', () => {
       labels_skipped: 0
     })
     
-    // Verificar que se abrió el modal de resultados
+    // Verificar que se abrió el modal de resultados.
     expect(wrapper.vm.showResultModal).toBe(true)
   })
   
-  // Test 9: Manejo de errores al cargar dataset
+  // Test 9: Manejo de errores al cargar dataset.
   it('maneja correctamente el error cuando el dataset no existe', async () => {
-    // Configurar el servidor para devolver un error 404
+    // Configurar el servidor para devolver un error 404.
     server.use(
       http.get('/datasets/:id', () => {
         return HttpResponse.json(
@@ -423,29 +421,29 @@ describe('DatasetDetailView.vue', () => {
       global: globalOptions
     })
     
-    // Esperar a que se procese el error
+    // Esperar a que se procese el error.
     await vi.waitFor(() => {
       expect(wrapper.vm.isLoading).toBe(false)
     })
     
-    // Verificar que se notificó el error
+    // Verificar que se notificó el error.
     expect(notifications.notifyError).toHaveBeenCalledWith(
       'Conjunto de imágenes no encontrado',
       expect.any(String)
     )
   })
   
-  // Test 10: Formateo correcto de fechas
+  // Test 10: Formateo correcto de fechas.
   it('formatea correctamente las fechas', async () => {
     const wrapper = mount(DatasetDetailView, {
       global: globalOptions
     })
     
-    // Probar la función de formateo de fechas
+    // Probar la función de formateo de fechas.
     const formattedDate = wrapper.vm.formatDate('2023-03-15T14:30:00Z')
     
     // La implementación exacta dependerá del navegador y la zona horaria,
-    // pero podemos comprobar que devuelve un string no vacío
+    // pero se puede comprobar que devuelve un string no vacío.
     expect(typeof formattedDate).toBe('string')
     expect(formattedDate.length).toBeGreaterThan(0)
   })

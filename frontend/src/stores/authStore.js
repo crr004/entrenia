@@ -67,7 +67,7 @@ export const useAuthStore = defineStore('auth', {
       }
     }
   },
-  /*
+
   persist: {
     enabled: true,
     strategies: [
@@ -78,12 +78,12 @@ export const useAuthStore = defineStore('auth', {
       }
     ]
   }
-    */
-  
+  /*
   persist: {
     enabled: true,
     storage: window.sessionStorage,
     key: 'auth-store',
     paths: ['token', 'user', 'isAuthenticated']
   }
+  */
 });

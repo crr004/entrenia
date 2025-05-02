@@ -599,13 +599,13 @@ async def upload_zip_with_images(
             detail="The uploaded file must be a ZIP file",
         )
 
-    # Verificar tamaño máximo (50MB).
+    # Verificar tamaño máximo (150MB).
     file_content = await file.read()
-    max_size = 50 * 1024 * 1024
+    max_size = 150 * 1024 * 1024
     if len(file_content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File size exceeds the maximum allowed (50MB)",
+            detail=f"File size exceeds the maximum allowed (150MB)",
         )
 
     # Procesar el CSV si se proporciona.

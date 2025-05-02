@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { userPreferencesStore } from '@/stores/userPreferencesStore'
 
-// Mock del sessionStorage
+// Mock del sessionStorage.
 const sessionStorageMock = (() => {
   let store = {}
   return {
@@ -34,13 +34,13 @@ describe('UserPreferencesStore', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     
-    // Restaurar el mock de sessionStorage
+    // Restaurar el mock de sessionStorage.
     Object.defineProperty(window, 'sessionStorage', {
       value: sessionStorageMock,
       writable: true
     })
     
-    // Limpiar el sessionStorage antes de cada test
+    // Limpiar el sessionStorage antes de cada test.
     sessionStorageMock.clear()
   })
   
@@ -92,15 +92,15 @@ describe('UserPreferencesStore', () => {
     store.setDatasetPageSize(15)
     store.setImagePageSize(20)
     
-    // Verificar que los valores cambiaron
+    // Verificar que los valores cambiaron.
     expect(store.adminPageSize).toBe(10)
     expect(store.datasetPageSize).toBe(15)
     expect(store.imagePageSize).toBe(20)
     
-    // Restablecer preferencias
+    // Restablecer preferencias.
     store.resetPreferences()
     
-    // Verificar que los valores volvieron a sus valores predeterminados
+    // Verificar que los valores volvieron a sus valores predeterminados.
     expect(store.adminPageSize).toBe(5)
     expect(store.datasetPageSize).toBe(5)
     expect(store.imagePageSize).toBe(5)
@@ -126,22 +126,22 @@ describe('UserPreferencesStore', () => {
     
     const store = userPreferencesStore()
     
-    // Simular la carga inicial desde sessionStorage
+    // Simular la carga inicial desde sessionStorage.
     const mockPersistedData = {
       adminPageSize: 8,
       datasetPageSize: 12,
       imagePageSize: 16
     }
     
-    // Aplicar los datos persistidos manualmente (simulando la acción del plugin)
+    // Aplicar los datos persistidos manualmente (simulando la acción del plugin).
     store.$patch(mockPersistedData)
     
-    // Verificar que el store tiene los valores cargados
+    // Verificar que el store tiene los valores cargados.
     expect(store.adminPageSize).toBe(8)
     expect(store.datasetPageSize).toBe(12)
     expect(store.imagePageSize).toBe(16)
     
-    // Hacer un cambio
+    // Hacer un cambio.
     store.setAdminPageSize(25)
     
     const updatedState = {
@@ -150,7 +150,7 @@ describe('UserPreferencesStore', () => {
       imagePageSize: store.imagePageSize
     }
     
-    // Verificar que los cambios se reflejan en el store
+    // Verificar que los cambios se reflejan en el store.
     expect(updatedState).toEqual({
       adminPageSize: 25,
       datasetPageSize: 12,

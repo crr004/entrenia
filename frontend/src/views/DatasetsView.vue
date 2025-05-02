@@ -125,6 +125,7 @@
                         @delete="confirmDeleteDataset"
                         @publish="confirmPublishDataset"
                         @unpublish="confirmUnpublishDataset"
+                        @train="trainWithDataset"
                         @close="closeActionsMenu"
                       />
                     </div>
@@ -481,11 +482,20 @@ const onDatasetUpdated = async (updatedDataset) => {
     searchQuery.value.trim() || 
     // Verificar si el campo por el que se ordena se ha modificado.
     (updatedDataset.hasOwnProperty(sortBy.value) && 
-     sortBy.value !== 'image_count' && 
+     sortBy.value !== 'image_count' &&
      sortBy.value !== 'category_count')
   ) {
+    const paginaActual = currentPage.value;
+    
     // Recargar la tabla en ese caso.
     await fetchDatasets();
+    
+    // Si después de recargar no hay datasets en la página actual pero hay datasets en total,
+    // retroceder a la página anterior.
+    if (datasets.value.length === 0 && totalDatasets.value > 0 && paginaActual > 1) {
+      currentPage.value = paginaActual - 1;
+      await fetchDatasets();
+    }
   } else {
     // Sin búsqueda activa y sin cambios en el campo de ordenación,
     // se puede actualizar sólo el dataset en la lista local.
@@ -546,7 +556,7 @@ const deleteDataset = async () => {
     }
     
     notifySuccess("Conjunto de imágenes eliminado", 
-    `Se ha eliminado el conjunto ${datasetToDelete.value.name} con éxito.`);
+    `Se ha eliminado el conjunto "${datasetToDelete.value.name}" con éxito.`);
   } catch (error) {
     console.error('Error while deleting dataset: ', error);
     handleApiError(error);
@@ -614,7 +624,7 @@ const processShareAction = async () => {
     }
     
     notifySuccess(isPublic ? "Conjunto compartido" : "Conjunto no compartido", 
-    `El conjunto ${datasetToShare.value.name} se ha ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
+    `El conjunto "${datasetToShare.value.name}" se ha ${isPublic ? "compartido" : "dejado de compartir"} con éxito.`);
   } catch (error) {
     console.error('Error while updating dataset sharing status: ', error);
     handleApiError(error);
@@ -623,6 +633,14 @@ const processShareAction = async () => {
     datasetToShare.value = null;
     shareModalAction.value = '';
   }
+};
+
+const trainWithDataset = (dataset) => {
+  closeActionsMenu();
+  router.push({
+    path: '/train-model',
+    query: { dataset: dataset.name }
+  });
 };
 
 const handleApiError = (error) => {
@@ -708,7 +726,8 @@ const getDatasetMenuActions = (dataset) => {
   // Acciones básicas que siempre estarán presentes.
   const baseActions = [
     { label: 'Abrir', event: 'view', icon: ['fas', 'folder-open'], class: 'view' },
-    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' }
+    { label: 'Editar', event: 'edit', icon: ['fas', 'edit'], class: 'edit' },
+    { label: 'Usar', event: 'train', icon: ['fas', 'robot'], class: 'train' }
   ];
   
   // Acción de compartir/no compartir según el estado actual.

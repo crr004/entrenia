@@ -153,7 +153,7 @@ const handleSubmit = async () => {
     const response = await axios.post('/datasets/', dataToSubmit);
     
     notifySuccess("Conjunto de imágenes creado", 
-    `Se ha creado el conjunto ${datasetData.value.name} con éxito.`);
+    `Se ha creado el conjunto "${datasetData.value.name}" con éxito.`);
     
     emit('dataset-added', response.data);
     closeModal();

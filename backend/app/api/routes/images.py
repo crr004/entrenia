@@ -225,3 +225,78 @@ async def delete_image(
     await crud_images.delete_image(session=session, image=image)
 
     return Message(message="Image deleted successfully")
+
+
+@router.get("/public-dataset/{dataset_id}", response_model=ImagesReturn)
+async def read_public_dataset_images(
+    session: SessionDep,
+    dataset_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+    search: str | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+) -> ImagesReturn:
+    """Obtiene imágenes de un dataset público sin requerir autenticación.
+
+        - Ordenación por: name, label, created_at.
+        - Dirección de ordenación: asc o desc.
+        - Paginación: usando parámetros skip y limit.
+        - Búsqueda: filtra imágenes por nombre o etiqueta.
+
+    Args:
+        session (SessionDep): Sesión de la base de datos.
+        dataset_id (uuid.UUID): ID del dataset público del que obtener las imágenes.
+        skip (int): Cantidad de imágenes a omitir (paginación).
+        limit (int): Cantidad de imágenes a devolver (paginación).
+        search (str | None): Texto a buscar en el nombre o etiqueta de la imagen.
+        sort_by (str): Campo por el cual ordenar las imágenes.
+        sort_order (str): Dirección de ordenación.
+
+    Raises:
+        HTTPException[400]: Si los parámetros sort_order o sort_by no son válidos.
+        HTTPException[404]: Si no existe un dataset con ese ID o no es público.
+
+    Returns:
+        ImagesReturn: Lista de imágenes encontradas y su conteo total.
+    """
+
+    if sort_order not in ["asc", "desc"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid sort_order. Must be 'asc' or 'desc'",
+        )
+
+    valid_sort_fields = ["name", "label", "created_at"]
+    if sort_by not in valid_sort_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid sort_by. Must be one of: {', '.join(valid_sort_fields)}",
+        )
+
+    dataset = await get_dataset_by_id(session=session, id=dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
+        )
+
+    # Verificar que el dataset es público.
+    if not dataset.is_public:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dataset not found or not accessible",
+        )
+
+    images, count = await crud_images.get_images_sorted(
+        session=session,
+        dataset_id=dataset_id,
+        skip=skip,
+        limit=limit,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    image_returns = [ImageReturn.model_validate(image) for image in images]
+
+    return ImagesReturn(images=image_returns, count=count)

@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { shallowMount, flushPromises } from '@vue/test-utils'
+import { shallowMount } from '@vue/test-utils'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 import LoginModal from '@/components/users/LoginModal.vue'
 import * as notifications from '@/utils/notifications'
-import { useAuthStore } from '@/stores/authStore'
 import { globalOptions } from '../../../tests/helpers/test-utils'
 
 // Mock de las funciones de notificación.

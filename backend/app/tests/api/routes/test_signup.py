@@ -24,7 +24,7 @@ class TestSignupRoutes:
     ):
         """Prueba de registro exitoso de usuario."""
 
-        # Preparación
+        # Preparación.
         mock_signup_get_user_by_email.return_value = None
         mock_signup_get_user_by_username.return_value = None
         mock_signup_create_user.return_value = mock_user
@@ -37,10 +37,10 @@ class TestSignupRoutes:
             full_name="Test User",
         )
 
-        # Ejecución
+        # Ejecución.
         result = await register_user(mock_session, user_data, mock_background_tasks)
 
-        # Verificación
+        # Verificación.
         mock_signup_get_user_by_email.assert_called_once_with(
             session=mock_session, email="test@example.com"
         )
@@ -60,7 +60,7 @@ class TestSignupRoutes:
     ):
         """Prueba de error al registrar usuario con correo existente."""
 
-        # Preparación
+        # Preparación.
         mock_get_user_by_email.return_value = mock_user
 
         user_data = UserRegister(
@@ -70,7 +70,7 @@ class TestSignupRoutes:
             full_name="New User",
         )
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await register_user(mock_session, user_data, mock_background_tasks)
 
@@ -87,7 +87,7 @@ class TestSignupRoutes:
     ):
         """Prueba de error al registrar usuario con nombre de usuario existente."""
 
-        # Preparación
+        # Preparación.
         mock_get_user_by_email.return_value = None
         mock_get_user_by_username.return_value = mock_user
 
@@ -98,7 +98,7 @@ class TestSignupRoutes:
             full_name="New User",
         )
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await register_user(mock_session, user_data, mock_background_tasks)
 
@@ -114,18 +114,18 @@ class TestSignupRoutes:
     ):
         """Prueba de error al registrar usuario con nombre de usuario inválido."""
 
-        # Preparación
+        # Preparación.
         mock_get_user_by_email.return_value = None
         mock_get_user_by_username.return_value = None
 
         user_data = UserRegister(
             email="new@example.com",
             password="SecurePassword123!",
-            username="123",  # Inválido: necesita al menos 3 letras
+            username="123",  # Inválido: necesita al menos 3 letras.
             full_name="New User",
         )
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await register_user(mock_session, user_data, mock_background_tasks)
 
@@ -141,7 +141,7 @@ class TestSignupRoutes:
     ):
         """Prueba de error al registrar usuario con nombre completo inválido."""
 
-        # Preparación
+        # Preparación.
         mock_get_user_by_email.return_value = None
         mock_get_user_by_username.return_value = None
 
@@ -149,10 +149,10 @@ class TestSignupRoutes:
             email="new@example.com",
             password="SecurePassword123!",
             username="testuser",
-            full_name="Test User123$",  # Caracteres inválidos
+            full_name="Test User123$",  # Caracteres inválidos.
         )
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await register_user(mock_session, user_data, mock_background_tasks)
 
@@ -171,7 +171,7 @@ class TestSignupRoutes:
     ):
         """Prueba de registro de usuario sin nombre completo."""
 
-        # Preparación
+        # Preparación.
         mock_get_user_by_email.return_value = None
         mock_get_user_by_username.return_value = None
 
@@ -187,10 +187,10 @@ class TestSignupRoutes:
             full_name=None,
         )
 
-        # Ejecución
+        # Ejecución.
         result = await register_user(mock_session, user_data, mock_background_tasks)
 
-        # Verificación
+        # Verificación.
         mock_generate_email.assert_called_once_with(
             email_to="test@example.com",
             username="testuser",
@@ -208,19 +208,19 @@ class TestSignupRoutes:
     ):
         """Prueba de verificación exitosa de cuenta."""
 
-        # Preparación
+        # Preparación.
         mock_verify_token.return_value = "test@example.com"
         mock_get_user_by_email.return_value = mock_user
         mock_user.is_verified = False
         mock_user.model_dump.return_value = {"is_verified": True}
         mock_update_user.return_value = mock_user
 
-        # Ejecución
+        # Ejecución.
         from app.api.routes.signup import verify_account
 
         result = await verify_account(mock_session, "valid_token")
 
-        # Verificación
+        # Verificación.
         mock_verify_token.assert_called_once_with(token="valid_token")
         mock_get_user_by_email.assert_called_once_with(
             session=mock_session, email="test@example.com"
@@ -232,10 +232,10 @@ class TestSignupRoutes:
     async def test_verify_account_invalid_token(self, mock_verify_token, mock_session):
         """Prueba de error al verificar cuenta con token inválido."""
 
-        # Preparación
+        # Preparación.
         mock_verify_token.return_value = None
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         from app.api.routes.signup import verify_account
 
         with pytest.raises(HTTPException) as exc_info:
@@ -249,11 +249,11 @@ class TestSignupRoutes:
     ):
         """Prueba de error al verificar cuenta cuando no existe el usuario."""
 
-        # Preparación
+        # Preparación.
         mock_verify_token.return_value = "nonexistent@example.com"
         mock_get_user_by_email.return_value = None
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         from app.api.routes.signup import verify_account
 
         with pytest.raises(HTTPException) as exc_info:
@@ -267,12 +267,12 @@ class TestSignupRoutes:
     ):
         """Prueba de error al verificar una cuenta ya verificada."""
 
-        # Preparación
+        # Preparación.
         mock_verify_token.return_value = "test@example.com"
         mock_get_user_by_email.return_value = mock_user
         mock_user.is_verified = True
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         from app.api.routes.signup import verify_account
 
         with pytest.raises(HTTPException) as exc_info:

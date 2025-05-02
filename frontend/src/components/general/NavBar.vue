@@ -43,18 +43,22 @@
             </span>
           </div>
           <div class="user-links-burger">
+            <router-link to="/my-models" @click="closeBurgerMenu" class="user-link-burger">
+              <font-awesome-icon :icon="['fas', 'robot']" class="link-icon" fixed-width />
+              Mis modelos
+            </router-link>
             <router-link to="/my-datasets" @click="closeBurgerMenu" class="user-link-burger">
               <font-awesome-icon :icon="['fas', 'database']" class="link-icon" fixed-width />
               Mis conjuntos de imágenes
             </router-link>
             <router-link 
-              v-if="isAdmin" 
+              v-if="isAdmin"
               to="/admin" 
               @click="closeBurgerMenu" 
               class="user-link-burger admin-link-mobile"
             >
               <font-awesome-icon :icon="['fas', 'shield-alt']" class="link-icon" fixed-width />
-              Panel de admin
+              Panel de administración
             </router-link>
             <router-link to="/account" @click="closeBurgerMenu" class="user-link-burger">
               <font-awesome-icon :icon="['fas', 'user-cog']" class="link-icon" fixed-width />
@@ -530,7 +534,7 @@ hr {
   
   .nav-content {
     position: fixed;
-    top: 70px;
+    top: 47px;
     left: 0;
     right: 0;
     background-color: #FFFDF5;
@@ -541,6 +545,7 @@ hr {
     transform: translateY(-100vh);
     transition: transform 0.3s ease-in-out;
     z-index: 90;
+    border-top: 1px solid #b4b4b4;
   }
   
   .nav-content.active {

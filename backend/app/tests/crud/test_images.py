@@ -26,7 +26,8 @@ class TestImagesCRUD:
 
     async def test_get_image_by_id_success(self, mock_session):
         """Prueba de obtención exitosa de una imagen por ID."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
 
         mock_image = MagicMock()
@@ -40,29 +41,31 @@ class TestImagesCRUD:
 
         mock_session.get = AsyncMock(return_value=mock_image)
 
-        # Ejecución
+        # Ejecución.
         result = await get_image_by_id(session=mock_session, id=image_id)
 
-        # Verificación
+        # Verificación.
         assert result is mock_image
         mock_session.get.assert_called_once_with(Image, image_id)
 
     async def test_get_image_by_id_not_found(self, mock_session):
         """Prueba cuando la imagen no existe."""
-        # Configuración
+
+        # Configuración.
         image_id = uuid.uuid4()
         mock_session.get = AsyncMock(return_value=None)
 
-        # Ejecución
+        # Ejecución.
         result = await get_image_by_id(session=mock_session, id=image_id)
 
-        # Verificación
+        # Verificación.
         assert result is None
         mock_session.get.assert_called_once_with(Image, image_id)
 
     async def test_get_image_by_datasetid_and_name_success(self, mock_session):
         """Prueba de obtención exitosa de una imagen por dataset_id y nombre."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image_name = "test_image.jpg"
 
@@ -72,7 +75,7 @@ class TestImagesCRUD:
         mock_image.dataset_id = dataset_id
         mock_image.__class__ = Image
 
-        # Configurar el resultado de la consulta
+        # Configurar el resultado de la consulta.
         execute_result = MagicMock()
         scalars_result = MagicMock()
         scalars_result.first.return_value = mock_image
@@ -80,7 +83,7 @@ class TestImagesCRUD:
 
         mock_session.execute = AsyncMock(return_value=execute_result)
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.images.select") as mock_select:
             mock_select.return_value = MagicMock()
 
@@ -88,18 +91,19 @@ class TestImagesCRUD:
                 session=mock_session, dataset_id=dataset_id, name=image_name
             )
 
-            # Verificación
+            # Verificación.
             assert result is mock_image
             mock_session.execute.assert_called_once()
             mock_select.assert_called_once()
 
     async def test_get_image_by_datasetid_and_name_not_found(self, mock_session):
         """Prueba cuando la imagen no existe por dataset_id y nombre."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image_name = "nonexistent_image.jpg"
 
-        # Configurar el resultado de la consulta para que no encuentre nada
+        # Configurar el resultado de la consulta para que no encuentre nada.
         execute_result = MagicMock()
         scalars_result = MagicMock()
         scalars_result.first.return_value = None
@@ -107,7 +111,7 @@ class TestImagesCRUD:
 
         mock_session.execute = AsyncMock(return_value=execute_result)
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.images.select") as mock_select:
             mock_select.return_value = MagicMock()
 
@@ -115,14 +119,15 @@ class TestImagesCRUD:
                 session=mock_session, dataset_id=dataset_id, name=image_name
             )
 
-            # Verificación
+            # Verificación.
             assert result is None
             mock_session.execute.assert_called_once()
             mock_select.assert_called_once()
 
     async def test_create_image_success(self, mock_session):
         """Prueba de creación exitosa de una imagen."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image_id = uuid.uuid4()
 
@@ -147,12 +152,12 @@ class TestImagesCRUD:
             with patch(
                 "app.crud.images.invalidate_dataset_cache"
             ) as mock_invalidate_cache:
-                # Ejecución
+                # Ejecución.
                 result = await create_image(
                     session=mock_session, image_in=image_in, dataset_id=dataset_id
                 )
 
-                # Verificación
+                # Verificación.
                 assert result is mock_image
                 mock_validate.assert_called_once_with(image_in)
                 mock_session.add.assert_called_once_with(mock_image)
@@ -164,7 +169,8 @@ class TestImagesCRUD:
 
     async def test_update_image_success(self, mock_session):
         """Prueba de actualización exitosa de una imagen."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image = MagicMock()
         image.id = uuid.uuid4()
@@ -175,13 +181,13 @@ class TestImagesCRUD:
 
         image_update = ImageUpdate(label="new_label")
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.images.invalidate_dataset_cache") as mock_invalidate_cache:
             result = await update_image(
                 session=mock_session, image=image, image_data=image_update
             )
 
-            # Verificación
+            # Verificación.
             assert "id" in result
             assert result["name"] == image.name
             assert result["label"] == image.label
@@ -197,7 +203,8 @@ class TestImagesCRUD:
 
     async def test_update_image_no_label_change(self, mock_session):
         """Prueba de actualización de una imagen sin cambiar la etiqueta."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image = MagicMock()
         image.id = uuid.uuid4()
@@ -206,16 +213,16 @@ class TestImagesCRUD:
         image.label = "existing_label"
         image.__class__ = Image
 
-        # Actualizar solo el nombre, no la etiqueta
+        # Actualizar solo el nombre, no la etiqueta.
         image_update = ImageUpdate(name="new_name.jpg")
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.images.invalidate_dataset_cache") as mock_invalidate_cache:
             result = await update_image(
                 session=mock_session, image=image, image_data=image_update
             )
 
-            # Verificación
+            # Verificación.
             assert "id" in result
             assert result["name"] == image.name
             assert result["label"] == image.label
@@ -226,12 +233,13 @@ class TestImagesCRUD:
             assert mock_session.commit.call_count == 1
             assert mock_session.refresh.call_count == 1
 
-            # No se debe invalidar la caché porque no cambió la etiqueta
+            # No se debe invalidar la caché porque no cambió la etiqueta.
             mock_invalidate_cache.assert_not_called()
 
     async def test_delete_image_success(self, mock_session):
         """Prueba de eliminación exitosa de una imagen."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image = MagicMock()
         image.id = uuid.uuid4()
@@ -245,13 +253,13 @@ class TestImagesCRUD:
             "app.crud.images.invalidate_dataset_cache"
         ) as mock_invalidate_cache:
 
-            # Simular que el archivo existe
+            # Simular que el archivo existe.
             mock_exists.return_value = True
 
-            # Ejecución
+            # Ejecución.
             await delete_image(session=mock_session, image=image)
 
-            # Verificación
+            # Verificación.
             mock_exists.assert_called_once()
             mock_remove.assert_called_once()
             mock_session.delete.assert_called_once_with(image)
@@ -262,7 +270,8 @@ class TestImagesCRUD:
 
     async def test_delete_image_file_not_found(self, mock_session):
         """Prueba de eliminación de una imagen cuyo archivo no existe."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
         image = MagicMock()
         image.id = uuid.uuid4()
@@ -276,15 +285,15 @@ class TestImagesCRUD:
             "app.crud.images.invalidate_dataset_cache"
         ) as mock_invalidate_cache:
 
-            # Simular que el archivo no existe
+            # Simular que el archivo no existe.
             mock_exists.return_value = False
 
-            # Ejecución
+            # Ejecución.
             await delete_image(session=mock_session, image=image)
 
-            # Verificación
+            # Verificación.
             mock_exists.assert_called_once()
-            mock_remove.assert_not_called()  # No debería intentar eliminar el archivo
+            mock_remove.assert_not_called()  # No debería intentar eliminar el archivo.
             mock_session.delete.assert_called_once_with(image)
             assert mock_session.commit.call_count == 1
             mock_invalidate_cache.assert_called_once_with(
@@ -293,10 +302,11 @@ class TestImagesCRUD:
 
     async def test_get_images_sorted_success(self, mock_session):
         """Prueba de obtención exitosa de imágenes con ordenación."""
-        # Configuración
+
+        # Configuración.
         dataset_id = uuid.uuid4()
 
-        # Crear algunas imágenes de prueba
+        # Crear algunas imágenes de prueba.
         mock_images = []
         for i in range(3):
             img = MagicMock()
@@ -306,7 +316,7 @@ class TestImagesCRUD:
             img.label = f"label_{i}" if i % 2 == 0 else None
             mock_images.append(img)
 
-        # Configurar los resultados de las consultas
+        # Configurar los resultados de las consultas.
         images_result = MagicMock()
         scalar_images = MagicMock()
         scalar_images.all.return_value = mock_images
@@ -315,10 +325,10 @@ class TestImagesCRUD:
         count_result = MagicMock()
         count_result.scalar_one.return_value = len(mock_images)
 
-        # Configurar mock_session.execute para devolver estos resultados en orden
+        # Configurar mock_session.execute para devolver estos resultados en orden.
         mock_session.execute = AsyncMock(side_effect=[count_result, images_result])
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.images.select") as mock_select:
             mock_select.return_value = MagicMock()
 
@@ -331,7 +341,7 @@ class TestImagesCRUD:
                 sort_order="asc",
             )
 
-            # Verificación
+            # Verificación.
             assert result == mock_images
             assert count == len(mock_images)
             assert mock_session.execute.call_count == 2
@@ -339,7 +349,8 @@ class TestImagesCRUD:
 
     async def test_is_valid_image_extension(self):
         """Prueba de validación de extensiones de imágenes."""
-        # Configuración - Extensiones válidas e inválidas
+
+        # Configuración - Extensiones válidas e inválidas.
         valid_extensions = [
             "image.jpg",
             "image.jpeg",
@@ -355,7 +366,7 @@ class TestImagesCRUD:
             "image.tiff",
         ]
 
-        # Verificación
+        # Verificación.
         for filename in valid_extensions:
             assert is_valid_image_extension(filename) is True
 
@@ -364,16 +375,17 @@ class TestImagesCRUD:
 
     async def test_create_thumbnail_success(self):
         """Prueba de creación exitosa de una miniatura."""
-        # Crear una imagen PIL para probar
+
+        # Crear una imagen PIL para probar.
         img = PILImage.new("RGB", (200, 200), color="red")
 
-        # Ejecución
+        # Ejecución.
         thumbnail_data = create_thumbnail(img)
 
-        # Verificación
+        # Verificación.
         assert isinstance(thumbnail_data, str)
         assert len(thumbnail_data) > 0
-        # Verificar que es un string base64 válido
+        # Verificar que es un string base64 válido.
         try:
             base64.b64decode(thumbnail_data)
             is_valid_base64 = True
@@ -383,14 +395,15 @@ class TestImagesCRUD:
 
     async def test_create_thumbnail_with_error_handling(self):
         """Prueba de creación de miniatura con manejo de errores."""
-        # Crear un mock de imagen que cause error al copiarse
+
+        # Crear un mock de imagen que cause error al copiarse.
         mock_img = MagicMock()
         mock_img.copy.side_effect = Exception("Simulated error")
         mock_img.mode = "RGB"
 
-        # Ejecución
+        # Ejecución.
         with patch("app.crud.images.PILImage.new") as mock_new:
-            # Simular la creación de una imagen en blanco como fallback
+            # Simular la creación de una imagen en blanco como fallback.
             blank_img = MagicMock()
             buffer = io.BytesIO()
             buffer.write(b"test_data")
@@ -399,32 +412,33 @@ class TestImagesCRUD:
 
             thumbnail_data = create_thumbnail(mock_img)
 
-            # Verificación
+            # Verificación.
             assert isinstance(thumbnail_data, str)
-            mock_new.assert_called_once()  # Se debería crear una imagen en blanco
+            mock_new.assert_called_once()  # Se debería crear una imagen en blanco.
 
     async def test_convert_and_save_image(self):
         """Prueba de conversión y guardado de una imagen."""
-        # Configuración
+
+        # Configuración.
         source_path = "/tmp/test_image.png"
         image_id = uuid.uuid4()
 
-        # Crear mocks para PIL y os
+        # Crear mocks para PIL y os.
         with patch("app.crud.images.PILImage.open") as mock_open_image, patch(
             "app.crud.images.os.makedirs"
         ) as mock_makedirs, patch("builtins.open", mock_open()), patch(
             "app.crud.images.IMAGES_DIR", "/app/media/images"
         ):
 
-            # Configurar el mock de la imagen
+            # Configurar el mock de la imagen.
             mock_img = MagicMock()
-            mock_img.mode = "RGB"  # Modo que no requiere conversión
+            mock_img.mode = "RGB"  # Modo que no requiere conversión.
             mock_open_image.return_value.__enter__.return_value = mock_img
 
-            # Ejecución
+            # Ejecución.
             result = convert_and_save_image(source_path, image_id)
 
-            # Verificación
+            # Verificación.
             mock_makedirs.assert_called_once_with("/app/media/images", exist_ok=True)
-            mock_img.save.assert_called_once()  # Debería guardar la imagen
+            mock_img.save.assert_called_once()  # Debería guardar la imagen.
             assert result == f"images/{image_id}.jpg"

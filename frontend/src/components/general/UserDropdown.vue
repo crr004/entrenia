@@ -1,9 +1,15 @@
 <template>
     <div class="user-dropdown-container">
         <div class="dropdown-links" @click="emit('close')">
+            <router-link to="/my-models">
+                <span class="icon-container">
+                    <font-awesome-icon :icon="['fas', 'robot']" fixed-width />
+                </span>
+                Mis modelos
+            </router-link>
             <router-link to="/my-datasets">
                 <span class="icon-container">
-                    <font-awesome-icon :icon="['fas', 'database']"/>
+                    <font-awesome-icon :icon="['fas', 'database']" fixed-width />
                 </span>
                 Mis conjuntos de imágenes
             </router-link>
@@ -12,7 +18,7 @@
                 <span class="icon-container">
                     <font-awesome-icon :icon="['fas', 'shield-alt']" fixed-width />
                 </span>
-                Panel de admin
+                Panel de administración
             </router-link>
             <hr v-if="isAdmin">
             <router-link to="/account">
@@ -59,7 +65,7 @@ const logout = () => {
   display: block;
   text-align: left;
   position: absolute;
-  width: 200px;
+  width: 280px;
   top: 38px;
   right: 5px;
   background-color: #555;

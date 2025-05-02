@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { useRoute, useRouter } from 'vue-router';
 import ExploreView from '../../src/views/ExploreView.vue';
@@ -13,7 +13,7 @@ beforeEach(() => {
   setActivePinia(createPinia());
 });
 
-// Mock del store de auth
+// Mock del store de auth.
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: vi.fn(() => ({
     token: 'mock-token',
@@ -77,14 +77,14 @@ vi.mock('../../src/services/api', () => ({
         total: 10,
         page: 1,
         size: 10,
-        totalPages: 5 // Aseguramos que hay 5 páginas para el test de navegación
+        totalPages: 5 // Asegurar que hay 5 páginas para el test de navegación.
       }
     }),
     cloneDataset: vi.fn().mockResolvedValue({ data: { id: 999 } })
   }
 }));
 
-// Mock de Pinia
+// Mock de Pinia.
 vi.mock('pinia', () => {
   const actual = vi.importActual('pinia');
   return {
@@ -95,14 +95,14 @@ vi.mock('pinia', () => {
         const getters = {};
         const actions = {};
         
-        // Simular getters
+        // Simular getters.
         if (options.getters) {
           Object.keys(options.getters).forEach(key => {
             getters[key] = vi.fn();
           });
         }
         
-        // Simular acciones
+        // Simular acciones.
         if (options.actions) {
           Object.keys(options.actions).forEach(key => {
             actions[key] = vi.fn();
@@ -121,71 +121,75 @@ vi.mock('pinia', () => {
 });
 
 describe('ExploreView', () => {
+  // Test 1: Verificar que el componente se monta correctamente.
   it('trunca correctamente el texto con el método truncateText', () => {
       const wrapper = mount(ExploreView, globalOptions);
       
-      // Texto corto que no necesita truncamiento
+      // Texto corto que no necesita truncamiento.
       const shortText = "Texto corto";
       expect(wrapper.vm.truncateText(shortText, 20)).toBe(shortText);
       
-      // Texto largo que necesita truncamiento
+      // Texto largo que necesita truncamiento.
       const longText = "Este es un texto muy largo que debe ser truncado";
       const truncated = wrapper.vm.truncateText(longText, 15);
       expect(truncated).toBe("Este es un text...");
-      expect(truncated.length).toBe(18); // 15 caracteres + "..."
+      expect(truncated.length).toBe(18); // 15 caracteres + "...".
       
-      // Manejo de texto vacío
+      // Manejo de texto vacío.
       expect(wrapper.vm.truncateText("", 10)).toBe("");
       expect(wrapper.vm.truncateText(null, 10)).toBe("");
   });
 
+  // Test 2: Verifica que se formatea correctamente la descripción.
   it('formatea correctamente las descripciones con el método formatDescription', () => {
       const wrapper = mount(ExploreView, globalOptions);
       
-      // Descripción corta que no necesita formato
+      // Descripción corta que no necesita formato.
       const shortDesc = "Esta es una descripción corta";
       expect(wrapper.vm.formatDescription(shortDesc)).toBe(shortDesc);
       
-      // Descripción larga que necesita formato
-      const longDesc = "a".repeat(300); // 300 caracteres
+      // Descripción larga que necesita formato.
+      const longDesc = "a".repeat(300); // 300 caracteres.
       const formatted = wrapper.vm.formatDescription(longDesc);
       expect(formatted.endsWith('...')).toBe(true);
-      expect(formatted.length).toBe(203); // aprox 200 + "..."
+      expect(formatted.length).toBe(203); // aprox 200 + "...".
       
-      // Manejo de descripción vacía
+      // Manejo de descripción vacía.
       expect(wrapper.vm.formatDescription("")).toBe("");
       expect(wrapper.vm.formatDescription(null)).toBe("");
   });
 
+  // Test 3: Verificar que se cancela correctamente la clonación del dataset.
   it('cancela correctamente la clonación del dataset', async () => {
       const wrapper = mount(ExploreView, globalOptions);
       
-      // Configurar estado inicial
+      // Configurar estado inicial.
       wrapper.vm.selectedDataset = mockDatasets[0];
       wrapper.vm.showCloneModal = true;
       await wrapper.vm.$nextTick();
       
-      // Cancelar clonación
+      // Cancelar clonación.
       await wrapper.vm.cancelCloneDataset();
       
-      // Verificar que se cierra el modal y se resetea el dataset seleccionado
+      // Verificar que se cierra el modal y se resetea el dataset seleccionado.
       expect(wrapper.vm.showCloneModal).toBe(false);
       expect(wrapper.vm.selectedDataset).toBe(null);
   });
 
+  // Test 4: Verificar que se actualiza correctamente la URL al cambiar los parámetros de paginación.
   it('actualiza la URL correctamente cuando cambian los parámetros de paginación', async () => {
       const wrapper = mount(ExploreView, globalOptions);
       
       wrapper.vm.isLoading = false;
       
-      // Cambiar parámetros de paginación
+      // Cambiar parámetros de paginación.
       wrapper.vm.currentPage = 2;
       wrapper.vm.pageSize = 10;
       
-      // Disparar el watcher manualmente
+      // Disparar el watcher manualmente.
       await flushPromises();
       
-      // Verificar que se actualiza la URL
+      // Verificar que se actualiza la URL.
       expect(routerReplaceMock).toHaveBeenCalledWith(
           expect.objectContaining({
               query: expect.objectContaining({
@@ -196,8 +200,9 @@ describe('ExploreView', () => {
       );
   });
 
+  // Test 5: Verifica que se cargan correctamente los parámetros de la URL al montar el componente.
   it('carga correctamente los parámetros de la URL al montar el componente', async () => {
-      // Mockear ruta con parámetros de consulta
+      // Mockear ruta con parámetros de consulta.
       vi.mocked(useRoute).mockReturnValue({
           path: '/explore',
           query: {
@@ -219,6 +224,7 @@ describe('ExploreView', () => {
       expect(wrapper.vm.searchQuery).toBe('test');
   });
 
+  // Test 6: Verifica que se vuelve a la primera página al ejecutar una nueva búsqueda.
   it('sale a primera página cuando ejecuta una nueva búsqueda', async () => {
       const wrapper = mount(ExploreView, globalOptions);
       
@@ -226,15 +232,15 @@ describe('ExploreView', () => {
       
       wrapper.vm.fetchSharedDatasets = vi.fn();
       
-      // Establecer una página diferente de la primera
+      // Establecer una página diferente de la primera.
       wrapper.vm.currentPage = 2;
       await wrapper.vm.$nextTick();
       
-      // Ejecutar búsqueda
+      // Ejecutar búsqueda.
       wrapper.vm.searchQuery = 'Nueva búsqueda';
       await wrapper.vm.executeSearch();
       
-      // Verificar que volvió a la primera página
+      // Verificar que volvió a la primera página.
       expect(wrapper.vm.currentPage).toBe(1);
   });
 });

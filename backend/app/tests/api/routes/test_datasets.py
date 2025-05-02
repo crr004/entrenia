@@ -30,7 +30,8 @@ class TestDatasetRoutes:
         mock_get_dataset_counts,
     ):
         """Prueba de obtención exitosa de datasets públicos."""
-        # Configuración
+
+        # Configuración.
         mock_get_public_datasets.return_value = ([mock_dataset], 1)
         mock_user = MagicMock()
         mock_user.username = "testuser"
@@ -42,7 +43,7 @@ class TestDatasetRoutes:
 
             local_mock.side_effect = mock_get_user
 
-            # Ejecución
+            # Ejecución.
             response = await get_public_datasets(
                 session=mock_session,
                 skip=0,
@@ -50,7 +51,7 @@ class TestDatasetRoutes:
                 search=None,
             )
 
-            # Verificación
+            # Verificación.
             assert response.count == 1
             assert len(response.datasets) == 1
             mock_get_public_datasets.assert_called_once_with(
@@ -68,10 +69,10 @@ class TestDatasetRoutes:
         mock_get_dataset_by_id,
         mock_public_dataset,
         mock_get_dataset_counts,
-        mock_get_user_by_id,
     ):
         """Prueba de lectura exitosa de un dataset público."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_id.return_value = mock_public_dataset
         mock_user = MagicMock()
         mock_user.username = "testuser"
@@ -85,14 +86,14 @@ class TestDatasetRoutes:
 
             dataset_id = mock_public_dataset.id
 
-            # Ejecución
+            # Ejecución.
             response = await read_public_dataset(
                 session=mock_session,
                 dataset_id=dataset_id,
                 current_user=None,
             )
 
-            # Verificación
+            # Verificación.
             assert response.id == mock_public_dataset.id
             assert response.name == mock_public_dataset.name
             mock_get_dataset_by_id.assert_called_once_with(
@@ -105,11 +106,12 @@ class TestDatasetRoutes:
         self, mock_session, mock_get_dataset_by_id
     ):
         """Prueba de error al leer un dataset público que no existe."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_id.return_value = None
         dataset_id = uuid.uuid4()
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await read_public_dataset(
                 session=mock_session,
@@ -124,11 +126,12 @@ class TestDatasetRoutes:
         self, mock_session, mock_get_dataset_by_id, mock_dataset
     ):
         """Prueba de error al leer un dataset que no es público."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_id.return_value = mock_dataset
         dataset_id = mock_dataset.id
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await read_public_dataset(
                 session=mock_session,
@@ -148,19 +151,20 @@ class TestDatasetRoutes:
         mock_dataset_label_details,
     ):
         """Prueba de lectura exitosa de detalles de etiquetas de un dataset público."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_id.return_value = mock_public_dataset
         mock_get_dataset_label_details.return_value = mock_dataset_label_details
         dataset_id = mock_public_dataset.id
 
-        # Ejecución
+        # Ejecución.
         response = await read_public_dataset_label_details(
             session=mock_session,
             dataset_id=dataset_id,
             current_user=None,
         )
 
-        # Verificación
+        # Verificación.
         assert response.dataset_id == mock_dataset_label_details["dataset_id"]
         assert len(response.categories) == len(mock_dataset_label_details["categories"])
         assert hasattr(response.categories[0], "name")
@@ -181,10 +185,11 @@ class TestDatasetRoutes:
         mock_get_dataset_counts,
     ):
         """Prueba de lectura exitosa de datasets del usuario."""
-        # Configuración
+
+        # Configuración.
         mock_get_user_datasets_sorted.return_value = ([mock_dataset], 1, False)
 
-        # Ejecución
+        # Ejecución.
         response = await read_datasets(
             session=mock_session,
             current_user=mock_user,
@@ -195,7 +200,7 @@ class TestDatasetRoutes:
             sort_order="desc",
         )
 
-        # Verificación
+        # Verificación.
         assert response.count == 1
         assert len(response.datasets) == 1
         mock_get_user_datasets_sorted.assert_called_once_with(
@@ -217,10 +222,10 @@ class TestDatasetRoutes:
         mock_get_user_datasets_sorted,
         mock_dataset,
         mock_get_dataset_counts,
-        mock_get_user_by_id,
     ):
         """Prueba de lectura exitosa de todos los datasets por un administrador."""
-        # Configuración
+
+        # Configuración.
         mock_get_user_datasets_sorted.return_value = ([mock_dataset], 1, False)
         mock_user = MagicMock()
         mock_user.username = "testuser"
@@ -232,7 +237,7 @@ class TestDatasetRoutes:
 
             local_mock.side_effect = mock_get_user
 
-            # Ejecución
+            # Ejecución.
             response = await read_datasets(
                 session=mock_session,
                 current_user=mock_admin_user,
@@ -243,7 +248,7 @@ class TestDatasetRoutes:
                 sort_order="desc",
             )
 
-            # Verificación
+            # Verificación.
             assert response.count == 1
             assert len(response.datasets) == 1
             mock_get_user_datasets_sorted.assert_called_once_with(
@@ -261,7 +266,8 @@ class TestDatasetRoutes:
 
     async def test_read_datasets_invalid_sort_order(self, mock_session, mock_user):
         """Prueba de error al usar un orden de ordenación inválido."""
-        # Ejecución y verificación
+
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await read_datasets(
                 session=mock_session,
@@ -285,19 +291,20 @@ class TestDatasetRoutes:
         mock_get_dataset_counts,
     ):
         """Prueba de lectura exitosa de un dataset específico."""
-        # Configuración
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+
+        # Configuración.
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
         mock_get_dataset_by_id.return_value = mock_dataset
         dataset_id = mock_dataset.id
 
-        # Ejecución
+        # Ejecución.
         response = await read_dataset(
             session=mock_session,
             current_user=mock_user,
             dataset_id=dataset_id,
         )
 
-        # Verificación
+        # Verificación.
         assert response.id == mock_dataset.id
         assert response.name == mock_dataset.name
         mock_get_dataset_by_id.assert_called_once_with(
@@ -309,11 +316,12 @@ class TestDatasetRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_id
     ):
         """Prueba de error al leer un dataset que no existe."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_id.return_value = None
         dataset_id = uuid.uuid4()
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await read_dataset(
                 session=mock_session,
@@ -328,13 +336,14 @@ class TestDatasetRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_id, mock_dataset
     ):
         """Prueba de error al leer un dataset al que el usuario no tiene acceso."""
-        # Configuración
+
+        # Configuración.
         other_user_id = uuid.uuid4()
-        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario
+        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario.
         mock_get_dataset_by_id.return_value = mock_dataset
         dataset_id = mock_dataset.id
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await read_dataset(
                 session=mock_session,
@@ -355,20 +364,21 @@ class TestDatasetRoutes:
         mock_dataset_label_details,
     ):
         """Prueba de lectura exitosa de detalles de etiquetas de un dataset."""
-        # Configuración
-        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario
+
+        # Configuración.
+        mock_dataset.user_id = mock_user.id  # Dataset pertenece al usuario.
         mock_get_dataset_by_id.return_value = mock_dataset
         mock_get_dataset_label_details.return_value = mock_dataset_label_details
         dataset_id = mock_dataset.id
 
-        # Ejecución
+        # Ejecución.
         response = await read_dataset_label_details(
             session=mock_session,
             current_user=mock_user,
             dataset_id=dataset_id,
         )
 
-        # Verificación
+        # Verificación.
         assert response.dataset_id == mock_dataset_label_details["dataset_id"]
         assert len(response.categories) == len(mock_dataset_label_details["categories"])
         assert hasattr(response.categories[0], "name")
@@ -388,9 +398,10 @@ class TestDatasetRoutes:
         mock_get_dataset_by_userid_and_name,
     ):
         """Prueba de creación exitosa de un dataset."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_userid_and_name.return_value = (
-            None  # No existe dataset con ese nombre
+            None  # No existe dataset con ese nombre.
         )
         dataset_data = DatasetCreate(
             name="New Dataset",
@@ -402,14 +413,14 @@ class TestDatasetRoutes:
         new_dataset.name = dataset_data.name
         mock_create_dataset.return_value = new_dataset
 
-        # Ejecución
+        # Ejecución.
         response = await create_dataset(
             session=mock_session,
             current_user=mock_user,
             dataset_in=dataset_data,
         )
 
-        # Verificación
+        # Verificación.
         assert response.name == dataset_data.name
         mock_get_dataset_by_userid_and_name.assert_called_once_with(
             session=mock_session,
@@ -426,9 +437,10 @@ class TestDatasetRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_userid_and_name, mock_dataset
     ):
         """Prueba de error al crear un dataset con un nombre que ya existe."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_userid_and_name.return_value = (
-            mock_dataset  # Ya existe un dataset con ese nombre
+            mock_dataset  # Ya existe un dataset con ese nombre.
         )
         dataset_data = DatasetCreate(
             name="Existing Dataset",
@@ -436,7 +448,7 @@ class TestDatasetRoutes:
             is_public=False,
         )
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await create_dataset(
                 session=mock_session,
@@ -457,10 +469,13 @@ class TestDatasetRoutes:
         mock_get_dataset_counts,
     ):
         """Prueba de clonación exitosa de un dataset público."""
-        # Configuración
+
+        # Configuración.
         source_user_id = uuid.uuid4()
-        mock_public_dataset.user_id = source_user_id  # Dataset pertenece a otro usuario
-        mock_public_dataset.is_public = True  # Aseguramos que es público
+        mock_public_dataset.user_id = (
+            source_user_id  # Dataset pertenece a otro usuario.
+        )
+        mock_public_dataset.is_public = True  # Aseguramos que es público.
         mock_get_dataset_by_id.return_value = mock_public_dataset
 
         source_user = MagicMock()
@@ -473,14 +488,13 @@ class TestDatasetRoutes:
 
             local_mock_user.side_effect = mock_get_user
 
-            # Mockear DatasetReturn para evitar la validación
+            # Mockear DatasetReturn para evitar la validación.
             with patch("app.api.routes.datasets.DatasetReturn") as mock_dataset_return:
                 mock_return = MagicMock()
                 mock_dataset_return.return_value = mock_return
                 mock_return.name = "sourceuser - Public Dataset"
                 mock_return.id = uuid.uuid4()
 
-                # Configurar mejor el mock del dataset clonado
                 cloned_dataset = MagicMock()
                 cloned_dataset.id = uuid.uuid4()
                 cloned_dataset.name = f"sourceuser - Public Dataset"
@@ -502,7 +516,7 @@ class TestDatasetRoutes:
                 }
                 cloned_dataset.model_dump.return_value = cloned_dict
 
-                # Configurar cómo se comporta el mock cuando se llama
+                # Configurar cómo se comporta el mock cuando se llama.
                 async def mock_clone(*args, **kwargs):
                     return cloned_dataset
 
@@ -510,14 +524,14 @@ class TestDatasetRoutes:
 
                 dataset_id = mock_public_dataset.id
 
-                # Ejecución
+                # Ejecución.
                 response = await clone_public_dataset(
                     dataset_id=dataset_id,
                     session=mock_session,
                     current_user=mock_user,
                 )
 
-                # Verificación
+                # Verificación.
                 assert response == mock_return
                 local_mock_user.assert_called_once()
                 mock_clone_dataset.assert_called_once_with(
@@ -532,11 +546,12 @@ class TestDatasetRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_id
     ):
         """Prueba de error al clonar un dataset que no existe."""
-        # Configuración
+
+        # Configuración.
         mock_get_dataset_by_id.return_value = None
         dataset_id = uuid.uuid4()
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await clone_public_dataset(
                 dataset_id=dataset_id,
@@ -551,13 +566,14 @@ class TestDatasetRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_id, mock_dataset
     ):
         """Prueba de error al clonar un dataset que no es público."""
-        # Configuración
+
+        # Configuración.
         other_user_id = uuid.uuid4()
-        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario
-        mock_get_dataset_by_id.return_value = mock_dataset  # No es público por defecto
+        mock_dataset.user_id = other_user_id  # Dataset pertenece a otro usuario.
+        mock_get_dataset_by_id.return_value = mock_dataset  # No es público por defecto.
         dataset_id = mock_dataset.id
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await clone_public_dataset(
                 dataset_id=dataset_id,
@@ -572,12 +588,13 @@ class TestDatasetRoutes:
         self, mock_session, mock_user, mock_get_dataset_by_id, mock_public_dataset
     ):
         """Prueba de error al intentar clonar un dataset que ya es propiedad del usuario."""
-        # Configuración
-        mock_public_dataset.user_id = mock_user.id  # Dataset ya pertenece al usuario
+
+        # Configuración.
+        mock_public_dataset.user_id = mock_user.id  # Dataset ya pertenece al usuario.
         mock_get_dataset_by_id.return_value = mock_public_dataset
         dataset_id = mock_public_dataset.id
 
-        # Ejecución y verificación
+        # Ejecución y verificación.
         with pytest.raises(HTTPException) as exc_info:
             await clone_public_dataset(
                 dataset_id=dataset_id,
