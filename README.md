@@ -24,4 +24,4 @@ models. Once trained, models can be evaluated by users using certain metrics gen
 during training, used for inference, or downloaded for use outside the application. For 
 model training, the application offers both architectures implemented from scratch and 
 pre-trained models that have already learned to distinguish features in images. This latter 
-aspecto enables very good results without the need to use large image datasets.
+aspect enables very good results without the need to use large image datasets.
