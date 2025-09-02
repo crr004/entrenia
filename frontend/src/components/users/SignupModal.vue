@@ -201,7 +201,7 @@ const handleSignup = async () => {
       password: password.value
     };
     
-    const response = await axios.post('/signup', userData);
+    const response = await axios.post('/signup/', userData);
     
     notifySuccess("Cuenta creada", 
     "Revisa tu correo para verificar tu identidad antes de poder iniciar sesión.");

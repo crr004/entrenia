@@ -24,7 +24,6 @@ from app.ml.model_utils import save_trained_model
 
 # Configuración del broker y backend de resultados.
 broker_url = os.environ["BROKER_URL"]
-result_backend = os.environ["RESULT_BACKEND"]
 task_serializer = "json"
 result_serializer = "json"
 accept_content = ["json"]
@@ -36,7 +35,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 
 logger = logging.getLogger(__name__)
 
-app = Celery("entrenia", broker=broker_url, backend=result_backend)
+app = Celery("entrenia", broker=broker_url)
 
 app.conf.update(
     task_serializer=task_serializer,

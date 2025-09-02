@@ -1,10 +1,10 @@
-import emails
 from dataclasses import dataclass
 from jinja2 import Template
 from pathlib import Path
 from typing import Any
 import os
 import logging
+import requests
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,26 +50,32 @@ def send_email(
         html_content (str): Contenido HTML del email
     """
 
-    message = emails.Message(
-        subject=subject,
-        html=html_content,
-        mail_from=(os.environ["APP_NAME"], os.environ["EMAILS_FROM_EMAIL"]),
-    )
-    smtp_options = {
-        "user": os.environ["SMTP_USER"],
-        "password": os.environ["SMTP_PASSWORD"],
-        "host": os.environ["SMTP_HOST"],
-        "port": int(os.environ["SMTP_PORT"]),
-    }
-    if os.environ["SMTP_TLS"] == "True":
-        smtp_options["tls"] = True
-        smtp_options["ssl"] = False
-    elif os.environ["SMTP_SSL"] == "True":
-        smtp_options["ssl"] = True
-        smtp_options["tls"] = False
+    try:
+        api_key = os.environ["SENDGRID_API_KEY"]
+        url = "https://api.sendgrid.com/v3/mail/send"
 
-    response = message.send(to=email_to, smtp=smtp_options)
-    logger.info(f"Message sent to {email_to}. Server response: {response}")
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        from_email = os.environ["EMAILS_FROM_EMAIL"]
+
+        data = {
+            "personalizations": [{"to": [{"email": email_to}]}],
+            "from": {"email": from_email, "name": os.environ["APP_NAME"]},
+            "subject": subject,
+            "content": [{"type": "text/html", "value": html_content}],
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        logger.info(
+            f"Message sent to {email_to}. SendGrid response: {response.status_code}"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send email to {email_to}. Error: {str(e)}")
+        raise
 
 
 def generate_new_account_email(email_to: str, username: str, token: str) -> EmailData:

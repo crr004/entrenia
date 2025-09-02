@@ -16,7 +16,7 @@
           <div class="feature-icon">
             <font-awesome-icon :icon="['fas', 'database']" />
           </div>
-          <h3>Gestionar datasets</h3>
+          <h3>Gestionar conjuntos de imágenes</h3>
           <p>Crea y edita tus conjuntos de imágenes. Sube tus imágenes y etiquétalas de forma sencilla.</p>
         </div>
         <div class="feature-card">
@@ -31,14 +31,14 @@
             <font-awesome-icon :icon="['fas', 'chart-bar']" />
           </div>
           <h3>Analizar resultados</h3>
-          <p>Visualiza métricas de rendimiento, matrices de confusión y evalúa la precisión de tus modelos con gráficos.</p>
+          <p>Visualiza métricas de rendimiento, matrices de confusión y evalúa la precisión de tus modelos.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
             <font-awesome-icon :icon="['fas', 'magic']" />
           </div>
           <h3>Clasificar nuevas imágenes</h3>
-          <p>Utiliza tus modelos entrenados para clasificar nuevas imágenes. Exporta tus modelos para usarlos en otras plataformas.</p>
+          <p>Utiliza tus modelos entrenados para clasificar nuevas imágenes. Descarga tus modelos para usarlos en otras plataformas.</p>
         </div>
       </div>
     </section>
@@ -57,7 +57,7 @@
         </div>
         <div class="step">
           <div class="step-number">3</div>
-          <h3>Analiza</h3>
+          <h3>Analiza tu modelo</h3>
           <p>Evalúa el rendimiento de tu modelo con métricas detalladas.</p>
         </div>
         <div class="step">
@@ -86,7 +86,7 @@ onMounted(async () => {
     // Si no existe, no se hace nada.
     if (token) {
       try {
-        await axios.post(`/signup/account-verification?token=${token}`, {});
+        await axios.post(`/signup/account-verification/?token=${token}`, {});
         
         notifySuccess("Cuenta verificada", 
         "Tu cuenta ha sido verificada con éxito. Ahora puedes iniciar sesión.");

@@ -1,6 +1,6 @@
 <template>
   <div class="account-view">
-    <h1 class="account-title">Mi Cuenta</h1>
+    <h1 class="account-title">Mi cuenta</h1>
     <div class="account-content">
       <div class="sidebar">
         <div 

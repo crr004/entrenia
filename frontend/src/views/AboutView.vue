@@ -40,7 +40,7 @@
             <div class="feature">
                 <h3><font-awesome-icon :icon="['fas', 'chart-bar']" class="feature-icon" /> Análisis visual de resultados</h3>
                 <p>
-                    Visualiza el rendimiento de tus modelos mediante gráficos, matrices 
+                    Visualiza el rendimiento de tus modelos mediante matrices 
                     de confusión y métricas de precisión. EntrenIA presenta los resultados de forma 
                     clara y comprensible, permitiéndote evaluar la eficacia de tus modelos sin 
                     necesidad de conocimientos avanzados en estadística.
