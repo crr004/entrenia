@@ -1,11 +1,11 @@
 <template>
     <div class="help-container">
         <section class="hero-section">
-            <h1>Centro de Ayuda</h1>
+            <h1>Centro de ayuda</h1>
             <p class="subtitle">Encuentra respuestas y soluciones para EntrenIA</p>
         </section>
         <section class="support-section">
-            <h2>Soporte Técnico</h2>
+            <h2>Soporte técnico</h2>
             <p>
                 Si tienes problemas o dudas cuya respuesta no encuentras aquí, 
                 puedes contactar directamente con el administrador:
@@ -21,7 +21,7 @@
             </div>
         </section>
         <section class="faq-section">
-            <h2>Preguntas Frecuentes (FAQ)</h2>
+            <h2>Preguntas frecuentes (FAQ)</h2>
             <div class="faq-item" v-for="(item, index) in faqItems" :key="index">
                 <div 
                     class="faq-question" 
@@ -42,7 +42,7 @@
             </div>
         </section>
         <section class="guides-section">
-            <h2>Guías Rápidas</h2>
+            <h2>Guías rápidas</h2>
             <div class="guide-cards">
                 <div class="guide-card">
                     <div class="guide-icon">
@@ -104,7 +104,7 @@ const faqItems = [
     {
         question: "¿Qué tipo de imágenes puedo utilizar para entrenar modelos?",
         answer: [
-            "Puedes utilizar cualquier tipo de imagen en alguno de los formatos permitidos (puedes consultarlos al subir una nueva imágen). Es importante que las imágenes sean representativas de las categorías que deseas clasificar.",
+            "Puedes utilizar cualquier tipo de imagen en alguno de los formatos permitidos (puedes consultarlos al subir una nueva imagen). Es importante que las imágenes sean representativas de las categorías que deseas clasificar.",
         ]
     },
     {
@@ -134,8 +134,8 @@ const faqItems = [
     {
         question: "¿Es posible compartir mis conjuntos de imágenes con otros usuarios?",
         answer: [
-            "Sí, EntrenIA te permite compartir tus conjuntos de imágenes con la comunidad. Para hacerlo, ve a la sección 'Mis modelos', selecciona el modelo que deseas compartir y haz clic en la opción de compartir.",
-            "Puedes volver a privatizar tus conjuntos en cualquier momento si lo deseas, siguiendo los mismos pasos."
+            "Sí, EntrenIA te permite compartir tus conjuntos de imágenes con la comunidad. Para hacerlo, ve a la sección 'Mis conjuntos de imágenes', selecciona el conjunto de imágenes que deseas compartir y haz clic en la opción de compartir.",
+            "Puedes volver a privatizar tus conjuntos de imágenes en cualquier momento si lo deseas, siguiendo los mismos pasos."
         ]
     },
     {
