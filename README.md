@@ -18,5 +18,5 @@ This was my final Bachelor's project and received a grade of **10/10 with highes
 - **Docker Compose** for quick and easy deployment
 - Deployed on a **DigitalOcean VPS**
 
-This is the app architecture:
+## App Architecture
 <img width="886" height="420" alt="image" src="https://github.com/user-attachments/assets/5ef996e6-988c-41ac-8eb3-a78c9f6d0054" />
