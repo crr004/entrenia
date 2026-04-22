@@ -8,7 +8,7 @@ This was my final Bachelor's project and received a grade of **10/10 with highes
 
 ## Main Features
 
-- **Keras** for the machine learning component
+- **Keras** for the machine learning components
 - User authentication implemented from scratch with **JWT**, including:
   - Email verification
   - Password recovery
