@@ -25,3 +25,6 @@ during training, used for inference, or downloaded for use outside the applicati
 model training, the application offers both architectures implemented from scratch and 
 pre-trained models that have already learned to distinguish features in images. This latter 
 aspect enables very good results without the need to use large image datasets.
+
+This is the app architecture:
+<img width="886" height="420" alt="image" src="https://github.com/user-attachments/assets/5ef996e6-988c-41ac-8eb3-a78c9f6d0054" />
